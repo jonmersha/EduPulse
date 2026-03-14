@@ -9,8 +9,11 @@
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
         "role": { "type": "string", "enum": ["admin", "teacher", "student", "parent"] },
-        "schoolId": { "type": "string", "description": "ID of the school the user belongs to" },
+        "schoolId": { "type": "string", "description": "Primary school ID" },
+        "schoolIds": { "type": "array", "items": { "type": "string" }, "description": "List of schools the teacher is linked to" },
         "classId": { "type": "string", "description": "ID of the class the student belongs to" },
+        "specialization": { "type": "string", "description": "Teacher's subject specialization" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
         "photoURL": { "type": "string", "format": "uri" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
@@ -23,7 +26,11 @@
       "properties": {
         "name": { "type": "string" },
         "address": { "type": "string" },
+        "contactEmail": { "type": "string", "format": "email" },
+        "contactPhone": { "type": "string" },
+        "academicStructure": { "type": "string", "description": "e.g. K-12, Higher Ed" },
         "adminId": { "type": "string", "description": "UID of the school administrator" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "adminId"]

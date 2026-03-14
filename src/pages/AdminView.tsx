@@ -16,9 +16,10 @@ export const AdminView: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Form states
-  const [newSchool, setNewSchool] = useState({ name: '', address: '', adminEmail: '' });
+  const [newSchool, setNewSchool] = useState({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
   const [newClass, setNewClass] = useState({ name: '', grade: '', teacherId: '' });
-  const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '' });
+  const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolIds: [] as string[] });
+  const [editingItem, setEditingItem] = useState<any>(null);
 
   const isSuperAdmin = profile?.email === 'beshegercom@gmail.com';
 
@@ -30,10 +31,13 @@ export const AdminView: React.FC = () => {
     let unsubUsers: () => void = () => {};
 
     if (isSuperAdmin) {
-      // Super Admin sees all schools
+      // Super Admin sees all schools and all users
       unsubSchools = onSnapshot(collection(db, 'schools'), (snap) => {
         setSchools(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         setLoading(false);
+      });
+      unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+        setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       });
     } else if (profile.role === 'admin' && profile.schoolId) {
       // School Admin sees their school's classes and users
@@ -59,44 +63,59 @@ export const AdminView: React.FC = () => {
 
   const handleAddSchool = async (e: React.FormEvent) => {
     e.preventDefault();
-    const schoolId = doc(collection(db, 'schools')).id;
-    // In a real app, we'd create the admin user here too or link an existing one
+    const schoolId = editingItem?.id || doc(collection(db, 'schools')).id;
     await setDoc(doc(db, 'schools', schoolId), {
       ...newSchool,
-      createdAt: Timestamp.now()
-    });
+      status: 'active',
+      createdAt: editingItem?.createdAt || Timestamp.now()
+    }, { merge: true });
     setShowAddModal(false);
-    setNewSchool({ name: '', address: '', adminEmail: '' });
+    setEditingItem(null);
+    setNewSchool({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
   };
 
   const handleAddClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.schoolId) return;
-    const classId = doc(collection(db, 'classes')).id;
+    const classId = editingItem?.id || doc(collection(db, 'classes')).id;
     await setDoc(doc(db, 'classes', classId), {
       ...newClass,
       schoolId: profile.schoolId,
-      createdAt: Timestamp.now()
-    });
+      createdAt: editingItem?.createdAt || Timestamp.now()
+    }, { merge: true });
     setShowAddModal(false);
+    setEditingItem(null);
     setNewClass({ name: '', grade: '', teacherId: '' });
   };
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.schoolId) return;
-    // Note: This only creates the Firestore profile. 
-    // The user still needs to sign in with Google to link their Auth account.
-    // In a production app, you'd use Firebase Admin SDK or a Cloud Function to create the Auth user.
-    const userId = doc(collection(db, 'users')).id; 
+    const schoolId = profile?.schoolId || (newUser.schoolIds.length > 0 ? newUser.schoolIds[0] : null);
+    const userId = editingItem?.id || doc(collection(db, 'users')).id; 
     await setDoc(doc(db, 'users', userId), {
       ...newUser,
-      schoolId: profile.schoolId,
-      uid: userId, // Temporary until they sign in
-      createdAt: Timestamp.now()
-    });
+      schoolId: schoolId,
+      status: 'active',
+      uid: editingItem?.uid || userId,
+      createdAt: editingItem?.createdAt || Timestamp.now()
+    }, { merge: true });
     setShowAddModal(false);
-    setNewUser({ email: '', displayName: '', role: 'student', classId: '' });
+    setEditingItem(null);
+    setNewUser({ email: '', displayName: '', role: 'student', classId: '', specialization: '', schoolIds: [] });
+  };
+
+  const handleDelete = async (collectionName: string, id: string) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(db, collectionName, id));
+  };
+
+  const startEdit = (item: any) => {
+    setEditingItem(item);
+    if (activeSubTab === 'schools') setNewSchool({ name: item.name, address: item.address, adminEmail: item.adminEmail, contactPhone: item.contactPhone || '', academicStructure: item.academicStructure || 'K-12' });
+    if (activeSubTab === 'classes') setNewClass({ name: item.name, grade: item.grade, teacherId: item.teacherId || '' });
+    if (activeSubTab === 'users') setNewUser({ email: item.email, displayName: item.displayName, role: item.role, classId: item.classId || '', specialization: item.specialization || '', schoolIds: item.schoolIds || [] });
+    setShowAddModal(true);
   };
 
   return (
@@ -155,6 +174,7 @@ export const AdminView: React.FC = () => {
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">School Name</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Address</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Admin Email</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Structure</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Actions</th>
                 </tr>
               </thead>
@@ -164,8 +184,12 @@ export const AdminView: React.FC = () => {
                     <td className="px-6 py-4 font-bold">{school.name}</td>
                     <td className="px-6 py-4 text-zinc-500">{school.address}</td>
                     <td className="px-6 py-4 text-zinc-500">{school.adminEmail}</td>
+                    <td className="px-6 py-4 text-zinc-500">{school.academicStructure}</td>
                     <td className="px-6 py-4">
-                      <button className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      <div className="flex gap-2">
+                        <button onClick={() => startEdit(school)} className="text-zinc-400 hover:text-zinc-900 transition-colors"><Settings className="w-4 h-4" /></button>
+                        <button onClick={() => handleDelete('schools', school.id)} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -187,7 +211,10 @@ export const AdminView: React.FC = () => {
                   <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
                     {users.filter(u => u.classId === cls.id).length} Students
                   </span>
-                  <button className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400"><Settings className="w-4 h-4" /></button>
+                  <div className="flex gap-2">
+                    <button onClick={() => startEdit(cls)} className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400"><Settings className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete('classes', cls.id)} className="p-2 hover:bg-zinc-100 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -202,7 +229,7 @@ export const AdminView: React.FC = () => {
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Name</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Email</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Role</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Class</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Details</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Actions</th>
                 </tr>
               </thead>
@@ -220,11 +247,21 @@ export const AdminView: React.FC = () => {
                         {user.role}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-zinc-500">
-                      {classes.find(c => c.id === user.classId)?.name || '-'}
+                    <td className="px-6 py-4 text-zinc-500 text-sm">
+                      {user.role === 'teacher' ? (
+                        <div>
+                          <p className="font-medium text-zinc-700">{user.specialization || 'No specialization'}</p>
+                          <p className="text-[10px]">{user.schoolIds?.length || 0} Schools</p>
+                        </div>
+                      ) : (
+                        classes.find(c => c.id === user.classId)?.name || '-'
+                      )}
                     </td>
                     <td className="px-6 py-4">
-                      <button className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      <div className="flex gap-2">
+                        <button onClick={() => startEdit(user)} className="text-zinc-400 hover:text-zinc-900 transition-colors"><Settings className="w-4 h-4" /></button>
+                        <button onClick={() => handleDelete('users', user.id)} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -241,10 +278,10 @@ export const AdminView: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-black/5"
+              className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-black/5 overflow-y-auto max-h-[90vh]"
             >
               <h2 className="text-2xl font-bold mb-6">
-                {activeSubTab === 'schools' ? 'Add New School' : activeSubTab === 'classes' ? 'Add New Class' : 'Add New User'}
+                {editingItem ? 'Edit' : 'Add'} {activeSubTab === 'schools' ? 'School' : activeSubTab === 'classes' ? 'Class' : 'User'}
               </h2>
               
               {activeSubTab === 'schools' && (
@@ -257,13 +294,28 @@ export const AdminView: React.FC = () => {
                     <label className="block text-sm font-bold text-zinc-700 mb-1">Address</label>
                     <input required className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newSchool.address} onChange={e => setNewSchool({...newSchool, address: e.target.value})} />
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-zinc-700 mb-1">Admin Email</label>
+                      <input required type="email" className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newSchool.adminEmail} onChange={e => setNewSchool({...newSchool, adminEmail: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-zinc-700 mb-1">Contact Phone</label>
+                      <input className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newSchool.contactPhone} onChange={e => setNewSchool({...newSchool, contactPhone: e.target.value})} />
+                    </div>
+                  </div>
                   <div>
-                    <label className="block text-sm font-bold text-zinc-700 mb-1">Admin Email</label>
-                    <input required type="email" className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newSchool.adminEmail} onChange={e => setNewSchool({...newSchool, adminEmail: e.target.value})} />
+                    <label className="block text-sm font-bold text-zinc-700 mb-1">Academic Structure</label>
+                    <select className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newSchool.academicStructure} onChange={e => setNewSchool({...newSchool, academicStructure: e.target.value})}>
+                      <option value="K-12">K-12</option>
+                      <option value="Primary">Primary (K-6)</option>
+                      <option value="Secondary">Secondary (7-12)</option>
+                      <option value="Higher Ed">Higher Education</option>
+                    </select>
                   </div>
                   <div className="flex gap-3 pt-4">
-                    <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 px-6 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-bold">Cancel</button>
-                    <button type="submit" className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold">Add School</button>
+                    <button type="button" onClick={() => { setShowAddModal(false); setEditingItem(null); }} className="flex-1 px-6 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-bold">Cancel</button>
+                    <button type="submit" className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold">{editingItem ? 'Update' : 'Add'} School</button>
                   </div>
                 </form>
               )}
@@ -278,9 +330,16 @@ export const AdminView: React.FC = () => {
                     <label className="block text-sm font-bold text-zinc-700 mb-1">Grade</label>
                     <input required className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newClass.grade} onChange={e => setNewClass({...newClass, grade: e.target.value})} />
                   </div>
+                  <div>
+                    <label className="block text-sm font-bold text-zinc-700 mb-1">Assign Teacher</label>
+                    <select className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newClass.teacherId} onChange={e => setNewClass({...newClass, teacherId: e.target.value})}>
+                      <option value="">Select Teacher</option>
+                      {users.filter(u => u.role === 'teacher').map(t => <option key={t.id} value={t.id}>{t.displayName}</option>)}
+                    </select>
+                  </div>
                   <div className="flex gap-3 pt-4">
-                    <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 px-6 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-bold">Cancel</button>
-                    <button type="submit" className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold">Add Class</button>
+                    <button type="button" onClick={() => { setShowAddModal(false); setEditingItem(null); }} className="flex-1 px-6 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-bold">Cancel</button>
+                    <button type="submit" className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold">{editingItem ? 'Update' : 'Add'} Class</button>
                   </div>
                 </form>
               )}
@@ -303,6 +362,36 @@ export const AdminView: React.FC = () => {
                       <option value="admin">School Admin</option>
                     </select>
                   </div>
+                  {newUser.role === 'teacher' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-bold text-zinc-700 mb-1">Specialization</label>
+                        <input className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newUser.specialization} onChange={e => setNewUser({...newUser, specialization: e.target.value})} placeholder="e.g. Mathematics, Physics" />
+                      </div>
+                      {isSuperAdmin && (
+                        <div>
+                          <label className="block text-sm font-bold text-zinc-700 mb-1">Link to Schools</label>
+                          <div className="space-y-2 max-h-32 overflow-y-auto p-2 border border-zinc-200 rounded-xl">
+                            {schools.map(s => (
+                              <label key={s.id} className="flex items-center gap-2">
+                                <input 
+                                  type="checkbox" 
+                                  checked={newUser.schoolIds.includes(s.id)} 
+                                  onChange={e => {
+                                    const ids = e.target.checked 
+                                      ? [...newUser.schoolIds, s.id] 
+                                      : newUser.schoolIds.filter(id => id !== s.id);
+                                    setNewUser({...newUser, schoolIds: ids});
+                                  }}
+                                />
+                                <span className="text-sm">{s.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                   {newUser.role === 'student' && (
                     <div>
                       <label className="block text-sm font-bold text-zinc-700 mb-1">Assign to Class</label>
@@ -313,8 +402,8 @@ export const AdminView: React.FC = () => {
                     </div>
                   )}
                   <div className="flex gap-3 pt-4">
-                    <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 px-6 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-bold">Cancel</button>
-                    <button type="submit" className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold">Add User</button>
+                    <button type="button" onClick={() => { setShowAddModal(false); setEditingItem(null); }} className="flex-1 px-6 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-bold">Cancel</button>
+                    <button type="submit" className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold">{editingItem ? 'Update' : 'Add'} User</button>
                   </div>
                 </form>
               )}

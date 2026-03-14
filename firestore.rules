@@ -54,7 +54,7 @@ service cloud.firestore {
 
     function isTeacherInSchool(schoolId) {
       let userData = getUserData();
-      return userData.role == 'teacher' && userData.schoolId == schoolId;
+      return userData.role == 'teacher' && (userData.schoolId == schoolId || (userData.schoolIds != null && schoolId in userData.schoolIds));
     }
 
     function hasOnlyAllowedFields(fields) {
