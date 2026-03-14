@@ -9,7 +9,8 @@
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
         "role": { "type": "string", "enum": ["admin", "teacher", "student", "parent"] },
-        "schoolId": { "type": "string", "description": "ID of the school the user belongs to (optional for public users)" },
+        "schoolId": { "type": "string", "description": "ID of the school the user belongs to" },
+        "classId": { "type": "string", "description": "ID of the class the student belongs to" },
         "photoURL": { "type": "string", "format": "uri" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
@@ -27,6 +28,19 @@
       },
       "required": ["name", "adminId"]
     },
+    "Class": {
+      "title": "Class",
+      "description": "A specific class within a school.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "teacherId": { "type": "string", "description": "Primary teacher for the class" },
+        "grade": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "schoolId"]
+    },
     "Course": {
       "title": "Course",
       "description": "A course offered by a school or publicly.",
@@ -35,6 +49,7 @@
         "title": { "type": "string" },
         "description": { "type": "string" },
         "schoolId": { "type": "string" },
+        "classId": { "type": "string", "description": "If assigned to a specific class" },
         "teacherId": { "type": "string" },
         "isPublic": { "type": "boolean" },
         "price": { "type": "number" },
@@ -51,7 +66,9 @@
       "properties": {
         "courseId": { "type": "string" },
         "title": { "type": "string" },
-        "content": { "type": "string", "description": "Markdown content or URL" },
+        "content": { "type": "string", "description": "Markdown content" },
+        "videoUrl": { "type": "string", "description": "YouTube or direct video URL" },
+        "pdfUrl": { "type": "string", "description": "URL to PDF file" },
         "type": { "type": "string", "enum": ["text", "video", "pdf", "quiz"] },
         "order": { "type": "integer" }
       },
@@ -102,6 +119,7 @@
   "firestore": {
     "/users/{uid}": { "schema": "User", "description": "User profiles" },
     "/schools/{schoolId}": { "schema": "School", "description": "School details" },
+    "/classes/{classId}": { "schema": "Class", "description": "Class details" },
     "/courses/{courseId}": { "schema": "Course", "description": "Course details" },
     "/lessons/{lessonId}": { "schema": "Lesson", "description": "Lesson content" },
     "/assignments/{assignmentId}": { "schema": "Assignment", "description": "Assignments" },

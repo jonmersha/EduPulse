@@ -17,6 +17,9 @@ service cloud.firestore {
     // Collection: lessons
     // Fields: courseId, title, content, type, order
     //
+    // Collection: classes
+    // Fields: name, schoolId, teacherId, grade, createdAt
+    //
     // ===============================================================
 
     // ===============================================================
@@ -40,8 +43,18 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    function isSchoolAdmin(schoolId) {
+      let userData = getUserData();
+      return isAdmin() || (userData.role == 'admin' && userData.schoolId == schoolId);
+    }
+
     function isTeacher() {
       return isAuthenticated() && getUserData().role == 'teacher';
+    }
+
+    function isTeacherInSchool(schoolId) {
+      let userData = getUserData();
+      return userData.role == 'teacher' && userData.schoolId == schoolId;
     }
 
     function hasOnlyAllowedFields(fields) {
@@ -62,6 +75,16 @@ service cloud.firestore {
              data.displayName is string && data.displayName.size() < 100;
     }
 
+    function isValidSchool(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.adminId is string;
+    }
+
+    function isValidClass(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.schoolId is string;
+    }
+
     function isValidCourse(data) {
       return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              (data.description == null || (data.description is string && data.description.size() < 2000)) &&
@@ -72,7 +95,9 @@ service cloud.firestore {
 
     function isValidLesson(data) {
       return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             data.content is string && data.content.size() < 50000 &&
+             (data.content == null || (data.content is string && data.content.size() < 50000)) &&
+             (data.videoUrl == null || (data.videoUrl is string && data.videoUrl.size() < 1000)) &&
+             (data.pdfUrl == null || (data.pdfUrl is string && data.pdfUrl.size() < 1000)) &&
              data.type in ['text', 'video', 'pdf', 'quiz'] &&
              data.courseId is string;
     }
@@ -87,16 +112,25 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
+      allow read: if isOwner(uid) || isAdmin() || (isAuthenticated() && getUserData().schoolId == get(/databases/$(database)/documents/users/$(uid)).data.schoolId);
       allow create: if isOwner(uid) && isValidUser(request.resource.data) && request.resource.data.role != 'admin';
       allow create: if isAdmin() && isValidUser(request.resource.data);
-      allow update: if (isOwner(uid) || isAdmin()) && isValidUser(request.resource.data) && 
+      allow create: if isAuthenticated() && getUserData().role == 'admin' && getUserData().schoolId == request.resource.data.schoolId && isValidUser(request.resource.data);
+      allow update: if (isOwner(uid) || isAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId)) && isValidUser(request.resource.data) && 
                     (isAdmin() || request.resource.data.role == resource.data.role);
     }
 
     match /schools/{schoolId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || isSchoolAdmin(schoolId);
+    }
+
+    match /classes/{classId} {
+      allow read: if isAuthenticated() && (getUserData().schoolId == resource.data.schoolId || isAdmin());
+      allow create: if isAuthenticated() && getUserData().role == 'admin' && getUserData().schoolId == request.resource.data.schoolId && isValidClass(request.resource.data);
+      allow update: if (isAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId)) && isValidClass(request.resource.data);
+      allow delete: if isAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId);
     }
 
     match /courses/{courseId} {
