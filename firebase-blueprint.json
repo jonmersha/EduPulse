@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the LMS platform.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "teacher", "student", "parent"] },
+        "schoolId": { "type": "string", "description": "ID of the school the user belongs to (optional for public users)" },
+        "photoURL": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "School": {
+      "title": "School",
+      "description": "A school organization on the platform.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "adminId": { "type": "string", "description": "UID of the school administrator" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "adminId"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "A course offered by a school or publicly.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "isPublic": { "type": "boolean" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "thumbnail": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "teacherId"]
+    },
+    "Lesson": {
+      "title": "Lesson",
+      "description": "A specific lesson within a course.",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string", "description": "Markdown content or URL" },
+        "type": { "type": "string", "enum": ["text", "video", "pdf", "quiz"] },
+        "order": { "type": "integer" }
+      },
+      "required": ["courseId", "title", "type"]
+    },
+    "Assignment": {
+      "title": "Assignment",
+      "description": "An assignment for students.",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string" },
+        "lessonId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["courseId", "title"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "A student's submission for an assignment.",
+      "type": "object",
+      "properties": {
+        "assignmentId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "content": { "type": "string" },
+        "grade": { "type": "number" },
+        "feedback": { "type": "string" },
+        "submittedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["assignmentId", "studentId"]
+    },
+    "Enrollment": {
+      "title": "Enrollment",
+      "description": "A student's enrollment in a course.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "courseTitle": { "type": "string" },
+        "enrolledAt": { "type": "string", "format": "date-time" },
+        "progress": { "type": "number" },
+        "completedLessons": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["studentId", "courseId"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": { "schema": "User", "description": "User profiles" },
+    "/schools/{schoolId}": { "schema": "School", "description": "School details" },
+    "/courses/{courseId}": { "schema": "Course", "description": "Course details" },
+    "/lessons/{lessonId}": { "schema": "Lesson", "description": "Lesson content" },
+    "/assignments/{assignmentId}": { "schema": "Assignment", "description": "Assignments" },
+    "/submissions/{submissionId}": { "schema": "Submission", "description": "Student submissions" },
+    "/enrollments/{enrollmentId}": { "schema": "Enrollment", "description": "Course enrollments" }
+  }
+}

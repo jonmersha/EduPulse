@@ -1,0 +1,150 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: uid, email, displayName, role, schoolId, photoURL, createdAt
+    //
+    // Collection: schools
+    // Fields: name, address, adminId, createdAt
+    //
+    // Collection: courses
+    // Fields: title, description, schoolId, teacherId, isPublic, price, category, thumbnail, createdAt
+    //
+    // Collection: lessons
+    // Fields: courseId, title, content, type, order
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "beshegercom@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isTeacher() {
+      return isAuthenticated() && getUserData().role == 'teacher';
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return data.uid is string && 
+             data.email is string && isValidEmail(data.email) &&
+             data.role in ['admin', 'teacher', 'student', 'parent'] &&
+             data.displayName is string && data.displayName.size() < 100;
+    }
+
+    function isValidCourse(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             (data.description == null || (data.description is string && data.description.size() < 2000)) &&
+             (data.category == null || (data.category is string && data.category.size() < 50)) &&
+             (data.price == null || data.price is number) &&
+             data.teacherId == request.auth.uid;
+    }
+
+    function isValidLesson(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() < 50000 &&
+             data.type in ['text', 'video', 'pdf', 'quiz'] &&
+             data.courseId is string;
+    }
+
+    function isValidEnrollment(data) {
+      return data.studentId is string && data.courseId is string &&
+             (data.progress == null || (data.progress is number && data.progress >= 0 && data.progress <= 100));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) && isValidUser(request.resource.data) && request.resource.data.role != 'admin';
+      allow create: if isAdmin() && isValidUser(request.resource.data);
+      allow update: if (isOwner(uid) || isAdmin()) && isValidUser(request.resource.data) && 
+                    (isAdmin() || request.resource.data.role == resource.data.role);
+    }
+
+    match /schools/{schoolId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin();
+    }
+
+    match /courses/{courseId} {
+      allow read: if isAuthenticated();
+      allow create: if isTeacher() && isValidCourse(request.resource.data);
+      allow update: if (isTeacher() && resource.data.teacherId == request.auth.uid && isValidCourse(request.resource.data)) || isAdmin();
+      allow delete: if (isTeacher() && resource.data.teacherId == request.auth.uid) || isAdmin();
+    }
+
+    match /lessons/{lessonId} {
+      allow read: if isAuthenticated() && (
+        exists(/databases/$(database)/documents/enrollments/$(request.auth.uid + "_" + resource.data.courseId)) ||
+        get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid ||
+        isAdmin() ||
+        get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.isPublic == true
+      );
+      allow create: if (isTeacher() && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data)) || isAdmin();
+      allow update: if (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data)) || isAdmin();
+      allow delete: if (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid) || isAdmin();
+    }
+
+    match /assignments/{assignmentId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isTeacher() || isAdmin();
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.studentId;
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isAdmin());
+    }
+
+    match /enrollments/{enrollmentId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.studentId || 
+        isAdmin() || 
+        (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid)
+      );
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.studentId && isValidEnrollment(request.resource.data);
+      allow update: if isAuthenticated() && (
+        (request.auth.uid == resource.data.studentId && isValidEnrollment(request.resource.data)) || 
+        isAdmin() ||
+        (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid && isValidEnrollment(request.resource.data))
+      );
+    }
+
+    match /_connection_test_/{docId} {
+      allow read: if true;
+    }
+  }
+}
