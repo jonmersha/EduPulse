@@ -18,7 +18,7 @@ export const AdminView: React.FC = () => {
   // Form states
   const [newSchool, setNewSchool] = useState({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
   const [newClass, setNewClass] = useState({ name: '', grade: '', teacherId: '' });
-  const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolIds: [] as string[] });
+  const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolId: '', schoolIds: [] as string[] });
   const [editingItem, setEditingItem] = useState<any>(null);
 
   const isSuperAdmin = profile?.email === 'beshegercom@gmail.com';
@@ -31,13 +31,16 @@ export const AdminView: React.FC = () => {
     let unsubUsers: () => void = () => {};
 
     if (isSuperAdmin) {
-      // Super Admin sees all schools and all users
+      // Super Admin sees all schools, all users, and all classes (for assignment)
       unsubSchools = onSnapshot(collection(db, 'schools'), (snap) => {
         setSchools(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         setLoading(false);
       });
       unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
         setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+      unsubClasses = onSnapshot(collection(db, 'classes'), (snap) => {
+        setClasses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       });
     } else if (profile.role === 'admin' && profile.schoolId) {
       // School Admin sees their school's classes and users
@@ -90,7 +93,7 @@ export const AdminView: React.FC = () => {
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    const schoolId = profile?.schoolId || (newUser.schoolIds.length > 0 ? newUser.schoolIds[0] : null);
+    const schoolId = profile?.schoolId || newUser.schoolId || (newUser.schoolIds.length > 0 ? newUser.schoolIds[0] : null);
     const userId = editingItem?.id || doc(collection(db, 'users')).id; 
     await setDoc(doc(db, 'users', userId), {
       ...newUser,
@@ -101,7 +104,7 @@ export const AdminView: React.FC = () => {
     }, { merge: true });
     setShowAddModal(false);
     setEditingItem(null);
-    setNewUser({ email: '', displayName: '', role: 'student', classId: '', specialization: '', schoolIds: [] });
+    setNewUser({ email: '', displayName: '', role: 'student', classId: '', specialization: '', schoolId: '', schoolIds: [] });
   };
 
   const handleDelete = async (collectionName: string, id: string) => {
@@ -114,7 +117,7 @@ export const AdminView: React.FC = () => {
     setEditingItem(item);
     if (activeSubTab === 'schools') setNewSchool({ name: item.name, address: item.address, adminEmail: item.adminEmail, contactPhone: item.contactPhone || '', academicStructure: item.academicStructure || 'K-12' });
     if (activeSubTab === 'classes') setNewClass({ name: item.name, grade: item.grade, teacherId: item.teacherId || '' });
-    if (activeSubTab === 'users') setNewUser({ email: item.email, displayName: item.displayName, role: item.role, classId: item.classId || '', specialization: item.specialization || '', schoolIds: item.schoolIds || [] });
+    if (activeSubTab === 'users') setNewUser({ email: item.email, displayName: item.displayName, role: item.role, classId: item.classId || '', specialization: item.specialization || '', schoolId: item.schoolId || '', schoolIds: item.schoolIds || [] });
     setShowAddModal(true);
   };
 
@@ -140,12 +143,20 @@ export const AdminView: React.FC = () => {
 
       <div className="flex gap-4 border-b border-black/5 pb-4">
         {isSuperAdmin && (
-          <button 
-            onClick={() => setActiveSubTab('schools')}
-            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all", activeSubTab === 'schools' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
-          >
-            Schools
-          </button>
+          <>
+            <button 
+              onClick={() => setActiveSubTab('schools')}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all", activeSubTab === 'schools' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+            >
+              Schools
+            </button>
+            <button 
+              onClick={() => setActiveSubTab('users')}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+            >
+              All Users
+            </button>
+          </>
         )}
         {!isSuperAdmin && (
           <>
@@ -229,6 +240,7 @@ export const AdminView: React.FC = () => {
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Name</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Email</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Role</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">School</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Details</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Actions</th>
                 </tr>
@@ -246,6 +258,9 @@ export const AdminView: React.FC = () => {
                       )}>
                         {user.role}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-zinc-500 text-sm">
+                      {schools.find(s => s.id === user.schoolId)?.name || '-'}
                     </td>
                     <td className="px-6 py-4 text-zinc-500 text-sm">
                       {user.role === 'teacher' ? (
@@ -362,6 +377,15 @@ export const AdminView: React.FC = () => {
                       <option value="admin">School Admin</option>
                     </select>
                   </div>
+                  {isSuperAdmin && (
+                    <div>
+                      <label className="block text-sm font-bold text-zinc-700 mb-1">Primary School</label>
+                      <select required className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newUser.schoolId} onChange={e => setNewUser({...newUser, schoolId: e.target.value})}>
+                        <option value="">Select School</option>
+                        {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </div>
+                  )}
                   {newUser.role === 'teacher' && (
                     <>
                       <div>
@@ -397,7 +421,10 @@ export const AdminView: React.FC = () => {
                       <label className="block text-sm font-bold text-zinc-700 mb-1">Assign to Class</label>
                       <select className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newUser.classId} onChange={e => setNewUser({...newUser, classId: e.target.value})}>
                         <option value="">No Class</option>
-                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {classes
+                          .filter(c => !newUser.schoolId || c.schoolId === newUser.schoolId || c.schoolId === profile?.schoolId)
+                          .map(c => <option key={c.id} value={c.id}>{c.name} ({schools.find(s => s.id === c.schoolId)?.name || 'Unknown School'})</option>)
+                        }
                       </select>
                     </div>
                   )}
