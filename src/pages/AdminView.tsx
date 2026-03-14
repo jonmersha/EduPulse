@@ -12,12 +12,13 @@ export const AdminView: React.FC = () => {
   const [classes, setClasses] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [activeSubTab, setActiveSubTab] = useState<'schools' | 'classes' | 'users'>('schools');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'teacher' | 'student'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Form states
   const [newSchool, setNewSchool] = useState({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
-  const [newClass, setNewClass] = useState({ name: '', grade: '', teacherId: '' });
+  const [newClass, setNewClass] = useState({ name: '', grade: '', teacherId: '', schoolId: '' });
   const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolId: '', schoolIds: [] as string[] });
   const [editingItem, setEditingItem] = useState<any>(null);
 
@@ -79,16 +80,18 @@ export const AdminView: React.FC = () => {
 
   const handleAddClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.schoolId) return;
+    const schoolId = profile?.schoolId || newClass.schoolId;
+    if (!schoolId) return;
+    
     const classId = editingItem?.id || doc(collection(db, 'classes')).id;
     await setDoc(doc(db, 'classes', classId), {
       ...newClass,
-      schoolId: profile.schoolId,
+      schoolId: schoolId,
       createdAt: editingItem?.createdAt || Timestamp.now()
     }, { merge: true });
     setShowAddModal(false);
     setEditingItem(null);
-    setNewClass({ name: '', grade: '', teacherId: '' });
+    setNewClass({ name: '', grade: '', teacherId: '', schoolId: '' });
   };
 
   const handleAddUser = async (e: React.FormEvent) => {
@@ -116,8 +119,22 @@ export const AdminView: React.FC = () => {
   const startEdit = (item: any) => {
     setEditingItem(item);
     if (activeSubTab === 'schools') setNewSchool({ name: item.name, address: item.address, adminEmail: item.adminEmail, contactPhone: item.contactPhone || '', academicStructure: item.academicStructure || 'K-12' });
-    if (activeSubTab === 'classes') setNewClass({ name: item.name, grade: item.grade, teacherId: item.teacherId || '' });
+    if (activeSubTab === 'classes') setNewClass({ name: item.name, grade: item.grade, teacherId: item.teacherId || '', schoolId: item.schoolId || '' });
     if (activeSubTab === 'users') setNewUser({ email: item.email, displayName: item.displayName, role: item.role, classId: item.classId || '', specialization: item.specialization || '', schoolId: item.schoolId || '', schoolIds: item.schoolIds || [] });
+    setShowAddModal(true);
+  };
+
+  const openAddUserModal = (role?: 'student' | 'teacher' | 'admin', classId?: string, schoolId?: string) => {
+    setEditingItem(null);
+    setNewUser({ 
+      email: '', 
+      displayName: '', 
+      role: role || 'student', 
+      classId: classId || '', 
+      specialization: '', 
+      schoolId: schoolId || profile?.schoolId || '', 
+      schoolIds: [] 
+    });
     setShowAddModal(true);
   };
 
@@ -132,13 +149,34 @@ export const AdminView: React.FC = () => {
             {isSuperAdmin ? 'Manage schools and platform-wide settings.' : 'Manage your school, classes, and users.'}
           </p>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
-        >
-          <Plus className="w-5 h-5" />
-          {activeSubTab === 'schools' ? 'Add School' : activeSubTab === 'classes' ? 'Add Class' : 'Add User'}
-        </button>
+        <div className="flex gap-3">
+          {activeSubTab === 'users' ? (
+            <>
+              <button 
+                onClick={() => openAddUserModal('teacher')}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md"
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Teacher
+              </button>
+              <button 
+                onClick={() => openAddUserModal('student')}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Student
+              </button>
+            </>
+          ) : (
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg"
+            >
+              <Plus className="w-5 h-5" />
+              {activeSubTab === 'schools' ? 'Add School' : 'Add Class'}
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="flex gap-4 border-b border-black/5 pb-4">
@@ -149,6 +187,12 @@ export const AdminView: React.FC = () => {
               className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all", activeSubTab === 'schools' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
             >
               Schools
+            </button>
+            <button 
+              onClick={() => setActiveSubTab('classes')}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+            >
+              All Classes
             </button>
             <button 
               onClick={() => setActiveSubTab('users')}
@@ -173,6 +217,23 @@ export const AdminView: React.FC = () => {
               Users
             </button>
           </>
+        )}
+        
+        {activeSubTab === 'users' && (
+          <div className="ml-auto flex items-center gap-2 bg-zinc-100 p-1 rounded-xl">
+            {(['all', 'admin', 'teacher', 'student'] as const).map((role) => (
+              <button
+                key={role}
+                onClick={() => setRoleFilter(role)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all",
+                  roleFilter === role ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+                )}
+              >
+                {role}s
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
@@ -218,10 +279,19 @@ export const AdminView: React.FC = () => {
                 </div>
                 <h3 className="text-xl font-bold">{cls.name}</h3>
                 <p className="text-zinc-500 text-sm">Grade: {cls.grade}</p>
+                {isSuperAdmin && (
+                  <p className="text-[10px] text-zinc-400 mt-1">
+                    School: {schools.find(s => s.id === cls.schoolId)?.name || 'Unknown'}
+                  </p>
+                )}
                 <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                    {users.filter(u => u.classId === cls.id).length} Students
-                  </span>
+                  <button 
+                    onClick={() => openAddUserModal('student', cls.id, cls.schoolId)}
+                    className="flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-700"
+                  >
+                    <UserPlus className="w-3 h-3" />
+                    Add Student
+                  </button>
                   <div className="flex gap-2">
                     <button onClick={() => startEdit(cls)} className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400"><Settings className="w-4 h-4" /></button>
                     <button onClick={() => handleDelete('classes', cls.id)} className="p-2 hover:bg-zinc-100 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
@@ -241,45 +311,54 @@ export const AdminView: React.FC = () => {
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Email</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Role</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">School</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Details</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Class / Specialization</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map(user => (
-                  <tr key={user.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 transition-colors">
-                    <td className="px-6 py-4 font-bold">{user.displayName}</td>
-                    <td className="px-6 py-4 text-zinc-500">{user.email}</td>
-                    <td className="px-6 py-4">
-                      <span className={cn(
-                        "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
-                        user.role === 'teacher' ? "bg-blue-100 text-blue-700" : 
-                        user.role === 'admin' ? "bg-purple-100 text-purple-700" : "bg-emerald-100 text-emerald-700"
-                      )}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-zinc-500 text-sm">
-                      {schools.find(s => s.id === user.schoolId)?.name || '-'}
-                    </td>
-                    <td className="px-6 py-4 text-zinc-500 text-sm">
-                      {user.role === 'teacher' ? (
-                        <div>
-                          <p className="font-medium text-zinc-700">{user.specialization || 'No specialization'}</p>
-                          <p className="text-[10px]">{user.schoolIds?.length || 0} Schools</p>
+                {users
+                  .filter(u => roleFilter === 'all' || u.role === roleFilter)
+                  .map(user => (
+                    <tr key={user.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 transition-colors">
+                      <td className="px-6 py-4 font-bold">{user.displayName}</td>
+                      <td className="px-6 py-4 text-zinc-500">{user.email}</td>
+                      <td className="px-6 py-4">
+                        <span className={cn(
+                          "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
+                          user.role === 'teacher' ? "bg-blue-100 text-blue-700" : 
+                          user.role === 'admin' ? "bg-purple-100 text-purple-700" : "bg-emerald-100 text-emerald-700"
+                        )}>
+                          {user.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-zinc-500 text-sm">
+                        {schools.find(s => s.id === user.schoolId)?.name || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-zinc-500 text-sm">
+                        {user.role === 'teacher' ? (
+                          <div>
+                            <p className="font-medium text-zinc-700">{user.specialization || 'No specialization'}</p>
+                            <p className="text-[10px]">{user.schoolIds?.length || 0} Schools</p>
+                          </div>
+                        ) : user.role === 'student' ? (
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="w-3 h-3 text-emerald-500" />
+                            <span className="font-medium text-zinc-700">
+                              {classes.find(c => c.id === user.classId)?.name || 'Unassigned'}
+                            </span>
+                          </div>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2">
+                          <button onClick={() => startEdit(user)} className="text-zinc-400 hover:text-zinc-900 transition-colors"><Settings className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete('users', user.id)} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </div>
-                      ) : (
-                        classes.find(c => c.id === user.classId)?.name || '-'
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <button onClick={() => startEdit(user)} className="text-zinc-400 hover:text-zinc-900 transition-colors"><Settings className="w-4 h-4" /></button>
-                        <button onClick={() => handleDelete('users', user.id)} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -337,6 +416,15 @@ export const AdminView: React.FC = () => {
 
               {activeSubTab === 'classes' && (
                 <form onSubmit={handleAddClass} className="space-y-4">
+                  {isSuperAdmin && (
+                    <div>
+                      <label className="block text-sm font-bold text-zinc-700 mb-1">School</label>
+                      <select required className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newClass.schoolId} onChange={e => setNewClass({...newClass, schoolId: e.target.value})}>
+                        <option value="">Select School</option>
+                        {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-bold text-zinc-700 mb-1">Class Name</label>
                     <input required className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newClass.name} onChange={e => setNewClass({...newClass, name: e.target.value})} />
@@ -349,7 +437,10 @@ export const AdminView: React.FC = () => {
                     <label className="block text-sm font-bold text-zinc-700 mb-1">Assign Teacher</label>
                     <select className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newClass.teacherId} onChange={e => setNewClass({...newClass, teacherId: e.target.value})}>
                       <option value="">Select Teacher</option>
-                      {users.filter(u => u.role === 'teacher').map(t => <option key={t.id} value={t.id}>{t.displayName}</option>)}
+                      {users
+                        .filter(u => u.role === 'teacher' && (!isSuperAdmin || !newClass.schoolId || u.schoolId === newClass.schoolId))
+                        .map(t => <option key={t.id} value={t.id}>{t.displayName}</option>)
+                      }
                     </select>
                   </div>
                   <div className="flex gap-3 pt-4">
