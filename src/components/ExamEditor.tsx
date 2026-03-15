@@ -51,14 +51,17 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
     setQuestions(newQuestions);
   };
 
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
   const handleSave = async () => {
     setSaving(true);
+    setSaveSuccess(false);
     try {
       await updateDoc(doc(db, 'exams', examId), { questions });
-      alert('Exam updated successfully!');
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error('Error saving exam:', error);
-      alert('Failed to save exam.');
     }
     setSaving(false);
   };
@@ -93,6 +96,16 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
             <Save className="w-4 h-4" />
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
+          {saveSuccess && (
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-2 text-emerald-600 font-bold text-sm"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Saved!
+            </motion.div>
+          )}
         </div>
       </header>
 

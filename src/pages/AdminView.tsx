@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { Modal } from '../components/Modal';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 export const AdminView: React.FC = () => {
@@ -90,53 +91,71 @@ export const AdminView: React.FC = () => {
 
   const handleAddSchool = async (e: React.FormEvent) => {
     e.preventDefault();
-    const schoolId = editingItem?.id || doc(collection(db, 'schools')).id;
-    await setDoc(doc(db, 'schools', schoolId), {
-      ...newSchool,
-      status: 'active',
-      createdAt: editingItem?.createdAt || Timestamp.now()
-    }, { merge: true });
-    setShowAddModal(false);
-    setEditingItem(null);
-    setNewSchool({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
+    try {
+      const schoolId = editingItem?.id || doc(collection(db, 'schools')).id;
+      await setDoc(doc(db, 'schools', schoolId), {
+        ...newSchool,
+        status: 'active',
+        createdAt: editingItem?.createdAt || Timestamp.now()
+      }, { merge: true });
+      setShowAddModal(false);
+      setEditingItem(null);
+      setNewSchool({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `schools/${editingItem?.id || 'new'}`);
+    }
   };
 
   const handleAddClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    const schoolId = profile?.schoolId || newClass.schoolId;
-    if (!schoolId) return;
-    
-    const classId = editingItem?.id || doc(collection(db, 'classes')).id;
-    await setDoc(doc(db, 'classes', classId), {
-      ...newClass,
-      schoolId: schoolId,
-      createdAt: editingItem?.createdAt || Timestamp.now()
-    }, { merge: true });
-    setShowAddModal(false);
-    setEditingItem(null);
-    setNewClass({ name: '', grade: '', teacherId: '', schoolId: '' });
+    try {
+      const schoolId = profile?.schoolId || newClass.schoolId;
+      if (!schoolId) return;
+      
+      const classId = editingItem?.id || doc(collection(db, 'classes')).id;
+      await setDoc(doc(db, 'classes', classId), {
+        ...newClass,
+        schoolId: schoolId,
+        createdAt: editingItem?.createdAt || Timestamp.now()
+      }, { merge: true });
+      setShowAddModal(false);
+      setEditingItem(null);
+      setNewClass({ name: '', grade: '', teacherId: '', schoolId: '' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `classes/${editingItem?.id || 'new'}`);
+    }
   };
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    const schoolId = selectedSchoolId || profile?.schoolId || newUser.schoolId || (newUser.schoolIds.length > 0 ? newUser.schoolIds[0] : null);
-    const userId = editingItem?.id || doc(collection(db, 'users')).id; 
-    await setDoc(doc(db, 'users', userId), {
-      ...newUser,
-      schoolId: schoolId,
-      status: 'active',
-      uid: editingItem?.uid || userId,
-      createdAt: editingItem?.createdAt || Timestamp.now()
-    }, { merge: true });
-    setShowAddModal(false);
-    setEditingItem(null);
-    setNewUser({ email: '', displayName: '', role: 'student', classId: '', specialization: '', schoolId: '', schoolIds: [], isIndependent: false });
+    try {
+      const schoolId = selectedSchoolId || profile?.schoolId || newUser.schoolId || (newUser.schoolIds.length > 0 ? newUser.schoolIds[0] : null);
+      const userId = editingItem?.id || doc(collection(db, 'users')).id; 
+      await setDoc(doc(db, 'users', userId), {
+        ...newUser,
+        schoolId: schoolId,
+        status: 'active',
+        uid: editingItem?.uid || userId,
+        createdAt: editingItem?.createdAt || Timestamp.now()
+      }, { merge: true });
+      setShowAddModal(false);
+      setEditingItem(null);
+      setNewUser({ email: '', displayName: '', role: 'student', classId: '', specialization: '', schoolId: '', schoolIds: [], isIndependent: false });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${editingItem?.id || 'new'}`);
+    }
   };
 
+  const [deleteConfirm, setDeleteConfirm] = useState<{ collection: string, id: string } | null>(null);
+
   const handleDelete = async (collectionName: string, id: string) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
-    const { deleteDoc } = await import('firebase/firestore');
-    await deleteDoc(doc(db, collectionName, id));
+    try {
+      const { deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, collectionName, id));
+      setDeleteConfirm(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${collectionName}/${id}`);
+    }
   };
 
   const startEdit = (item: any) => {
@@ -324,7 +343,7 @@ export const AdminView: React.FC = () => {
                           Manage
                         </button>
                         <button onClick={() => startEdit(school)} className="text-zinc-400 hover:text-zinc-900 transition-colors"><Settings className="w-4 h-4" /></button>
-                        <button onClick={() => handleDelete('schools', school.id)} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => setDeleteConfirm({ collection: 'schools', id: school.id })} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -358,7 +377,7 @@ export const AdminView: React.FC = () => {
                   </button>
                   <div className="flex gap-2">
                     <button onClick={() => startEdit(cls)} className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400"><Settings className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete('classes', cls.id)} className="p-2 hover:bg-zinc-100 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => setDeleteConfirm({ collection: 'classes', id: cls.id })} className="p-2 hover:bg-zinc-100 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               </div>
@@ -423,7 +442,7 @@ export const AdminView: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
                           <button onClick={() => startEdit(user)} className="text-zinc-400 hover:text-zinc-900 transition-colors"><Settings className="w-4 h-4" /></button>
-                          <button onClick={() => handleDelete('users', user.id)} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => setDeleteConfirm({ collection: 'users', id: user.id })} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>
@@ -445,7 +464,7 @@ export const AdminView: React.FC = () => {
                 <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
                   <span className="text-xs font-bold text-zinc-400">By {course.teacherName}</span>
                   <div className="flex gap-2">
-                    <button onClick={() => handleDelete('courses', course.id)} className="p-2 hover:bg-zinc-100 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => setDeleteConfirm({ collection: 'courses', id: course.id })} className="p-2 hover:bg-zinc-100 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               </div>
@@ -466,7 +485,7 @@ export const AdminView: React.FC = () => {
                 <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
                   <span className="text-xs font-bold text-zinc-400">{exam.questions?.length || 0} Questions</span>
                   <div className="flex gap-2">
-                    <button onClick={() => handleDelete('exams', exam.id)} className="p-2 hover:bg-zinc-100 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => setDeleteConfirm({ collection: 'exams', id: exam.id })} className="p-2 hover:bg-zinc-100 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               </div>
@@ -650,6 +669,30 @@ export const AdminView: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="Confirm Deletion"
+      >
+        <div className="space-y-6">
+          <p className="text-zinc-600">Are you sure you want to delete this item? This action cannot be undone.</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setDeleteConfirm(null)}
+              className="flex-1 py-3 bg-zinc-100 text-zinc-900 rounded-xl font-bold hover:bg-zinc-200 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => deleteConfirm && handleDelete(deleteConfirm.collection, deleteConfirm.id)}
+              className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

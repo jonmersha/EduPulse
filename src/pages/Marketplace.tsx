@@ -61,14 +61,15 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
       await setDoc(doc(db, 'enrollments', enrollmentId), {
         studentId: profile.uid,
         [type === 'course' ? 'courseId' : 'examId']: item.id,
-        courseTitle: item.title,
+        title: item.title,
         enrolledAt: Timestamp.now(),
         progress: 0,
         status: 'active',
-        paymentVerified: item.price === 0 // Auto-verify if free
+        paymentVerified: item.price === 0, // Auto-verify if free
+        type: type
       });
     } catch (error) {
-      console.error("Enrollment failed:", error);
+      handleFirestoreError(error, OperationType.WRITE, `enrollments/${profile.uid}_${item.id}`);
     }
   };
 
@@ -145,10 +146,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                 
                 {(activeTab === 'courses' ? enrolledCourseIds : enrolledExamIds).includes(item.id) ? (
                   <button 
-                    onClick={() => activeTab === 'courses' ? onSelectCourse(item.id) : null}
+                    onClick={() => activeTab === 'courses' ? onSelectCourse(item.id) : onSelectExam(item.id)}
                     className="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-lg"
                   >
-                    {activeTab === 'courses' ? 'Open Course' : 'Already Subscribed'}
+                    {activeTab === 'courses' ? 'Open Course' : 'Open Exam'}
                   </button>
                 ) : (
                   <button 

@@ -29,20 +29,28 @@ export const MyCourses: React.FC<MyCoursesProps> = ({ onSelectCourse, onSelectEx
 
       // Fetch course details
       const coursePromises = courseEnrollments.map(async (enrollment) => {
-        const courseDoc = await getDoc(doc(db, 'courses', enrollment.courseId));
-        if (courseDoc.exists()) {
-          return { id: courseDoc.id, ...courseDoc.data(), progress: enrollment.progress };
+        try {
+          const courseDoc = await getDoc(doc(db, 'courses', enrollment.courseId));
+          if (courseDoc.exists()) {
+            return { id: courseDoc.id, ...courseDoc.data(), progress: enrollment.progress };
+          }
+        } catch (error) {
+          console.error("Error fetching course details:", error);
         }
         return null;
       });
 
       // Fetch exam details
       const examPromises = examEnrollments.map(async (enrollment) => {
-        const examDoc = await getDoc(doc(db, 'exams', enrollment.examId));
-        if (examDoc.exists()) {
-          // Check if there's a result
-          const resultDoc = await getDoc(doc(db, 'examResults', `${profile.uid}_${examDoc.id}`));
-          return { id: examDoc.id, ...examDoc.data(), result: resultDoc.exists() ? resultDoc.data() : null };
+        try {
+          const examDoc = await getDoc(doc(db, 'exams', enrollment.examId));
+          if (examDoc.exists()) {
+            // Check if there's a result
+            const resultDoc = await getDoc(doc(db, 'examResults', `${profile.uid}_${examDoc.id}`));
+            return { id: examDoc.id, ...examDoc.data(), result: resultDoc.exists() ? resultDoc.data() : null };
+          }
+        } catch (error) {
+          console.error("Error fetching exam details:", error);
         }
         return null;
       });

@@ -89,7 +89,7 @@ service cloud.firestore {
 
     function isValidSchool(data) {
       return data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
-             data.adminId is string;
+             (!('adminEmail' in data) || (data.adminEmail is string && isValidEmail(data.adminEmail)));
     }
 
     function isValidClass(data) {
@@ -125,14 +125,23 @@ service cloud.firestore {
 
     function isValidExamResult(data) {
       return data.examId is string && data.studentId is string &&
-             data.score is number && data.completedAt is string;
+             data.score is number && data.completedAt is timestamp &&
+             (!('studentName' in data) || data.studentName is string) &&
+             (!('totalQuestions' in data) || data.totalQuestions is number) &&
+             (!('correctAnswers' in data) || data.correctAnswers is number) &&
+             (!('feedback' in data) || data.feedback is string);
     }
 
     function isValidEnrollment(data) {
       return data.studentId is string &&
-             (data.courseId == null || data.courseId is string) &&
-             (data.examId == null || data.examId is string) &&
-             (data.courseId != null || data.examId != null);
+             (('courseId' in data && data.courseId is string) || ('examId' in data && data.examId is string)) &&
+             (!('status' in data) || data.status is string) &&
+             (!('progress' in data) || data.progress is number) &&
+             (!('paymentVerified' in data) || data.paymentVerified is bool) &&
+             (!('courseTitle' in data) || data.courseTitle is string) &&
+             (!('title' in data) || data.title is string) &&
+             (!('type' in data) || data.type in ['course', 'exam']) &&
+             (!('enrolledAt' in data) || data.enrolledAt is timestamp);
     }
 
     // ===============================================================
@@ -143,12 +152,14 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (isOwner(uid) || isAdmin() || getUserData().schoolId == get(/databases/$(database)/documents/users/$(uid)).data.schoolId);
       allow create: if isAuthenticated() && (isOwner(uid) || isAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == request.resource.data.schoolId)) && isValidUser(request.resource.data);
       allow update: if isAuthenticated() && (isOwner(uid) || isAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId)) && isValidUser(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /schools/{schoolId} {
       allow read: if isAuthenticated();
       allow create: if isAdmin();
       allow update: if isAdmin() || isSchoolAdmin(schoolId);
+      allow delete: if isAdmin();
     }
 
     match /classes/{classId} {
@@ -195,10 +206,10 @@ service cloud.firestore {
         isCourseTeacher(resource.data.courseId) ||
         isExamTeacher(resource.data.examId)
       );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.studentId && isValidEnrollment(request.resource.data);
+      allow create: if isAuthenticated() && (isAdmin() || (request.auth.uid == request.resource.data.studentId && isValidEnrollment(request.resource.data)));
       allow update: if isAuthenticated() && (
-        (request.auth.uid == resource.data.studentId && isValidEnrollment(request.resource.data)) || 
         isAdmin() ||
+        (request.auth.uid == resource.data.studentId && isValidEnrollment(request.resource.data)) || 
         isCourseTeacher(resource.data.courseId) ||
         isExamTeacher(resource.data.examId)
       );
