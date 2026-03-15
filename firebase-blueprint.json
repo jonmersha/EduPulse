@@ -8,11 +8,12 @@
         "uid": { "type": "string", "description": "Firebase Auth UID" },
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "teacher", "student", "parent"] },
+        "role": { "type": "string", "enum": ["admin", "teacher", "student", "parent", "provider"] },
         "schoolId": { "type": "string", "description": "Primary school ID" },
         "schoolIds": { "type": "array", "items": { "type": "string" }, "description": "List of schools the teacher is linked to" },
         "classId": { "type": "string", "description": "ID of the class the student belongs to" },
         "specialization": { "type": "string", "description": "Teacher's subject specialization" },
+        "isIndependent": { "type": "boolean", "description": "True if user is an independent provider or learner" },
         "status": { "type": "string", "enum": ["active", "inactive"] },
         "photoURL": { "type": "string", "format": "uri" },
         "createdAt": { "type": "string", "format": "date-time" }
@@ -110,17 +111,52 @@
     },
     "Enrollment": {
       "title": "Enrollment",
-      "description": "A student's enrollment in a course.",
+      "description": "A student's enrollment in a course or exam.",
       "type": "object",
       "properties": {
         "studentId": { "type": "string" },
         "courseId": { "type": "string" },
+        "examId": { "type": "string", "description": "If enrolling in a standalone exam" },
         "courseTitle": { "type": "string" },
         "enrolledAt": { "type": "string", "format": "date-time" },
         "progress": { "type": "number" },
-        "completedLessons": { "type": "array", "items": { "type": "string" } }
+        "completedLessons": { "type": "array", "items": { "type": "string" } },
+        "paymentVerified": { "type": "boolean", "description": "For paid public content" }
       },
-      "required": ["studentId", "courseId"]
+      "required": ["studentId"]
+    },
+    "Exam": {
+      "title": "Exam",
+      "description": "An examination or quiz.",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "duration": { "type": "integer", "description": "Minutes" },
+        "passingScore": { "type": "number" },
+        "questions": { "type": "array", "items": { "type": "object" } },
+        "isPublic": { "type": "boolean" },
+        "price": { "type": "number" },
+        "teacherId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "teacherId"]
+    },
+    "ExamResult": {
+      "title": "ExamResult",
+      "description": "A student's result for an exam.",
+      "type": "object",
+      "properties": {
+        "examId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "score": { "type": "number" },
+        "totalQuestions": { "type": "integer" },
+        "correctAnswers": { "type": "integer" },
+        "feedback": { "type": "string" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["examId", "studentId", "score"]
     }
   },
   "firestore": {
@@ -131,6 +167,8 @@
     "/lessons/{lessonId}": { "schema": "Lesson", "description": "Lesson content" },
     "/assignments/{assignmentId}": { "schema": "Assignment", "description": "Assignments" },
     "/submissions/{submissionId}": { "schema": "Submission", "description": "Student submissions" },
-    "/enrollments/{enrollmentId}": { "schema": "Enrollment", "description": "Course enrollments" }
+    "/enrollments/{enrollmentId}": { "schema": "Enrollment", "description": "Course enrollments" },
+    "/exams/{examId}": { "schema": "Exam", "description": "Exams" },
+    "/examResults/{resultId}": { "schema": "ExamResult", "description": "Exam results" }
   }
 }

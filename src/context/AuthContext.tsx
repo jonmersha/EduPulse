@@ -9,7 +9,7 @@ import {
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
-export type UserRole = 'admin' | 'teacher' | 'student' | 'parent';
+export type UserRole = 'admin' | 'teacher' | 'student' | 'parent' | 'provider';
 
 export interface UserProfile {
   uid: string;
@@ -17,6 +17,7 @@ export interface UserProfile {
   displayName: string;
   role: UserRole;
   schoolId?: string;
+  isIndependent?: boolean;
   photoURL?: string;
   createdAt: any;
 }

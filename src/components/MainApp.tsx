@@ -12,19 +12,22 @@ import { AdminView } from '../pages/AdminView';
 import { ParentView } from '../pages/ParentView';
 import { SettingsView } from '../pages/SettingsView';
 
+import { ExamViewer } from './ExamViewer';
+
 export const MainApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [selectedExam, setSelectedExam] = useState<string | null>(null);
   
   return (
     <div className="min-h-screen bg-[#F9F9F8] text-zinc-900 font-sans">
       <Navbar />
       <div className="flex">
-        <Sidebar activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setSelectedCourse(null); }} />
+        <Sidebar activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setSelectedCourse(null); setSelectedExam(null); }} />
         <main className="flex-1 p-8 overflow-y-auto h-[calc(100vh-64px)]">
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeTab + (selectedCourse || '')}
+              key={activeTab + (selectedCourse || '') + (selectedExam || '')}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -32,11 +35,13 @@ export const MainApp: React.FC = () => {
             >
               {selectedCourse ? (
                 <LessonViewer courseId={selectedCourse} onBack={() => setSelectedCourse(null)} />
+              ) : selectedExam ? (
+                <ExamViewer examId={selectedExam} onBack={() => setSelectedExam(null)} />
               ) : (
                 <>
-                  {activeTab === 'dashboard' && <Dashboard />}
-                  {activeTab === 'marketplace' && <Marketplace onSelectCourse={setSelectedCourse} />}
-                  {activeTab === 'courses' && <MyCourses onSelectCourse={setSelectedCourse} />}
+                  {activeTab === 'dashboard' && <Dashboard onSelectCourse={setSelectedCourse} onSelectExam={setSelectedExam} />}
+                  {activeTab === 'marketplace' && <Marketplace onSelectCourse={setSelectedCourse} onSelectExam={setSelectedExam} />}
+                  {activeTab === 'courses' && <MyCourses onSelectCourse={setSelectedCourse} onSelectExam={setSelectedExam} />}
                   {activeTab === 'my-courses' && <CourseManagement />}
                   {activeTab === 'school' && <AdminView />}
                   {activeTab === 'parent' && <ParentView />}
