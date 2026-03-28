@@ -14,7 +14,7 @@ export const AdminView: React.FC = () => {
   const [classes, setClasses] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [activeSubTab, setActiveSubTab] = useState<'schools' | 'classes' | 'users' | 'courses' | 'exams'>('schools');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'teacher' | 'student' | 'provider'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'super_admin' | 'admin' | 'teacher' | 'student' | 'provider'>('all');
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ export const AdminView: React.FC = () => {
   const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolId: '', schoolIds: [] as string[], isIndependent: false });
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  const isSuperAdmin = profile?.email === 'beshegercom@gmail.com';
+  const isSuperAdmin = profile?.email === 'beshegercom@gmail.com' || profile?.role === 'super_admin';
 
   useEffect(() => {
     if (!profile) return;
@@ -52,6 +52,12 @@ export const AdminView: React.FC = () => {
       unsubClasses = onSnapshot(collection(db, 'classes'), (snap) => {
         setClasses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'classes'));
+      unsubCourses = onSnapshot(collection(db, 'courses'), (snap) => {
+        setCourses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'courses'));
+      unsubExams = onSnapshot(collection(db, 'exams'), (snap) => {
+        setExams(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'exams'));
     } else if (currentSchoolId) {
       // School Admin or Super Admin managing a specific school
       const classesQuery = query(collection(db, 'classes'), where('schoolId', '==', currentSchoolId));
@@ -293,12 +299,24 @@ export const AdminView: React.FC = () => {
             >
               All Users
             </button>
+            <button 
+              onClick={() => setActiveSubTab('courses')}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+            >
+              All Courses
+            </button>
+            <button 
+              onClick={() => setActiveSubTab('exams')}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+            >
+              All Exams
+            </button>
           </>
         )}
         
         {activeSubTab === 'users' && (
           <div className="ml-auto flex items-center gap-2 bg-zinc-100 p-1 rounded-xl">
-            {(['all', 'admin', 'teacher', 'student', 'provider'] as const).map((role) => (
+            {(['all', 'super_admin', 'admin', 'teacher', 'student', 'provider'] as const).map((role) => (
               <button
                 key={role}
                 onClick={() => setRoleFilter(role)}
@@ -307,7 +325,7 @@ export const AdminView: React.FC = () => {
                   roleFilter === role ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
                 )}
               >
-                {role}s
+                {role === 'super_admin' ? 'Platform Admins' : role === 'admin' ? 'School Admins' : `${role}s`}
               </button>
             ))}
           </div>
@@ -408,12 +426,13 @@ export const AdminView: React.FC = () => {
                       <td className="px-6 py-4">
                         <span className={cn(
                           "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
+                          user.role === 'super_admin' ? "bg-zinc-900 text-white" :
                           user.role === 'teacher' ? "bg-blue-100 text-blue-700" : 
                           user.role === 'admin' ? "bg-purple-100 text-purple-700" : 
                           user.role === 'provider' ? "bg-amber-100 text-amber-700" :
                           "bg-emerald-100 text-emerald-700"
                         )}>
-                          {user.role}
+                          {user.role === 'super_admin' ? 'Platform Admin' : user.role === 'admin' ? 'School Admin' : user.role}
                         </span>
                         {user.isIndependent && (
                           <span className="ml-2 px-1.5 py-0.5 bg-zinc-100 text-zinc-500 text-[8px] font-black uppercase rounded">Independent</span>
@@ -461,8 +480,13 @@ export const AdminView: React.FC = () => {
                 </div>
                 <h3 className="text-xl font-bold">{course.title}</h3>
                 <p className="text-zinc-500 text-sm line-clamp-2">{course.description}</p>
+                {isSuperAdmin && (
+                  <p className="text-[10px] text-zinc-400 mt-1">
+                    School: {schools.find(s => s.id === course.schoolId)?.name || 'Independent / Unknown'}
+                  </p>
+                )}
                 <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-400">By {course.teacherName}</span>
+                  <span className="text-xs font-bold text-zinc-400">By {course.teacherName || 'Unknown'}</span>
                   <div className="flex gap-2">
                     <button onClick={() => setDeleteConfirm({ collection: 'courses', id: course.id })} className="p-2 hover:bg-zinc-100 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
                   </div>
@@ -482,6 +506,11 @@ export const AdminView: React.FC = () => {
                 </div>
                 <h3 className="text-xl font-bold">{exam.title}</h3>
                 <p className="text-zinc-500 text-sm line-clamp-2">{exam.description}</p>
+                {isSuperAdmin && (
+                  <p className="text-[10px] text-zinc-400 mt-1">
+                    School: {schools.find(s => s.id === exam.schoolId)?.name || 'Independent / Unknown'}
+                  </p>
+                )}
                 <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
                   <span className="text-xs font-bold text-zinc-400">{exam.questions?.length || 0} Questions</span>
                   <div className="flex gap-2">
@@ -596,6 +625,7 @@ export const AdminView: React.FC = () => {
                       <option value="student">Student</option>
                       <option value="teacher">Teacher</option>
                       <option value="admin">School Admin</option>
+                      {isSuperAdmin && <option value="super_admin">Platform Admin (Super Admin)</option>}
                       <option value="provider">Independent Provider</option>
                     </select>
                   </div>

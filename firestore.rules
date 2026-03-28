@@ -39,7 +39,14 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && (
         (request.auth.token.email == "beshegercom@gmail.com" && (request.auth.token.email_verified == true || request.auth.token.email_verified == null)) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin'))
+      );
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        (request.auth.token.email == "beshegercom@gmail.com" && (request.auth.token.email_verified == true || request.auth.token.email_verified == null)) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')
       );
     }
 
@@ -83,7 +90,7 @@ service cloud.firestore {
     function isValidUser(data) {
       return data.uid is string && 
              data.email is string && isValidEmail(data.email) &&
-             data.role in ['admin', 'teacher', 'student', 'parent', 'provider'] &&
+             data.role in ['admin', 'teacher', 'student', 'parent', 'provider', 'super_admin'] &&
              data.displayName is string && data.displayName.size() < 100;
     }
 
@@ -119,6 +126,7 @@ service cloud.firestore {
              (data.description == null || (data.description is string && data.description.size() < 2000)) &&
              (data.duration == null || data.duration is int) &&
              (data.passingScore == null || data.passingScore is number) &&
+             (data.maxAttempts == null || data.maxAttempts is int) &&
              data.questions is list &&
              data.teacherId == request.auth.uid;
     }
@@ -150,9 +158,9 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if isAuthenticated() && (isOwner(uid) || isAdmin() || getUserData().schoolId == get(/databases/$(database)/documents/users/$(uid)).data.schoolId);
-      allow create: if isAuthenticated() && (isOwner(uid) || isAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == request.resource.data.schoolId)) && isValidUser(request.resource.data);
-      allow update: if isAuthenticated() && (isOwner(uid) || isAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId)) && isValidUser(request.resource.data);
-      allow delete: if isAdmin();
+      allow create: if isAuthenticated() && (isOwner(uid) || isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == request.resource.data.schoolId && request.resource.data.role != 'super_admin' && request.resource.data.role != 'admin')) && isValidUser(request.resource.data);
+      allow update: if isAuthenticated() && (isOwner(uid) || isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId && request.resource.data.role != 'super_admin' && request.resource.data.role != 'admin')) && isValidUser(request.resource.data);
+      allow delete: if isSuperAdmin();
     }
 
     match /schools/{schoolId} {

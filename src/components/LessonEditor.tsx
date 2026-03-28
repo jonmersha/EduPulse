@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, doc, setDoc } from 'firebase/firestore';
-import { ChevronRight, Plus, Settings } from 'lucide-react';
+import { collection, query, where, orderBy, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { ChevronRight, Plus, Settings, Trash2 } from 'lucide-react';
 import { db } from '../firebase';
 
 interface LessonEditorProps {
@@ -11,6 +11,7 @@ interface LessonEditorProps {
 export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) => {
   const [lessons, setLessons] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingLesson, setEditingLesson] = useState<any>(null);
   const [newLesson, setNewLesson] = useState({ title: '', content: '', type: 'text', videoUrl: '', pdfUrl: '', order: 0 });
 
   useEffect(() => {
@@ -21,16 +22,39 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
     return () => unsubscribe();
   }, [courseId]);
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const lessonId = doc(collection(db, 'lessons')).id;
+    const lessonId = editingLesson?.id || doc(collection(db, 'lessons')).id;
     await setDoc(doc(db, 'lessons', lessonId), {
       ...newLesson,
       courseId,
-      order: lessons.length + 1
-    });
+      order: editingLesson?.order || lessons.length + 1
+    }, { merge: true });
     setShowAdd(false);
+    setEditingLesson(null);
     setNewLesson({ title: '', content: '', type: 'text', videoUrl: '', pdfUrl: '', order: 0 });
+  };
+
+  const startEdit = (lesson: any) => {
+    setEditingLesson(lesson);
+    setNewLesson({
+      title: lesson.title,
+      content: lesson.content || '',
+      type: lesson.type || 'text',
+      videoUrl: lesson.videoUrl || '',
+      pdfUrl: lesson.pdfUrl || '',
+      order: lesson.order || 0
+    });
+    setShowAdd(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this lesson?')) return;
+    try {
+      await deleteDoc(doc(db, 'lessons', id));
+    } catch (error) {
+      console.error("Error deleting lesson:", error);
+    }
   };
 
   return (
@@ -41,7 +65,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
           Back to Teaching
         </button>
         <button 
-          onClick={() => setShowAdd(true)}
+          onClick={() => { setEditingLesson(null); setNewLesson({ title: '', content: '', type: 'text', videoUrl: '', pdfUrl: '', order: 0 }); setShowAdd(true); }}
           className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all"
         >
           <Plus className="w-4 h-4" />
@@ -62,7 +86,18 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                 </div>
               </div>
               <div className="flex gap-2">
-                <button className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400"><Settings className="w-4 h-4" /></button>
+                <button 
+                  onClick={() => startEdit(lesson)}
+                  className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-emerald-600"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => handleDelete(lesson.id)}
+                  className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-red-600"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
           ))}
@@ -77,8 +112,8 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
       {showAdd && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl">
-            <h3 className="text-2xl font-bold mb-6">Add New Lesson</h3>
-            <form onSubmit={handleAdd} className="space-y-4">
+            <h3 className="text-2xl font-bold mb-6">{editingLesson ? 'Edit Lesson' : 'Add New Lesson'}</h3>
+            <form onSubmit={handleSave} className="space-y-4">
               <div>
                 <label className="block text-sm font-bold mb-1">Title</label>
                 <input 
@@ -138,8 +173,10 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                 />
               </div>
               <div className="flex justify-end gap-3 mt-8">
-                <button type="button" onClick={() => setShowAdd(false)} className="px-6 py-2 text-zinc-500 font-bold">Cancel</button>
-                <button type="submit" className="px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-200">Create Lesson</button>
+                <button type="button" onClick={() => { setShowAdd(false); setEditingLesson(null); }} className="px-6 py-2 text-zinc-500 font-bold">Cancel</button>
+                <button type="submit" className="px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-200">
+                  {editingLesson ? 'Save Changes' : 'Create Lesson'}
+                </button>
               </div>
             </form>
           </div>

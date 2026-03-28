@@ -23,7 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'courses', label: 'Courses', icon: BookOpen },
     { id: 'marketplace', label: 'Marketplace', icon: Search },
-    ...(profile?.role === 'admin' ? [{ id: 'school', label: 'School Admin', icon: Settings }] : []),
+    ...(profile?.role === 'admin' || profile?.role === 'super_admin' || profile?.email === 'beshegercom@gmail.com' ? [{ id: 'school', label: 'Admin Panel', icon: Settings }] : []),
     ...(profile?.role === 'teacher' || profile?.role === 'provider' ? [{ id: 'my-courses', label: 'Teaching', icon: GraduationCap }] : []),
     ...(profile?.role === 'parent' ? [{ id: 'parent', label: 'Parent Portal', icon: Users }] : []),
     { id: 'messages', label: 'Messages', icon: MessageSquare },

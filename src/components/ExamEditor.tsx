@@ -13,6 +13,7 @@ interface Question {
   text: string;
   options: string[];
   correctAnswer: number;
+  explanation?: string;
 }
 
 export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
@@ -32,7 +33,7 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
   }, [examId]);
 
   const handleAddQuestion = () => {
-    setQuestions([...questions, { text: '', options: ['', '', '', ''], correctAnswer: 0 }]);
+    setQuestions([...questions, { text: '', options: ['', '', '', ''], correctAnswer: 0, explanation: '' }]);
   };
 
   const handleRemoveQuestion = (index: number) => {
@@ -167,6 +168,16 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
                       />
                     </div>
                   ))}
+                </div>
+
+                <div className="pt-4 border-t border-black/5">
+                  <label className="block text-sm font-bold text-zinc-500 mb-2">Explanation (Optional)</label>
+                  <textarea
+                    placeholder="Explain why the correct answer is right..."
+                    value={q.explanation || ''}
+                    onChange={(e) => handleUpdateQuestion(qIndex, 'explanation', e.target.value)}
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm"
+                  />
                 </div>
               </div>
             </motion.div>

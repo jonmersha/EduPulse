@@ -12,6 +12,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectExam }) => {
   const { profile } = useAuth();
+  const [recentResults, setRecentResults] = useState<any[]>([]);
   const [stats, setStats] = useState({ enrolled: 0, completed: 0, avgProgress: 0, examsTaken: 0 });
   const [recentCourses, setRecentCourses] = useState<any[]>([]);
   const [upcomingExams, setUpcomingExams] = useState<any[]>([]);
@@ -26,10 +27,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
       const totalProgress = docs.filter(d => d.courseId).reduce((acc, curr) => acc + (curr.progress || 0), 0);
       const avgProgress = enrolled > 0 ? Math.round(totalProgress / enrolled) : 0;
       
-      // Fetch exam results for stats
+      // Fetch exam results for stats and recent results
       const resultsQ = query(collection(db, 'examResults'), where('studentId', '==', profile.uid));
-      const resultsUnsub = onSnapshot(resultsQ, (resultsSnapshot) => {
-        setStats({ enrolled, completed, avgProgress, examsTaken: resultsSnapshot.docs.length });
+      const resultsUnsub = onSnapshot(resultsQ, async (resultsSnapshot) => {
+        const results = resultsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setStats({ enrolled, completed, avgProgress, examsTaken: results.length });
+        
+        // Sort by date and take top 3
+        const sortedResults = [...results].sort((a: any, b: any) => (b.completedAt?.toMillis() || 0) - (a.completedAt?.toMillis() || 0)).slice(0, 3);
+        setRecentResults(sortedResults);
+
+        // Fetch upcoming exams (subscribed but not taken or attempts remaining)
+        const examEnrollments = docs.filter((d: any) => d.examId);
+        const examPromises = examEnrollments.map(async (e: any) => {
+          const studentResultsForExam = results.filter((r: any) => r.examId === e.examId);
+          const examDoc = await getDoc(doc(db, 'exams', e.examId));
+          if (!examDoc.exists()) return null;
+          
+          const examData = examDoc.data();
+          const maxAttempts = examData.maxAttempts || 0;
+          
+          // If no attempts yet, or attempts remaining
+          if (studentResultsForExam.length === 0 || (maxAttempts > 0 && studentResultsForExam.length < maxAttempts)) {
+            return { id: examDoc.id, ...examData };
+          }
+          return null;
+        });
+        const exams = await Promise.all(examPromises);
+        setUpcomingExams(exams.filter(e => e !== null).slice(0, 3));
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'examResults'));
 
       // Fetch recent courses
@@ -41,18 +66,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
       const courses = await Promise.all(coursePromises);
       setRecentCourses(courses.filter((c: any) => c && c.title));
 
-      // Fetch upcoming exams (subscribed but not taken)
-      const examEnrollments = docs.filter(d => d.examId);
-      const examPromises = examEnrollments.map(async (e) => {
-        const resultDoc = await getDoc(doc(db, 'examResults', `${profile.uid}_${e.examId}`));
-        if (!resultDoc.exists()) {
-          const d = await getDoc(doc(db, 'exams', e.examId));
-          return { id: d.id, ...d.data() };
-        }
-        return null;
-      });
-      const exams = await Promise.all(examPromises);
-      setUpcomingExams(exams.filter(e => e !== null).slice(0, 3));
 
       return () => resultsUnsub();
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
@@ -128,6 +141,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
         </section>
 
         <section className="space-y-4">
+          <h2 className="text-xl font-bold">Recent Exam Results</h2>
+          <div className="space-y-3">
+            {recentResults.length > 0 ? recentResults.map(result => (
+              <div 
+                key={result.id} 
+                className="p-4 bg-white border border-black/5 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all"
+              >
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${result.score >= 70 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                  <Trophy className="w-6 h-6" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold truncate">{result.examTitle || 'Exam Result'}</h4>
+                  <p className="text-xs text-zinc-500">{new Date(result.completedAt?.toMillis()).toLocaleDateString()}</p>
+                </div>
+                <div className="text-right">
+                  <div className={`text-lg font-black ${result.score >= 70 ? 'text-emerald-600' : 'text-red-600'}`}>{result.score.toFixed(1)}%</div>
+                  <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">{result.score >= 70 ? 'Passed' : 'Failed'}</div>
+                </div>
+              </div>
+            )) : (
+              <p className="text-zinc-400 text-sm italic">No exam results yet.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-4 lg:col-span-2">
           <h2 className="text-xl font-bold">Upcoming Exams</h2>
           <div className="space-y-3">
             {upcomingExams.length > 0 ? upcomingExams.map(exam => (
