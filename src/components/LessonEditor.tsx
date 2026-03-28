@@ -12,7 +12,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
   const [lessons, setLessons] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
-  const [newLesson, setNewLesson] = useState({ title: '', content: '', type: 'text', videoUrl: '', pdfUrl: '', order: 0 });
+  const [newLesson, setNewLesson] = useState({ title: '', content: '', type: 'text', videoUrl: '', pdfUrl: '', section: '', order: 0 });
 
   useEffect(() => {
     const q = query(collection(db, 'lessons'), where('courseId', '==', courseId), orderBy('order', 'asc'));
@@ -32,7 +32,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
     }, { merge: true });
     setShowAdd(false);
     setEditingLesson(null);
-    setNewLesson({ title: '', content: '', type: 'text', videoUrl: '', pdfUrl: '', order: 0 });
+    setNewLesson({ title: '', content: '', type: 'text', videoUrl: '', pdfUrl: '', section: '', order: 0 });
   };
 
   const startEdit = (lesson: any) => {
@@ -43,6 +43,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
       type: lesson.type || 'text',
       videoUrl: lesson.videoUrl || '',
       pdfUrl: lesson.pdfUrl || '',
+      section: lesson.section || '',
       order: lesson.order || 0
     });
     setShowAdd(true);
@@ -65,7 +66,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
           Back to Teaching
         </button>
         <button 
-          onClick={() => { setEditingLesson(null); setNewLesson({ title: '', content: '', type: 'text', videoUrl: '', pdfUrl: '', order: 0 }); setShowAdd(true); }}
+          onClick={() => { setEditingLesson(null); setNewLesson({ title: '', content: '', type: 'text', videoUrl: '', pdfUrl: '', section: '', order: 0 }); setShowAdd(true); }}
           className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all"
         >
           <Plus className="w-4 h-4" />
@@ -114,6 +115,15 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl">
             <h3 className="text-2xl font-bold mb-6">{editingLesson ? 'Edit Lesson' : 'Add New Lesson'}</h3>
             <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold mb-1">Section</label>
+                <input 
+                  value={newLesson.section}
+                  onChange={e => setNewLesson({...newLesson, section: e.target.value})}
+                  className="w-full px-4 py-2 bg-zinc-50 border border-black/5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="e.g. Introduction, Advanced Topics"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-bold mb-1">Title</label>
                 <input 

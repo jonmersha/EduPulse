@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare } from 'lucide-react';
 import { Navbar } from './Navbar';
-import { Sidebar } from './Sidebar';
 import { LessonViewer } from './LessonViewer';
 import { Dashboard } from '../pages/Dashboard';
 import { Marketplace } from '../pages/Marketplace';
@@ -19,11 +18,16 @@ export const MainApp: React.FC = () => {
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
   
+  const handleTabChange = (t: string) => {
+    setActiveTab(t);
+    setSelectedCourse(null);
+    setSelectedExam(null);
+  };
+
   return (
     <div className="min-h-screen bg-[#F9F9F8] text-zinc-900 font-sans">
-      <Navbar />
+      <Navbar activeTab={activeTab} setActiveTab={handleTabChange} />
       <div className="flex">
-        <Sidebar activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setSelectedCourse(null); setSelectedExam(null); }} />
         <main className="flex-1 p-8 overflow-y-auto h-[calc(100vh-64px)]">
           <AnimatePresence mode="wait">
             <motion.div

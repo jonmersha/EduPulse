@@ -18,8 +18,14 @@ export const MyCourses: React.FC<MyCoursesProps> = ({ onSelectCourse, onSelectEx
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!profile) return;
+    if (!profile) {
+      setCourses([]);
+      setExams([]);
+      setLoading(false);
+      return;
+    }
 
+    setLoading(true);
     const q = query(collection(db, 'enrollments'), where('studentId', '==', profile.uid));
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const enrollmentData = snapshot.docs.map(doc => doc.data());
@@ -46,6 +52,7 @@ export const MyCourses: React.FC<MyCoursesProps> = ({ onSelectCourse, onSelectEx
           const examDoc = await getDoc(doc(db, 'exams', enrollment.examId));
           if (examDoc.exists()) {
             // Check if there's a result
+            // Use getDoc for specific result ID
             const resultDoc = await getDoc(doc(db, 'examResults', `${profile.uid}_${examDoc.id}`));
             return { id: examDoc.id, ...examDoc.data(), result: resultDoc.exists() ? resultDoc.data() : null };
           }
@@ -63,7 +70,10 @@ export const MyCourses: React.FC<MyCoursesProps> = ({ onSelectCourse, onSelectEx
       setCourses(courseDetails.filter(c => c !== null));
       setExams(examDetails.filter(e => e !== null));
       setLoading(false);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'enrollments');
+      setLoading(false);
+    });
 
     return () => unsubscribe();
   }, [profile]);

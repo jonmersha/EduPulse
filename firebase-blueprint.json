@@ -77,6 +77,7 @@
         "content": { "type": "string", "description": "Markdown content" },
         "videoUrl": { "type": "string", "description": "YouTube or direct video URL" },
         "pdfUrl": { "type": "string", "description": "URL to PDF file" },
+        "section": { "type": "string", "description": "Group lessons into sections" },
         "type": { "type": "string", "enum": ["text", "video", "pdf", "quiz"] },
         "order": { "type": "integer" }
       },

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, getDoc, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDoc, doc, getDocs } from 'firebase/firestore';
 import { BookOpen, CheckCircle2, GraduationCap, Trophy } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -18,44 +18,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
   const [upcomingExams, setUpcomingExams] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!profile) return;
-    const q = query(collection(db, 'enrollments'), where('studentId', '==', profile.uid));
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
+    if (!profile) {
+      setStats({ enrolled: 0, completed: 0, avgProgress: 0, examsTaken: 0 });
+      setRecentResults([]);
+      setRecentCourses([]);
+      setUpcomingExams([]);
+      return;
+    }
+
+    // Listener for enrollments
+    const enrollmentsQ = query(collection(db, 'enrollments'), where('studentId', '==', profile.uid));
+    const unsubEnrollments = onSnapshot(enrollmentsQ, async (snapshot) => {
       const docs = snapshot.docs.map(doc => doc.data());
       const enrolled = docs.filter(d => d.courseId).length;
       const completed = docs.filter(d => d.courseId && d.progress === 100).length;
       const totalProgress = docs.filter(d => d.courseId).reduce((acc, curr) => acc + (curr.progress || 0), 0);
       const avgProgress = enrolled > 0 ? Math.round(totalProgress / enrolled) : 0;
       
-      // Fetch exam results for stats and recent results
-      const resultsQ = query(collection(db, 'examResults'), where('studentId', '==', profile.uid));
-      const resultsUnsub = onSnapshot(resultsQ, async (resultsSnapshot) => {
-        const results = resultsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setStats({ enrolled, completed, avgProgress, examsTaken: results.length });
-        
-        // Sort by date and take top 3
-        const sortedResults = [...results].sort((a: any, b: any) => (b.completedAt?.toMillis() || 0) - (a.completedAt?.toMillis() || 0)).slice(0, 3);
-        setRecentResults(sortedResults);
-
-        // Fetch upcoming exams (subscribed but not taken or attempts remaining)
-        const examEnrollments = docs.filter((d: any) => d.examId);
-        const examPromises = examEnrollments.map(async (e: any) => {
-          const studentResultsForExam = results.filter((r: any) => r.examId === e.examId);
-          const examDoc = await getDoc(doc(db, 'exams', e.examId));
-          if (!examDoc.exists()) return null;
-          
-          const examData = examDoc.data();
-          const maxAttempts = examData.maxAttempts || 0;
-          
-          // If no attempts yet, or attempts remaining
-          if (studentResultsForExam.length === 0 || (maxAttempts > 0 && studentResultsForExam.length < maxAttempts)) {
-            return { id: examDoc.id, ...examData };
-          }
-          return null;
-        });
-        const exams = await Promise.all(examPromises);
-        setUpcomingExams(exams.filter(e => e !== null).slice(0, 3));
-      }, (error) => handleFirestoreError(error, OperationType.LIST, 'examResults'));
+      setStats(prev => ({ ...prev, enrolled, completed, avgProgress }));
 
       // Fetch recent courses
       const courseEnrollments = docs.filter(d => d.courseId).slice(0, 3);
@@ -65,11 +45,49 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
       });
       const courses = await Promise.all(coursePromises);
       setRecentCourses(courses.filter((c: any) => c && c.title));
-
-
-      return () => resultsUnsub();
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
-    return () => unsubscribe();
+
+    // Listener for exam results
+    const resultsQ = query(collection(db, 'examResults'), where('studentId', '==', profile.uid));
+    const unsubResults = onSnapshot(resultsQ, async (resultsSnapshot) => {
+      const results = resultsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setStats(prev => ({ ...prev, examsTaken: results.length }));
+      
+      const sortedResults = [...results].sort((a: any, b: any) => (b.completedAt?.toMillis() || 0) - (a.completedAt?.toMillis() || 0)).slice(0, 3);
+      setRecentResults(sortedResults);
+
+      // Fetch upcoming exams (subscribed but not taken or attempts remaining)
+      // We need the enrollments to know which exams the student is subscribed to
+      // This is a bit tricky since we separated the listeners. 
+      // We'll use a separate effect or just fetch them here by querying enrollments once.
+      try {
+        const enrollmentsSnap = await getDocs(query(collection(db, 'enrollments'), where('studentId', '==', profile.uid)));
+        const examEnrollments = enrollmentsSnap.docs.map(d => d.data()).filter((d: any) => d.examId);
+        
+        const examPromises = examEnrollments.map(async (e: any) => {
+          const studentResultsForExam = results.filter((r: any) => r.examId === e.examId);
+          const examDoc = await getDoc(doc(db, 'exams', e.examId));
+          if (!examDoc.exists()) return null;
+          
+          const examData = examDoc.data();
+          const maxAttempts = examData.maxAttempts || 0;
+          
+          if (studentResultsForExam.length === 0 || (maxAttempts > 0 && studentResultsForExam.length < maxAttempts)) {
+            return { id: examDoc.id, ...examData };
+          }
+          return null;
+        });
+        const exams = await Promise.all(examPromises);
+        setUpcomingExams(exams.filter(e => e !== null).slice(0, 3));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.LIST, 'enrollments');
+      }
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'examResults'));
+
+    return () => {
+      unsubEnrollments();
+      unsubResults();
+    };
   }, [profile]);
   
   return (

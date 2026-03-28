@@ -8,6 +8,7 @@ import { CourseCard } from '../components/CourseCard';
 import { LessonEditor } from '../components/LessonEditor';
 import { ExamEditor } from '../components/ExamEditor';
 import { Modal } from '../components/Modal';
+import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 export const CourseManagement: React.FC = () => {
   const { profile } = useAuth();
@@ -25,35 +26,51 @@ export const CourseManagement: React.FC = () => {
   const [selectedExamSummary, setSelectedExamSummary] = useState<any>(null);
 
   useEffect(() => {
-    if (!profile) return;
+    if (!profile) {
+      setCourses([]);
+      setExams([]);
+      setStudentResults([]);
+      return;
+    }
     
     const coursesQuery = query(collection(db, 'courses'), where('teacherId', '==', profile.uid));
     const unsubCourses = onSnapshot(coursesQuery, (snapshot) => {
       setCourses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'courses'));
 
     const examsQuery = query(collection(db, 'exams'), where('teacherId', '==', profile.uid));
     const unsubExams = onSnapshot(examsQuery, (snapshot) => {
       const examData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setExams(examData);
-
-      // Fetch results for these exams
-      if (examData.length > 0) {
-        const examIds = examData.map(e => e.id);
-        // Firestore 'in' query is limited to 10 items
-        const resultsQuery = query(collection(db, 'examResults'), where('examId', 'in', examIds.slice(0, 10)));
-        const unsubResults = onSnapshot(resultsQuery, (resultsSnapshot) => {
-          setStudentResults(resultsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        });
-        return () => unsubResults();
-      }
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'exams'));
 
     return () => {
       unsubCourses();
       unsubExams();
     };
   }, [profile]);
+
+  useEffect(() => {
+    if (!profile || exams.length === 0) {
+      setStudentResults([]);
+      return;
+    }
+
+    const examIds = exams.map(e => e.id);
+    // Firestore 'in' query is limited to 10 items
+    // If there are more than 10 exams, we might need multiple queries or a different approach
+    // For now, let's stick to the first 10 as per original logic but in a separate effect
+    const resultsQuery = query(
+      collection(db, 'examResults'), 
+      where('examId', 'in', examIds.slice(0, 10))
+    );
+
+    const unsubResults = onSnapshot(resultsQuery, (resultsSnapshot) => {
+      setStudentResults(resultsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'examResults'));
+
+    return () => unsubResults();
+  }, [profile, exams]);
 
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();

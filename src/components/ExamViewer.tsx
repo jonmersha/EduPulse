@@ -4,6 +4,7 @@ import { ChevronRight, Clock, CheckCircle2, AlertCircle, Trophy, XCircle, CheckC
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
+import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 interface ExamViewerProps {
   examId: string;
@@ -33,7 +34,11 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
   };
 
   useEffect(() => {
-    if (!profile) return;
+    if (!profile) {
+      setPreviousAttempts([]);
+      setIsCheckingAttempts(false);
+      return;
+    }
 
     // Fetch previous attempts
     const attemptsQuery = query(
@@ -45,7 +50,7 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
     const unsubAttempts = onSnapshot(attemptsQuery, (snapshot) => {
       setPreviousAttempts(snapshot.docs.map(doc => doc.data()));
       setIsCheckingAttempts(false);
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'examResults'));
 
     const unsubExam = onSnapshot(doc(db, 'exams', examId), (snapshot) => {
       if (snapshot.exists()) {
@@ -76,7 +81,7 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
           setTimeLeft(data.duration * 60);
         }
       }
-    });
+    }, (error) => handleFirestoreError(error, OperationType.GET, `exams/${examId}`));
 
     return () => {
       unsubAttempts();
