@@ -38,7 +38,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && (
-        request.auth.token.email == "beshegercom@gmail.com" ||
+        (request.auth.token.email == "beshegercom@gmail.com" && request.auth.token.email_verified == true) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin'))
       );
     }
@@ -60,7 +60,7 @@ service cloud.firestore {
     }
 
     function isTeacher() {
-      return isAuthenticated() && (getUserData().role == 'teacher' || getUserData().role == 'provider');
+      return isAuthenticated() && (getUserData().role == 'teacher' || getUserData().role == 'provider' || isAdmin());
     }
 
     function isCourseTeacher(courseId) {
@@ -106,29 +106,29 @@ service cloud.firestore {
 
     function isValidCourse(data) {
       return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             (data.description == null || (data.description is string && data.description.size() < 2000)) &&
-             (data.category == null || (data.category is string && data.category.size() < 50)) &&
-             (data.price == null || data.price is number) &&
-             data.teacherId == request.auth.uid;
+             (!('description' in data) || data.description == null || data.description == "" || (data.description is string && data.description.size() < 2000)) &&
+             (!('category' in data) || data.category == null || data.category == "" || (data.category is string && data.category.size() < 50)) &&
+             (!('price' in data) || data.price == null || data.price is number) &&
+             (!('teacherId' in data) || data.teacherId == request.auth.uid || isAdmin());
     }
 
     function isValidLesson(data) {
       return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             (data.content == null || (data.content is string && data.content.size() < 50000)) &&
-             (data.videoUrl == null || (data.videoUrl is string && data.videoUrl.size() < 1000)) &&
-             (data.pdfUrl == null || (data.pdfUrl is string && data.pdfUrl.size() < 1000)) &&
-             data.type in ['text', 'video', 'pdf', 'quiz'] &&
+             (!('content' in data) || data.content == null || data.content == "" || (data.content is string && data.content.size() < 100000)) &&
+             (!('videoUrl' in data) || data.videoUrl == null || data.videoUrl == "" || (data.videoUrl is string && data.videoUrl.size() < 1000)) &&
+             (!('pdfUrl' in data) || data.pdfUrl == null || data.pdfUrl == "" || (data.pdfUrl is string && data.pdfUrl.size() < 1000)) &&
+             data.type in ['text', 'video', 'pdf', 'quiz', 'container'] &&
              data.courseId is string;
     }
 
     function isValidExam(data) {
       return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             (data.description == null || (data.description is string && data.description.size() < 2000)) &&
-             (data.duration == null || data.duration is int) &&
-             (data.passingScore == null || data.passingScore is number) &&
-             (data.maxAttempts == null || data.maxAttempts is int) &&
+             (!('description' in data) || data.description == null || (data.description is string && data.description.size() < 2000)) &&
+             (!('duration' in data) || data.duration == null || data.duration is number) &&
+             (!('passingScore' in data) || data.passingScore == null || data.passingScore is number) &&
+             (!('maxAttempts' in data) || data.maxAttempts == null || data.maxAttempts is number) &&
              data.questions is list &&
-             data.teacherId == request.auth.uid;
+             (!('teacherId' in data) || data.teacherId == request.auth.uid || isAdmin());
     }
 
     function isValidExamResult(data) {
@@ -179,21 +179,16 @@ service cloud.firestore {
 
     match /courses/{courseId} {
       allow read: if isAuthenticated();
-      allow create: if isTeacher() && isValidCourse(request.resource.data);
-      allow update: if (isTeacher() && resource.data.teacherId == request.auth.uid && isValidCourse(request.resource.data)) || isAdmin();
-      allow delete: if (isTeacher() && resource.data.teacherId == request.auth.uid) || isAdmin();
+      allow create: if isAdmin() || (isTeacher() && isValidCourse(request.resource.data));
+      allow update: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid && isValidCourse(request.resource.data));
+      allow delete: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
     }
 
     match /lessons/{lessonId} {
-      allow read: if isAuthenticated() && (
-        exists(/databases/$(database)/documents/enrollments/$(request.auth.uid + "_" + resource.data.courseId)) ||
-        get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid ||
-        isAdmin() ||
-        get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.isPublic == true
-      );
-      allow create: if (isTeacher() && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data)) || isAdmin();
-      allow update: if (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data)) || isAdmin();
-      allow delete: if (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid) || isAdmin();
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data));
+      allow update: if isAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data));
+      allow delete: if isAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid);
     }
 
     match /assignments/{assignmentId} {
@@ -225,9 +220,9 @@ service cloud.firestore {
 
     match /exams/{examId} {
       allow read: if isAuthenticated();
-      allow create: if isTeacher() && isValidExam(request.resource.data);
-      allow update: if (isTeacher() && resource.data.teacherId == request.auth.uid && isValidExam(request.resource.data)) || isAdmin();
-      allow delete: if (isTeacher() && resource.data.teacherId == request.auth.uid) || isAdmin();
+      allow create: if isAdmin() || (isTeacher() && isValidExam(request.resource.data));
+      allow update: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid && isValidExam(request.resource.data));
+      allow delete: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
     }
 
     match /examResults/{resultId} {

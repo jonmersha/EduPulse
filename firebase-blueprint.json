@@ -74,10 +74,13 @@
       "properties": {
         "courseId": { "type": "string" },
         "title": { "type": "string" },
+        "shortDescription": { "type": "string", "description": "Brief summary of the lesson" },
         "content": { "type": "string", "description": "Markdown content" },
         "videoUrl": { "type": "string", "description": "YouTube or direct video URL" },
         "pdfUrl": { "type": "string", "description": "URL to PDF file" },
         "section": { "type": "string", "description": "Group lessons into sections" },
+        "subSection": { "type": "string", "description": "Further group lessons into sub-sections" },
+        "parentId": { "type": "string", "description": "ID of the parent lesson if this is a sub-lesson" },
         "type": { "type": "string", "enum": ["text", "video", "pdf", "quiz"] },
         "order": { "type": "integer" }
       },

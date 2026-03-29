@@ -21,7 +21,12 @@ import {
   Menu,
   X,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  MessageSquare,
+  ChevronDown,
+  PlayCircle,
+  Trophy,
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
@@ -44,6 +49,10 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [expandedSections, setExpandedSections] = useState<string[]>([]);
+  const [expandedLessons, setExpandedLessons] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<'overview' | 'resources' | 'qa'>('overview');
+  const [activeSection, setActiveSection] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch course details
@@ -75,14 +84,52 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
     return () => unsubscribe();
   }, [courseId, profile]);
 
+  // Auto-expand current lesson's section and parent
+  useEffect(() => {
+    if (currentLesson) {
+      const section = currentLesson.section || 'General';
+      setExpandedSections(prev => prev.includes(section) ? prev : [...prev, section]);
+      if (currentLesson.parentId) {
+        setExpandedLessons(prev => prev.includes(currentLesson.parentId) ? prev : [...prev, currentLesson.parentId]);
+      }
+    }
+  }, [currentLesson]);
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => 
+      prev.includes(section) ? prev.filter(s => s !== section) : [...prev, section]
+    );
+  };
+
+  const toggleLesson = (lessonId: string) => {
+    setExpandedLessons(prev => 
+      prev.includes(lessonId) ? prev.filter(id => id !== lessonId) : [...prev, lessonId]
+    );
+  };
+
   const sections = useMemo(() => {
     const grouped: { [key: string]: any[] } = {};
+    
+    // First, group by section
     lessons.forEach(lesson => {
       const sectionName = lesson.section || 'General';
       if (!grouped[sectionName]) grouped[sectionName] = [];
       grouped[sectionName].push(lesson);
     });
-    return Object.entries(grouped).map(([name, items]) => ({ name, items }));
+
+    return Object.entries(grouped).map(([sectionName, sectionLessons]) => {
+      // Within each section, organize by main lessons and their sub-lessons
+      const mainLessons = sectionLessons.filter(l => !l.parentId);
+      const subLessons = sectionLessons.filter(l => l.parentId);
+
+      return {
+        name: sectionName,
+        mainLessons: mainLessons.map(main => ({
+          ...main,
+          subs: subLessons.filter(sub => sub.parentId === main.id)
+        }))
+      };
+    });
   }, [lessons]);
 
   const currentIndex = lessons.findIndex(l => l.id === currentLesson?.id);
@@ -133,44 +180,48 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#F9F9F8] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-white flex flex-col overflow-hidden">
       {/* Top Menu Bar */}
-      <header className="h-16 bg-white border-b border-black/5 flex items-center justify-between px-4 md:px-8 shrink-0 z-20">
+      <header className="h-16 bg-zinc-900 text-white flex items-center justify-between px-4 md:px-8 shrink-0 z-20">
         <div className="flex items-center gap-4">
           <button 
             onClick={onBack}
-            className="p-2 hover:bg-zinc-100 rounded-xl transition-colors"
+            className="p-2 hover:bg-white/10 rounded-xl transition-colors"
             title="Back to Courses"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="hidden md:block">
-            <h1 className="font-bold text-lg truncate max-w-[300px]">{course?.title || 'Course'}</h1>
-            <div className="flex items-center gap-2">
-              <div className="w-32 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full transition-all duration-500" style={{ width: `${progress}%` }} />
+            <h1 className="font-bold text-sm truncate max-w-[400px]">{course?.title || 'Course'}</h1>
+            <div className="flex items-center gap-3 mt-0.5">
+              <div className="w-40 h-1 bg-white/10 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  className="bg-emerald-500 h-full" 
+                />
               </div>
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">{progress}% Complete</span>
+              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{progress}% COMPLETE</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 md:gap-4">
-          <div className="flex items-center bg-zinc-100 rounded-xl p-1">
+        <div className="flex items-center gap-2 md:gap-6">
+          <div className="hidden sm:flex items-center gap-1 bg-white/5 rounded-xl p-1">
             <button 
               onClick={() => prevLesson && setCurrentLesson(prevLesson)}
               disabled={!prevLesson}
-              className="p-2 hover:bg-white disabled:opacity-30 rounded-lg transition-all"
+              className="p-2 hover:bg-white/10 disabled:opacity-20 rounded-lg transition-all"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <div className="px-3 text-xs font-bold text-zinc-500 border-x border-zinc-200">
+            <div className="px-4 text-[10px] font-black text-zinc-400 border-x border-white/10 tracking-widest">
               {currentIndex + 1} / {lessons.length}
             </div>
             <button 
               onClick={() => nextLesson && setCurrentLesson(nextLesson)}
               disabled={!nextLesson}
-              className="p-2 hover:bg-white disabled:opacity-30 rounded-lg transition-all"
+              className="p-2 hover:bg-white/10 disabled:opacity-20 rounded-lg transition-all"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -178,213 +229,423 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
 
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 bg-zinc-900 text-white rounded-xl hover:bg-black transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-xl hover:bg-white/20 transition-all text-sm font-bold"
           >
-            {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            <Menu className="w-4 h-4" />
+            <span className="hidden md:inline">Contents</span>
           </button>
         </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Sidebar - Sections & Lessons */}
-        <AnimatePresence initial={false}>
-          {isSidebarOpen && (
-            <motion.aside 
-              initial={{ x: -300, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -300, opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="w-80 bg-white border-r border-black/5 flex flex-col shrink-0 z-10 absolute md:relative h-full shadow-xl md:shadow-none"
-            >
-              <div className="p-6 border-b border-black/5 flex items-center justify-between">
-                <h3 className="font-bold text-zinc-900">Course Content</h3>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">{lessons.length} Lessons</span>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                {sections.map((section, sIdx) => (
-                  <div key={section.name} className="space-y-2">
-                    <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] px-2">{section.name}</h4>
-                    <div className="space-y-1">
-                      {section.items.map((lesson) => (
-                        <button
-                          key={lesson.id}
-                          onClick={() => {
-                            setCurrentLesson(lesson);
-                            setAudioUrl(null);
-                            if (window.innerWidth < 768) setIsSidebarOpen(false);
-                          }}
-                          className={cn(
-                            "w-full flex items-center gap-3 px-3 py-3 text-left rounded-xl transition-all group",
-                            currentLesson?.id === lesson.id 
-                              ? "bg-emerald-50 text-emerald-700 shadow-sm" 
-                              : "hover:bg-zinc-50 text-zinc-600"
-                          )}
-                        >
-                          <div className={cn(
-                            "w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                            currentLesson?.id === lesson.id 
-                              ? "bg-emerald-600 text-white" 
-                              : completedLessons.includes(lesson.id) 
-                                ? "bg-emerald-100 text-emerald-600" 
-                                : "bg-zinc-100 text-zinc-400 group-hover:bg-zinc-200"
-                          )}>
-                            {completedLessons.includes(lesson.id) ? (
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                            ) : (
-                              <span className="text-[10px] font-bold">{lesson.order}</span>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn(
-                              "text-xs font-bold truncate",
-                              completedLessons.includes(lesson.id) && "text-zinc-400"
-                            )}>{lesson.title}</p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              {lesson.type === 'video' ? <Video className="w-3 h-3 opacity-40" /> : <FileText className="w-3 h-3 opacity-40" />}
-                              <span className="text-[9px] font-bold uppercase tracking-wider opacity-40">{lesson.type}</span>
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
-
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto bg-[#F9F9F8] relative">
-          <div className="max-w-4xl mx-auto p-4 md:p-12 pb-32">
+        <main className="flex-1 overflow-y-auto bg-white relative scroll-smooth">
+          <div className="max-w-5xl mx-auto">
             <AnimatePresence mode="wait">
               {currentLesson ? (
                 <motion.div 
                   key={currentLesson.id}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-8"
+                  exit={{ opacity: 0, y: -10 }}
+                  className="flex flex-col"
                 >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase rounded tracking-wider">
-                          {currentLesson.section || 'General'}
-                        </span>
-                        <span className="text-zinc-300">•</span>
-                        <span className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
-                          Lesson {currentIndex + 1} of {lessons.length}
-                        </span>
-                      </div>
-                      <h2 className="text-3xl md:text-4xl font-black tracking-tight text-zinc-900">{currentLesson.title}</h2>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={handleTTS}
-                        disabled={isSpeaking}
-                        className="p-3 bg-white border border-black/5 text-zinc-600 rounded-2xl hover:bg-zinc-50 transition-all shadow-sm disabled:opacity-50"
-                        title="Listen to lesson"
-                      >
-                        {isSpeaking ? <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /> : <Volume2 className="w-5 h-5" />}
-                      </button>
-                      <button 
-                        onClick={toggleComplete}
-                        className={cn(
-                          "flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm transition-all shadow-lg",
-                          completedLessons.includes(currentLesson.id)
-                            ? "bg-emerald-600 text-white shadow-emerald-200"
-                            : "bg-white border border-black/5 text-zinc-900 hover:bg-zinc-50"
-                        )}
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        {completedLessons.includes(currentLesson.id) ? 'Completed' : 'Mark as Complete'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {audioUrl && (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100"
-                    >
-                      <audio controls src={audioUrl} className="w-full h-10" autoPlay />
-                    </motion.div>
-                  )}
-
-                  <div className="space-y-8">
-                    {currentLesson.type === 'video' && currentLesson.videoUrl && (
-                      <div className="aspect-video w-full rounded-3xl overflow-hidden bg-black shadow-2xl">
-                        <iframe
-                          width="100%"
-                          height="100%"
-                          src={`https://www.youtube.com/embed/${getYouTubeId(currentLesson.videoUrl)}`}
-                          title="YouTube video player"
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        ></iframe>
+                  {/* Media Player Section */}
+                  <div className="bg-black aspect-video w-full relative group shadow-2xl">
+                    {currentLesson.type === 'video' && currentLesson.videoUrl ? (
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        src={`https://www.youtube.com/embed/${getYouTubeId(currentLesson.videoUrl)}?autoplay=1&rel=0&modestbranding=1`}
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="w-full h-full"
+                      ></iframe>
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 gap-6 bg-zinc-900">
+                        <div className="w-24 h-24 rounded-3xl bg-zinc-800 flex items-center justify-center shadow-inner">
+                          {currentLesson.type === 'pdf' ? <FileText className="w-12 h-12 text-emerald-500" /> : <BookOpen className="w-12 h-12 text-emerald-500" />}
+                        </div>
+                        <div className="text-center">
+                          <p className="font-black text-xs uppercase tracking-[0.3em] text-zinc-400 mb-2">Reading Material</p>
+                          <h3 className="text-xl font-bold text-white">{currentLesson.title}</h3>
+                        </div>
                       </div>
                     )}
-
-                    {currentLesson.type === 'pdf' && currentLesson.pdfUrl && (
-                      <div className="w-full h-[700px] rounded-3xl overflow-hidden border border-black/5 shadow-xl bg-white">
-                        <iframe
-                          src={currentLesson.pdfUrl}
-                          className="w-full h-full"
-                          title="PDF Viewer"
-                        ></iframe>
-                      </div>
-                    )}
-
-                    <div className="prose prose-zinc prose-lg max-w-none text-zinc-600 leading-relaxed bg-white p-8 md:p-12 rounded-[2.5rem] border border-black/5 shadow-sm">
-                      <Markdown>{currentLesson.content}</Markdown>
-                    </div>
                   </div>
 
-                  {/* Bottom Navigation */}
-                  <div className="flex items-center justify-between pt-12 border-t border-black/5">
-                    <button
-                      onClick={() => prevLesson && setCurrentLesson(prevLesson)}
-                      disabled={!prevLesson}
-                      className="flex items-center gap-3 group disabled:opacity-30"
-                    >
-                      <div className="w-12 h-12 rounded-2xl border border-black/5 flex items-center justify-center group-hover:bg-zinc-900 group-hover:text-white transition-all">
-                        <ArrowLeft className="w-5 h-5" />
+                  {/* Content Section */}
+                  <div className="p-8 md:p-12 space-y-10">
+                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-8">
+                      <div className="flex-1 space-y-4">
+                        <div className="flex items-center gap-3">
+                          <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase rounded-lg tracking-widest">
+                            {currentLesson.section || 'General'}
+                          </span>
+                          <span className="w-1 h-1 bg-zinc-200 rounded-full" />
+                          <span className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">
+                            {currentLesson.type}
+                          </span>
+                        </div>
+                        <h2 className="text-4xl font-black tracking-tight text-zinc-900 leading-tight">{currentLesson.title}</h2>
                       </div>
-                      <div className="text-left hidden sm:block">
-                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Previous</p>
-                        <p className="text-sm font-bold text-zinc-900">{prevLesson?.title || 'None'}</p>
+                      
+                      <div className="flex items-center gap-3 shrink-0">
+                        <button 
+                          onClick={handleTTS}
+                          disabled={isSpeaking}
+                          className="flex items-center gap-2 px-5 py-3 bg-zinc-50 border border-zinc-200 text-zinc-600 rounded-2xl hover:bg-zinc-100 transition-all disabled:opacity-50 font-bold text-sm"
+                        >
+                          {isSpeaking ? <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /> : <Volume2 className="w-4 h-4" />}
+                          Listen
+                        </button>
+                        <button 
+                          onClick={toggleComplete}
+                          className={cn(
+                            "flex items-center gap-2 px-8 py-3 rounded-2xl font-black text-sm transition-all shadow-xl shadow-zinc-200",
+                            completedLessons.includes(currentLesson.id)
+                              ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                              : "bg-zinc-900 text-white hover:bg-black"
+                          )}
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          {completedLessons.includes(currentLesson.id) ? 'Completed' : 'Mark as Complete'}
+                        </button>
                       </div>
-                    </button>
+                    </div>
 
-                    <button
-                      onClick={() => nextLesson && setCurrentLesson(nextLesson)}
-                      disabled={!nextLesson}
-                      className="flex items-center gap-3 group text-right disabled:opacity-30"
-                    >
-                      <div className="hidden sm:block">
-                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Next</p>
-                        <p className="text-sm font-bold text-zinc-900">{nextLesson?.title || 'None'}</p>
-                      </div>
-                      <div className="w-12 h-12 rounded-2xl border border-black/5 flex items-center justify-center group-hover:bg-zinc-900 group-hover:text-white transition-all">
-                        <ArrowRight className="w-5 h-5" />
-                      </div>
-                    </button>
+                    {/* Tabs */}
+                    <div className="border-b border-zinc-100 flex gap-10">
+                      {[
+                        { id: 'overview', label: 'Overview' },
+                        { id: 'resources', label: 'Resources' },
+                        { id: 'qa', label: 'Q&A' }
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveTab(tab.id as any)}
+                          className={cn(
+                            "pb-5 text-sm font-black uppercase tracking-widest transition-all relative",
+                            activeTab === tab.id ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-600"
+                          )}
+                        >
+                          {tab.label}
+                          {activeTab === tab.id && (
+                            <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-900 rounded-t-full" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Tab Content */}
+                    <div className="min-h-[500px] pb-20">
+                      {activeTab === 'overview' && (
+                        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          {currentLesson.shortDescription && (
+                            <p className="text-2xl text-zinc-500 font-medium leading-relaxed italic border-l-4 border-emerald-500 pl-8">
+                              "{currentLesson.shortDescription}"
+                            </p>
+                          )}
+                          
+                          {currentLesson.type === 'pdf' && currentLesson.pdfUrl && (
+                            <div className="w-full h-[800px] rounded-[2.5rem] overflow-hidden border border-zinc-200 shadow-2xl bg-zinc-50">
+                              <iframe src={currentLesson.pdfUrl} className="w-full h-full" title="PDF Viewer" />
+                            </div>
+                          )}
+
+                          <div className="prose prose-zinc prose-xl max-w-none text-zinc-600 leading-relaxed font-medium">
+                            <Markdown>{currentLesson.content || 'No detailed content provided for this lesson.'}</Markdown>
+                          </div>
+
+                          {/* Sub-lessons Grid */}
+                          {lessons.some(l => l.parentId === currentLesson.id) && (
+                            <div className="space-y-6 pt-12 border-t border-zinc-100">
+                              <h3 className="text-xl font-black text-zinc-900 uppercase tracking-widest">Module Contents</h3>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {lessons.filter(l => l.parentId === currentLesson.id).map((sub, idx) => (
+                                  <button
+                                    key={sub.id}
+                                    onClick={() => setCurrentLesson(sub)}
+                                    className="flex items-center gap-5 p-6 bg-zinc-50 border border-zinc-100 rounded-3xl hover:bg-white hover:shadow-xl hover:border-emerald-200 transition-all text-left group"
+                                  >
+                                    <div className="w-10 h-10 rounded-xl bg-white border border-zinc-200 text-zinc-400 flex items-center justify-center text-xs font-black group-hover:bg-zinc-900 group-hover:text-white transition-all">
+                                      {idx + 1}
+                                    </div>
+                                    <div>
+                                      <h4 className="font-bold text-zinc-900 text-base">{sub.title}</h4>
+                                      <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest mt-1">{sub.type}</p>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {activeTab === 'resources' && (
+                        <div className="flex flex-col items-center justify-center py-32 text-zinc-400 bg-zinc-50 rounded-[3rem] border-2 border-dashed border-zinc-200">
+                          <BookOpen className="w-16 h-16 mb-6 opacity-10" />
+                          <p className="font-black uppercase tracking-widest text-sm">No resources available</p>
+                        </div>
+                      )}
+
+                      {activeTab === 'qa' && (
+                        <div className="flex flex-col items-center justify-center py-32 text-zinc-400 bg-zinc-50 rounded-[3rem] border-2 border-dashed border-zinc-200">
+                          <MessageSquare className="w-16 h-16 mb-6 opacity-10" />
+                          <p className="font-black uppercase tracking-widest text-sm">Q&A section coming soon</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ) : activeSection ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-12 space-y-12"
+                >
+                  <div className="space-y-4">
+                    <span className="px-4 py-1.5 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase rounded-full tracking-[0.2em]">
+                      Section Overview
+                    </span>
+                    <h2 className="text-6xl font-black tracking-tighter text-zinc-900">{activeSection}</h2>
+                    <p className="text-2xl text-zinc-500 font-medium max-w-3xl leading-relaxed">
+                      Master the core concepts of this module. Complete each lesson to progress through the course.
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-16">
+                    {lessons.filter(l => (l.section || 'General') === activeSection && !l.parentId).map((lesson, idx) => (
+                      <button
+                        key={lesson.id}
+                        onClick={() => {
+                          setCurrentLesson(lesson);
+                          setActiveSection(null);
+                        }}
+                        className="flex items-center gap-6 p-10 bg-white border border-zinc-100 rounded-[3rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all text-left group border-b-4 border-b-zinc-200 hover:border-b-emerald-500"
+                      >
+                        <div className="w-16 h-16 rounded-[1.5rem] bg-zinc-900 text-white flex items-center justify-center text-2xl font-black group-hover:bg-emerald-600 transition-all shadow-lg">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-black text-zinc-900 text-xl mb-2">{lesson.title}</h4>
+                          {lesson.shortDescription && (
+                            <p className="text-zinc-500 line-clamp-2 font-medium leading-relaxed">{lesson.shortDescription}</p>
+                          )}
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </motion.div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-96 text-zinc-400">
-                  <BookOpen className="w-16 h-16 mb-4 opacity-10" />
-                  <p className="font-bold">Select a lesson to begin</p>
+                <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] text-zinc-400 bg-zinc-50/50">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center"
+                  >
+                    <div className="w-32 h-32 rounded-[2.5rem] bg-white shadow-2xl flex items-center justify-center mb-8">
+                      <BookOpen className="w-16 h-16 text-emerald-500 opacity-20" />
+                    </div>
+                    <h3 className="text-2xl font-black text-zinc-900 mb-2">Ready to learn?</h3>
+                    <p className="text-zinc-500 font-medium">Select a lesson from the contents to begin.</p>
+                  </motion.div>
                 </div>
               )}
             </AnimatePresence>
           </div>
         </main>
+
+        {/* Right Sidebar - Course Content */}
+        <AnimatePresence initial={false}>
+          {isSidebarOpen && (
+            <motion.aside 
+              initial={{ x: 400, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 400, opacity: 0 }}
+              transition={{ type: 'spring', damping: 30, stiffness: 200 }}
+              className="w-[420px] bg-zinc-50 border-l border-zinc-200 flex flex-col shrink-0 z-10 absolute right-0 md:relative h-full shadow-2xl md:shadow-none"
+            >
+              <div className="p-8 bg-white border-b border-zinc-200 flex flex-col gap-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-black text-zinc-900 uppercase tracking-[0.2em] text-xs">Course Contents</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg tracking-widest">{progress}% COMPLETE</span>
+                  </div>
+                </div>
+                <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto scrollbar-hide pb-20">
+                {sections.map((section, sIdx) => {
+                  const isExpanded = expandedSections.includes(section.name);
+                  return (
+                    <div key={section.name} className="border-b border-zinc-200 last:border-0">
+                      <button 
+                        onClick={() => {
+                          toggleSection(section.name);
+                          setActiveSection(section.name);
+                          setCurrentLesson(null);
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-between px-8 py-6 text-left transition-all group",
+                          isExpanded || activeSection === section.name ? "bg-white" : "hover:bg-zinc-100"
+                        )}
+                      >
+                        <div className="flex-1">
+                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-1.5">Module {sIdx + 1}</p>
+                          <h4 className="font-black text-zinc-900 text-sm tracking-tight">{section.name}</h4>
+                        </div>
+                        <div className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                          isExpanded ? "bg-zinc-900 text-white rotate-90" : "bg-zinc-200 text-zinc-500 group-hover:bg-zinc-300"
+                        )}>
+                          <ChevronRight className="w-4 h-4" />
+                        </div>
+                      </button>
+                      
+                      <AnimatePresence initial={false}>
+                        {isExpanded && (
+                          <motion.div 
+                            initial={{ height: 0 }}
+                            animate={{ height: 'auto' }}
+                            exit={{ height: 0 }}
+                            className="overflow-hidden bg-white"
+                          >
+                            {section.mainLessons.map((main) => {
+                              const hasSubs = main.subs.length > 0;
+                              const isLessonExpanded = expandedLessons.includes(main.id);
+                              const isActive = currentLesson?.id === main.id;
+                              const isCompleted = completedLessons.includes(main.id);
+                              
+                              return (
+                                <div key={main.id}>
+                                  <div className={cn(
+                                    "flex items-stretch group border-l-[6px] transition-all",
+                                    isActive ? "border-emerald-600 bg-emerald-50/40" : "border-transparent hover:bg-zinc-50"
+                                  )}>
+                                    <button
+                                      onClick={() => {
+                                        setCurrentLesson(main);
+                                        setActiveSection(null);
+                                        setAudioUrl(null);
+                                        if (window.innerWidth < 768) setIsSidebarOpen(false);
+                                      }}
+                                      className="flex-1 flex items-start gap-5 px-8 py-5 text-left"
+                                    >
+                                      <div className={cn(
+                                        "mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border-2 transition-all shadow-sm",
+                                        isCompleted 
+                                          ? "bg-emerald-600 border-emerald-600 text-white" 
+                                          : isActive 
+                                            ? "border-emerald-600 text-emerald-600 bg-white" 
+                                            : "border-zinc-200 text-zinc-300 bg-white group-hover:border-zinc-400"
+                                      )}>
+                                        {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span className="text-[10px] font-black">{main.order}</span>}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className={cn(
+                                          "text-sm font-black leading-snug tracking-tight",
+                                          isActive ? "text-emerald-900" : "text-zinc-800",
+                                          isCompleted && !isActive && "text-zinc-400"
+                                        )}>{main.title}</p>
+                                        <div className="flex items-center gap-3 mt-1.5">
+                                          <div className="flex items-center gap-1.5">
+                                            {main.type === 'video' ? <Video className="w-3 h-3 text-zinc-400" /> : <FileText className="w-3 h-3 text-zinc-400" />}
+                                            <span className="text-[9px] text-zinc-400 font-black uppercase tracking-widest">{main.type}</span>
+                                          </div>
+                                          {hasSubs && (
+                                            <span className="text-[9px] text-zinc-300 font-black uppercase tracking-widest">{main.subs.length} sub-lessons</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </button>
+                                    {hasSubs && (
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleLesson(main.id);
+                                        }}
+                                        className="px-5 hover:bg-zinc-100 text-zinc-400 transition-colors"
+                                      >
+                                        <ChevronRight className={cn("w-4 h-4 transition-transform duration-300", isLessonExpanded && "rotate-90")} />
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* Sub-lessons */}
+                                  {hasSubs && (
+                                    <AnimatePresence initial={false}>
+                                      {isLessonExpanded && (
+                                        <motion.div 
+                                          initial={{ height: 0 }}
+                                          animate={{ height: 'auto' }}
+                                          exit={{ height: 0 }}
+                                          className="overflow-hidden bg-zinc-50/80"
+                                        >
+                                          {main.subs.map((sub) => {
+                                            const isSubActive = currentLesson?.id === sub.id;
+                                            const isSubCompleted = completedLessons.includes(sub.id);
+                                            return (
+                                              <button
+                                                key={sub.id}
+                                                onClick={() => {
+                                                  setCurrentLesson(sub);
+                                                  setActiveSection(null);
+                                                  setAudioUrl(null);
+                                                  if (window.innerWidth < 768) setIsSidebarOpen(false);
+                                                }}
+                                                className={cn(
+                                                  "w-full flex items-start gap-5 px-14 py-4 text-left transition-all border-l-[6px]",
+                                                  isSubActive ? "border-emerald-600 bg-emerald-50/60" : "border-transparent hover:bg-zinc-100"
+                                                )}
+                                              >
+                                                <div className={cn(
+                                                  "mt-0.5 w-5 h-5 rounded-md flex items-center justify-center shrink-0 border-2 transition-all",
+                                                  isSubCompleted 
+                                                    ? "bg-emerald-600 border-emerald-600 text-white" 
+                                                    : isSubActive 
+                                                      ? "border-emerald-600 text-emerald-600 bg-white" 
+                                                      : "border-zinc-200 text-zinc-300 bg-white"
+                                                )}>
+                                                  {isSubCompleted ? <CheckCircle2 className="w-3 h-3" /> : <span className="text-[9px] font-black">{sub.order}</span>}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                  <p className={cn(
+                                                    "text-xs font-bold leading-snug tracking-tight",
+                                                    isSubActive ? "text-emerald-900" : "text-zinc-700",
+                                                    isSubCompleted && !isSubActive && "text-zinc-400"
+                                                  )}>{sub.title}</p>
+                                                </div>
+                                              </button>
+                                            );
+                                          })}
+                                        </motion.div>
+                                      )}
+                                    </AnimatePresence>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

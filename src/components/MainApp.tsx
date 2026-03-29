@@ -10,6 +10,7 @@ import { CourseManagement } from '../pages/CourseManagement';
 import { AdminView } from '../pages/AdminView';
 import { ParentView } from '../pages/ParentView';
 import { SettingsView } from '../pages/SettingsView';
+import { SeedData } from './SeedData';
 
 import { ExamViewer } from './ExamViewer';
 
@@ -29,6 +30,7 @@ export const MainApp: React.FC = () => {
       <Navbar activeTab={activeTab} setActiveTab={handleTabChange} />
       <div className="flex">
         <main className="flex-1 p-8 overflow-y-auto h-[calc(100vh-64px)]">
+          <SeedData />
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab + (selectedCourse || '') + (selectedExam || '')}

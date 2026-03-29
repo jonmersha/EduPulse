@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, doc, setDoc, Timestamp, deleteDoc } from 'firebase/firestore';
-import { Plus, Trash2, Settings } from 'lucide-react';
+import { Plus, Trash2, Settings, Search, Filter, BookOpen, Trophy, Users, Eye, CheckCircle, Clock, LayoutDashboard, GraduationCap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '../lib/utils';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { CourseCard } from '../components/CourseCard';
@@ -173,159 +174,202 @@ export const CourseManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <header className="flex items-center justify-between">
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Teaching Dashboard</h1>
-          <p className="text-zinc-500 mt-1">Manage your courses, exams, and student progress.</p>
+          <h1 className="text-4xl font-black tracking-tight text-zinc-900">Instructor Dashboard</h1>
+          <p className="text-zinc-500 mt-1 font-medium">Create, manage, and track your educational content.</p>
         </div>
-        <button 
-          onClick={() => { setEditingItem(null); setShowCreate(true); }}
-          className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
-        >
-          <Plus className="w-5 h-5" />
-          Create {activeTab === 'courses' ? 'Course' : 'Exam'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => { setEditingItem(null); setShowCreate(true); }}
+            className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-xl shadow-zinc-200"
+          >
+            <Plus className="w-5 h-5" />
+            New {activeTab === 'courses' ? 'Course' : 'Exam'}
+          </button>
+        </div>
       </header>
 
-      <div className="flex gap-4 border-b border-black/5 pb-4">
-        <button 
-          onClick={() => setActiveTab('courses')}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100"}`}
-        >
-          Courses
-        </button>
-        <button 
-          onClick={() => setActiveTab('exams')}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100"}`}
-        >
-          Exams
-        </button>
-        <button 
-          onClick={() => setActiveTab('results')}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'results' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100"}`}
-        >
-          Results
-        </button>
+      <div className="flex items-center gap-2 p-1 bg-zinc-100 w-fit rounded-2xl">
+        {[
+          { id: 'courses', label: 'My Courses', count: courses.length },
+          { id: 'exams', label: 'Exams', count: exams.length },
+          { id: 'results', label: 'Student Results', count: studentResults.length }
+        ].map((tab) => (
+          <button 
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={cn(
+              "px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2",
+              activeTab === tab.id ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-900"
+            )}
+          >
+            {tab.label}
+            <span className={cn(
+              "px-1.5 py-0.5 rounded-md text-[10px] font-black",
+              activeTab === tab.id ? "bg-zinc-100 text-zinc-600" : "bg-zinc-200/50 text-zinc-400"
+            )}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
       </div>
 
-      {activeTab === 'courses' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {courses.map(course => (
-            <div key={course.id} className="relative group">
-              <CourseCard course={course} onClick={() => setEditingCourseId(course.id)} />
-              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button 
-                  onClick={(e) => { e.stopPropagation(); startEditCourse(course); }}
-                  className="p-2 bg-white/90 backdrop-blur-sm text-zinc-600 rounded-lg hover:text-emerald-600 shadow-sm"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: course.id, type: 'course' }); }}
-                  className="p-2 bg-white/90 backdrop-blur-sm text-zinc-600 rounded-lg hover:text-red-600 shadow-sm"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : activeTab === 'exams' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {exams.map(exam => (
-            <div 
-              key={exam.id} 
-              className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all group cursor-pointer relative"
-              onClick={() => setEditingExamId(exam.id)}
-            >
-              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button 
-                  onClick={(e) => { e.stopPropagation(); startEditExam(exam); }}
-                  className="p-2 bg-zinc-100 text-zinc-600 rounded-lg hover:text-blue-600"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: exam.id, type: 'exam' }); }}
-                  className="p-2 bg-zinc-100 text-zinc-600 rounded-lg hover:text-red-600"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold uppercase rounded-md">Exam</span>
-                <span className="text-xs font-bold text-zinc-400">{exam.duration}m</span>
-              </div>
-              <h3 className="font-bold text-lg mb-2 group-hover:text-blue-600 transition-colors">{exam.title}</h3>
-              <p className="text-sm text-zinc-500 line-clamp-2 mb-4">{exam.description}</p>
-              <div className="flex items-center justify-between mt-auto pt-4 border-t border-black/5">
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold">{exam.price > 0 ? `$${exam.price}` : 'FREE'}</span>
-                  <span className="text-[10px] text-zinc-400 font-bold uppercase">{exam.maxAttempts > 0 ? `${exam.maxAttempts} Attempts` : 'Unlimited'}</span>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          {activeTab === 'courses' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {courses.map(course => (
+                <div key={course.id} className="relative group">
+                  <CourseCard course={course} onClick={() => setEditingCourseId(course.id)} />
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); startEditCourse(course); }}
+                      className="p-2.5 bg-white text-zinc-600 rounded-xl hover:text-emerald-600 shadow-xl border border-black/5"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: course.id, type: 'course' }); }}
+                      className="p-2.5 bg-white text-zinc-600 rounded-xl hover:text-red-600 shadow-xl border border-black/5"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setSelectedExamSummary(exam); }}
-                    className="text-xs font-bold text-zinc-500 hover:text-zinc-900"
-                  >
-                    Summary
-                  </button>
-                  <span className="text-xs font-bold text-blue-600 group-hover:underline">Edit Questions</span>
+              ))}
+              <button 
+                onClick={() => { setEditingItem(null); setShowCreate(true); }}
+                className="aspect-[4/5] border-2 border-dashed border-zinc-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-zinc-400 hover:border-emerald-500 hover:text-emerald-500 hover:bg-emerald-50/30 transition-all group"
+              >
+                <div className="w-12 h-12 rounded-full bg-zinc-50 flex items-center justify-center group-hover:bg-emerald-100">
+                  <Plus className="w-6 h-6" />
                 </div>
-              </div>
+                <span className="font-bold text-sm">Create New Course</span>
+              </button>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-white border border-black/5 rounded-[2rem] overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-zinc-50 border-b border-black/5">
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Student</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Exam</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Score</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/5">
-              {studentResults.length > 0 ? studentResults.map((result) => (
-                <tr key={result.id} className="hover:bg-zinc-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="font-bold text-zinc-900">{result.studentName}</div>
-                    <div className="text-xs text-zinc-500">{result.studentId.slice(0, 8)}...</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-zinc-700">{result.examTitle || 'Unknown Exam'}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className={`text-lg font-black ${result.score >= 70 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {result.score.toFixed(1)}%
+          ) : activeTab === 'exams' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {exams.map(exam => (
+                <div 
+                  key={exam.id} 
+                  className="bg-white border border-black/5 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all group cursor-pointer relative flex flex-col"
+                  onClick={() => setEditingExamId(exam.id)}
+                >
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); startEditExam(exam); }}
+                      className="p-2 bg-zinc-50 text-zinc-600 rounded-lg hover:text-blue-600"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: exam.id, type: 'exam' }); }}
+                      className="p-2 bg-zinc-50 text-zinc-600 rounded-lg hover:text-red-600"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="px-2.5 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-lg tracking-wider">Exam</span>
+                    <span className="text-xs font-bold text-zinc-400">{exam.duration}m</span>
+                  </div>
+                  <h3 className="font-bold text-xl mb-2 group-hover:text-blue-600 transition-colors leading-tight">{exam.title}</h3>
+                  <p className="text-sm text-zinc-500 line-clamp-2 mb-6 flex-1">{exam.description}</p>
+                  <div className="flex items-center justify-between pt-4 border-t border-black/5">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-zinc-900">{exam.price > 0 ? `$${exam.price}` : 'FREE'}</span>
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">{exam.maxAttempts > 0 ? `${exam.maxAttempts} Attempts` : 'Unlimited'}</span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-zinc-500">
-                    {new Date(result.completedAt?.toMillis()).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${
-                      result.score >= 70 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                      {result.score >= 70 ? 'Passed' : 'Failed'}
-                    </span>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-zinc-400 italic">
-                    No student results found yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setSelectedExamSummary(exam); }}
+                      className="px-3 py-1.5 bg-zinc-100 text-zinc-600 rounded-lg text-xs font-bold hover:bg-zinc-200 transition-colors"
+                    >
+                      Stats
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button 
+                onClick={() => { setEditingItem(null); setShowCreate(true); }}
+                className="aspect-[4/5] border-2 border-dashed border-zinc-200 rounded-3xl flex flex-col items-center justify-center gap-3 text-zinc-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50/30 transition-all group"
+              >
+                <div className="w-12 h-12 rounded-full bg-zinc-50 flex items-center justify-center group-hover:bg-blue-100">
+                  <Plus className="w-6 h-6" />
+                </div>
+                <span className="font-bold text-sm">Create New Exam</span>
+              </button>
+            </div>
+          ) : (
+            <div className="bg-white border border-black/5 rounded-[2.5rem] overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-zinc-50/50 border-b border-black/5">
+                      <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Student</th>
+                      <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Exam</th>
+                      <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Score</th>
+                      <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Date</th>
+                      <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-black/5">
+                    {studentResults.length > 0 ? studentResults.map((result) => (
+                      <tr key={result.id} className="hover:bg-zinc-50/50 transition-colors group">
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400 font-bold">
+                              {result.studentName?.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="font-bold text-zinc-900">{result.studentName}</div>
+                              <div className="text-[10px] text-zinc-400 font-medium tracking-tight uppercase">{result.studentId.slice(0, 8)}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="font-bold text-zinc-700">{result.examTitle || 'Unknown Exam'}</div>
+                        </td>
+                        <td className="px-8 py-5 text-center">
+                          <div className={`text-xl font-black ${result.score >= 70 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {result.score.toFixed(1)}%
+                          </div>
+                        </td>
+                        <td className="px-8 py-5 text-sm font-medium text-zinc-500">
+                          {new Date(result.completedAt?.toMillis()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+                            result.score >= 70 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                          }`}>
+                            {result.score >= 70 ? 'Passed' : 'Failed'}
+                          </span>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={5} className="px-8 py-20 text-center">
+                          <div className="flex flex-col items-center gap-2 text-zinc-400">
+                            <Users className="w-8 h-8 opacity-20" />
+                            <p className="italic font-medium">No student results found yet.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       <Modal
         isOpen={!!selectedExamSummary}
