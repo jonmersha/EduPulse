@@ -216,6 +216,43 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["questionId", "userId", "content"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A message in a course-specific chat room.",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["courseId", "senderId", "content", "createdAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "A private conversation between two students.",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string" },
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["courseId", "participants", "createdAt"]
+    },
+    "DirectMessage": {
+      "title": "DirectMessage",
+      "description": "A message in a private conversation.",
+      "type": "object",
+      "properties": {
+        "conversationId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["conversationId", "senderId", "content", "createdAt"]
     }
   },
   "firestore": {
@@ -231,6 +268,9 @@
     "/examResults/{resultId}": { "schema": "ExamResult", "description": "Exam results" },
     "/resources/{resourceId}": { "schema": "Resource", "description": "Course resources" },
     "/questions/{questionId}": { "schema": "Question", "description": "Course questions" },
-    "/answers/{answerId}": { "schema": "Answer", "description": "Question answers" }
+    "/answers/{answerId}": { "schema": "Answer", "description": "Question answers" },
+    "/chatMessages/{messageId}": { "schema": "ChatMessage", "description": "Course chat messages" },
+    "/conversations/{conversationId}": { "schema": "Conversation", "description": "Private conversations" },
+    "/directMessages/{messageId}": { "schema": "DirectMessage", "description": "Direct messages" }
   }
 }

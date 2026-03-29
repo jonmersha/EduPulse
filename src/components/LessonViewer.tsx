@@ -44,6 +44,9 @@ import Markdown from 'react-markdown';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
+import { CourseChat } from './CourseChat';
+import { AISummary } from './AISummary';
+import { RelatedCourses } from './RelatedCourses';
 
 interface LessonViewerProps {
   courseId: string;
@@ -65,7 +68,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [expandedLessons, setExpandedLessons] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'resources' | 'qa'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'resources' | 'qa' | 'chat'>('overview');
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -541,7 +544,8 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                       {[
                         { id: 'overview', label: 'Overview' },
                         { id: 'resources', label: 'Resources' },
-                        { id: 'qa', label: 'Q&A' }
+                        { id: 'qa', label: 'Q&A' },
+                        { id: 'chat', label: 'Chat' }
                       ].map((tab) => (
                         <button
                           key={tab.id}
@@ -579,6 +583,9 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                             <Markdown>{currentLesson.content || 'No detailed content provided for this lesson.'}</Markdown>
                           </div>
 
+                          <AISummary content={currentLesson.content || ''} title={currentLesson.title} />
+                          <RelatedCourses courseId={courseId} category={course?.category || ''} />
+
                           {/* Sub-lessons Grid */}
                           {lessons.some(l => l.parentId === currentLesson.id) && (
                             <div className="space-y-6 pt-12 border-t border-zinc-100">
@@ -602,6 +609,12 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                               </div>
                             </div>
                           )}
+                        </div>
+                      )}
+
+                      {activeTab === 'chat' && (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          <CourseChat courseId={courseId} />
                         </div>
                       )}
 
