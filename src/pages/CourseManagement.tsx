@@ -75,29 +75,22 @@ export const CourseManagement: React.FC = () => {
   }, [profile, exams]);
 
   useEffect(() => {
-    if (!profile || (courses.length === 0 && exams.length === 0)) {
+    if (!profile) {
       setEnrollmentRequests([]);
       return;
     }
 
-    const courseIds = courses.map(c => c.id);
-    const examIds = exams.map(e => e.id);
-    const allIds = [...courseIds, ...examIds];
-
-    if (allIds.length === 0) return;
-
     const enrollQuery = query(
       collection(db, 'enrollments'),
-      where('status', '==', 'pending')
+      where('teacherId', '==', profile.uid)
     );
 
     const unsubEnroll = onSnapshot(enrollQuery, (snapshot) => {
-      const allRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      setEnrollmentRequests(allRequests.filter(req => allIds.includes(req.courseId || req.examId)));
+      setEnrollmentRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
 
     return () => unsubEnroll();
-  }, [profile, courses, exams]);
+  }, [profile]);
 
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -230,7 +223,7 @@ export const CourseManagement: React.FC = () => {
           { id: 'courses', label: 'My Courses', count: courses.length },
           { id: 'exams', label: 'Exams', count: exams.length },
           { id: 'results', label: 'Student Results', count: studentResults.length },
-          { id: 'enrollments', label: 'Enrollment Requests', count: enrollmentRequests.length }
+          { id: 'enrollments', label: 'Student Enrollments', count: enrollmentRequests.length }
         ].map((tab) => (
           <button 
             key={tab.id}
@@ -437,18 +430,37 @@ export const CourseManagement: React.FC = () => {
                         </td>
                         <td className="px-8 py-5 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button 
-                              onClick={() => handleEnrollmentAction(req.id, 'approved')}
-                              className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
-                            >
-                              Approve
-                            </button>
-                            <button 
-                              onClick={() => handleEnrollmentAction(req.id, 'denied')}
-                              className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
-                            >
-                              Deny
-                            </button>
+                            {req.status === 'pending' ? (
+                              <>
+                                <button 
+                                  onClick={() => handleEnrollmentAction(req.id, 'approved')}
+                                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+                                >
+                                  Approve
+                                </button>
+                                <button 
+                                  onClick={() => handleEnrollmentAction(req.id, 'denied')}
+                                  className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                                >
+                                  Deny
+                                </button>
+                              </>
+                            ) : (
+                              <div className="flex items-center gap-3">
+                                <span className={cn(
+                                  "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider",
+                                  req.status === 'approved' ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"
+                                )}>
+                                  {req.status}
+                                </span>
+                                <button 
+                                  onClick={() => handleEnrollmentAction(req.id, req.status === 'approved' ? 'denied' : 'approved')}
+                                  className="text-[10px] font-black text-zinc-400 hover:text-zinc-900 uppercase tracking-widest underline underline-offset-4"
+                                >
+                                  Change to {req.status === 'approved' ? 'Denied' : 'Approved'}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -457,7 +469,7 @@ export const CourseManagement: React.FC = () => {
                         <td colSpan={4} className="px-8 py-20 text-center">
                           <div className="flex flex-col items-center gap-2 text-zinc-400">
                             <Clock className="w-8 h-8 opacity-20" />
-                            <p className="italic font-medium">No pending enrollment requests.</p>
+                            <p className="italic font-medium">No enrollments found.</p>
                           </div>
                         </td>
                       </tr>

@@ -60,6 +60,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
       await setDoc(doc(db, 'enrollments', enrollmentId), {
         studentId: profile.uid,
         studentName: profile.displayName,
+        teacherId: item.teacherId,
         [type === 'course' ? 'courseId' : 'examId']: item.id,
         title: item.title,
         enrolledAt: Timestamp.now(),
@@ -167,23 +168,23 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
               <div key={item.id} className="relative group">
                 <CourseCard 
                   course={item} 
-                  onClick={() => isApproved ? onSelectCourse(item.id) : !isEnrolled && handleEnroll(item, 'course')}
+                  onClick={() => isApproved ? onSelectCourse(item.id) : (!isEnrolled || isDenied) && handleEnroll(item, 'course')}
                 />
-                {!isEnrolled && (
+                {(!isEnrolled || isDenied) && (
                   <div className="absolute top-6 left-6">
                     <div className="px-3 py-1 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5">
                       <Sparkles className="w-3 h-3" />
-                      New
+                      {isDenied ? "Re-enroll" : "New"}
                     </div>
                   </div>
                 )}
-                {isEnrolled && (
+                {isEnrolled && !isDenied && (
                   <div className="absolute top-6 left-6">
                     <div className={cn(
                       "px-3 py-1 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5",
-                      isApproved ? "bg-emerald-600" : isPending ? "bg-amber-500" : "bg-red-500"
+                      isApproved ? "bg-emerald-600" : "bg-amber-500"
                     )}>
-                      {isApproved ? "Enrolled" : isPending ? "Pending Approval" : "Denied"}
+                      {isApproved ? "Enrolled" : "Pending Approval"}
                     </div>
                   </div>
                 )}
@@ -194,7 +195,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="group bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer flex flex-col h-full"
-                onClick={() => isApproved ? onSelectExam(item.id) : !isEnrolled && handleEnroll(item, 'exam')}
+                onClick={() => isApproved ? onSelectExam(item.id) : (!isEnrolled || isDenied) && handleEnroll(item, 'exam')}
               >
                 <div className="aspect-video bg-zinc-900 relative flex items-center justify-center overflow-hidden">
                   <Trophy className="w-20 h-20 text-zinc-700 group-hover:scale-110 transition-transform duration-700" />
@@ -202,13 +203,20 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                   <div className="absolute top-6 right-6 px-4 py-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md rounded-2xl text-xs font-black shadow-2xl dark:text-white">
                     {item.price > 0 ? `$${item.price}` : 'FREE'}
                   </div>
-                  {isEnrolled && (
+                  {isEnrolled && !isDenied && (
                     <div className="absolute top-6 left-6">
                       <div className={cn(
                         "px-3 py-1 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5",
-                        isApproved ? "bg-emerald-600" : isPending ? "bg-amber-500" : "bg-red-500"
+                        isApproved ? "bg-emerald-600" : "bg-amber-500"
                       )}>
-                        {isApproved ? "Enrolled" : isPending ? "Pending" : "Denied"}
+                        {isApproved ? "Enrolled" : "Pending"}
+                      </div>
+                    </div>
+                  )}
+                  {isDenied && (
+                    <div className="absolute top-6 left-6">
+                      <div className="px-3 py-1 bg-red-500 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5">
+                        Denied
                       </div>
                     </div>
                   )}
@@ -228,10 +236,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                       : isPending
                         ? "bg-amber-500 text-white cursor-not-allowed"
                         : isDenied
-                          ? "bg-red-500 text-white cursor-not-allowed"
+                          ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100" // Allow re-enroll
                           : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
                   )}>
-                    {isApproved ? 'Open Exam' : isPending ? 'Pending Approval' : isDenied ? 'Enrollment Denied' : (item.price > 0 ? 'Purchase Exam' : 'Enroll Free')}
+                    {isApproved ? 'Open Exam' : isPending ? 'Pending Approval' : isDenied ? 'Re-enroll' : (item.price > 0 ? 'Purchase Exam' : 'Enroll Free')}
                   </button>
                 </div>
               </motion.div>
