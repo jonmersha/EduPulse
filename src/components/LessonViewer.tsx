@@ -54,7 +54,10 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
   const { profile } = useAuth();
   const [course, setCourse] = useState<any>(null);
   const [lessons, setLessons] = useState<any[]>([]);
+  const [sectionMetadata, setSectionMetadata] = useState<any[]>([]);
   const [currentLesson, setCurrentLesson] = useState<any>(null);
+  const [selectedSection, setSelectedSection] = useState<any>(null);
+  const [isViewingCourseOverview, setIsViewingCourseOverview] = useState(true);
   const [loading, setLoading] = useState(true);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -86,8 +89,14 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setLessons(docs);
-      if (docs.length > 0 && !currentLesson) setCurrentLesson(docs[0]);
+      // Don't auto-set current lesson if we want to show course overview first
       setLoading(false);
+    });
+
+    // Fetch section metadata
+    const sectionsQ = query(collection(db, 'sections'), where('courseId', '==', courseId), orderBy('order', 'asc'));
+    const unsubSections = onSnapshot(sectionsQ, (snapshot) => {
+      setSectionMetadata(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
     if (profile) {
@@ -135,10 +144,14 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
         unsubEnroll();
         unsubResources();
         unsubQuestions();
+        unsubSections();
       };
     }
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      unsubSections();
+    };
   }, [courseId, profile]);
 
   useEffect(() => {
@@ -221,10 +234,13 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
     }
   }, [currentLesson]);
 
-  const toggleSection = (section: string) => {
+  const toggleSection = (section: any) => {
     setExpandedSections(prev => 
-      prev.includes(section) ? prev.filter(s => s !== section) : [...prev, section]
+      prev.includes(section.name) ? prev.filter(s => s !== section.name) : [...prev, section.name]
     );
+    setSelectedSection(section);
+    setIsViewingCourseOverview(false);
+    setCurrentLesson(null);
   };
 
   const toggleLesson = (lessonId: string) => {
@@ -243,20 +259,33 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
       grouped[sectionName].push(lesson);
     });
 
-    return Object.entries(grouped).map(([sectionName, sectionLessons]) => {
+    // Get all unique section names from lessons and metadata
+    const allSectionNames = Array.from(new Set([
+      'General',
+      ...Object.keys(grouped),
+      ...sectionMetadata.map(s => s.name)
+    ]));
+
+    return allSectionNames.map(sectionName => {
+      const metadata = sectionMetadata.find(s => s.name === sectionName);
+      const sectionLessons = grouped[sectionName] || [];
+      
       // Within each section, organize by main lessons and their sub-lessons
       const mainLessons = sectionLessons.filter(l => !l.parentId);
       const subLessons = sectionLessons.filter(l => l.parentId);
 
       return {
+        id: metadata?.id || sectionName,
         name: sectionName,
+        overview: metadata?.overview || '',
+        order: metadata?.order ?? 999,
         mainLessons: mainLessons.map(main => ({
           ...main,
           subs: subLessons.filter(sub => sub.parentId === main.id)
         }))
       };
-    });
-  }, [lessons]);
+    }).sort((a, b) => a.order - b.order);
+  }, [lessons, sectionMetadata]);
 
   const currentIndex = lessons.findIndex(l => l.id === currentLesson?.id);
   const nextLesson = currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null;
@@ -368,7 +397,82 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
         <main className="flex-1 overflow-y-auto bg-white relative scroll-smooth">
           <div className="max-w-5xl mx-auto">
             <AnimatePresence mode="wait">
-              {currentLesson ? (
+              {isViewingCourseOverview ? (
+                <motion.div
+                  key="course-overview"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="p-8 md:p-12 space-y-10"
+                >
+                  <div className="space-y-4">
+                    <h2 className="text-4xl font-black tracking-tight text-zinc-900 leading-tight">Course Overview</h2>
+                    <p className="text-xl text-zinc-500 font-medium leading-relaxed">{course?.title}</p>
+                  </div>
+                  <div className="prose prose-zinc prose-xl max-w-none text-zinc-600 leading-relaxed font-medium">
+                    <Markdown>{course?.description || 'No course overview provided.'}</Markdown>
+                  </div>
+                  {sections.length > 0 && (
+                    <div className="pt-12 border-t border-zinc-100">
+                      <h3 className="text-xl font-black text-zinc-900 uppercase tracking-widest mb-8">Course Curriculum</h3>
+                      <div className="space-y-4">
+                        {sections.map((section, idx) => (
+                          <div key={section.id} className="p-6 bg-zinc-50 rounded-3xl border border-zinc-100">
+                            <div className="flex items-center gap-4 mb-2">
+                              <span className="text-zinc-400 font-black text-xs uppercase tracking-widest">Section {idx + 1}</span>
+                              <h4 className="font-bold text-zinc-900 text-lg">{section.name}</h4>
+                            </div>
+                            {section.overview && (
+                              <p className="text-zinc-500 text-sm line-clamp-2">{section.overview}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              ) : selectedSection && !currentLesson ? (
+                <motion.div
+                  key={`section-${selectedSection.id}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="p-8 md:p-12 space-y-10"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-lg tracking-widest">
+                        Section Overview
+                      </span>
+                    </div>
+                    <h2 className="text-4xl font-black tracking-tight text-zinc-900 leading-tight">{selectedSection.name}</h2>
+                  </div>
+                  <div className="prose prose-zinc prose-xl max-w-none text-zinc-600 leading-relaxed font-medium">
+                    <Markdown>{selectedSection.overview || 'No overview provided for this section.'}</Markdown>
+                  </div>
+                  
+                  <div className="pt-12 border-t border-zinc-100">
+                    <h3 className="text-xl font-black text-zinc-900 uppercase tracking-widest mb-8">Lessons in this Section</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {selectedSection.mainLessons.map((lesson: any, idx: number) => (
+                        <button
+                          key={lesson.id}
+                          onClick={() => setCurrentLesson(lesson)}
+                          className="flex items-center gap-5 p-6 bg-zinc-50 border border-zinc-100 rounded-3xl hover:bg-white hover:shadow-xl hover:border-emerald-200 transition-all text-left group"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-white border border-zinc-200 text-zinc-400 flex items-center justify-center text-xs font-black group-hover:bg-zinc-900 group-hover:text-white transition-all">
+                            {idx + 1}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-zinc-900 text-base">{lesson.title}</h4>
+                            <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest mt-1">{lesson.type}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              ) : currentLesson ? (
                 <motion.div 
                   key={currentLesson.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -961,19 +1065,43 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
           </div>
           
           <div className="flex-1 overflow-y-auto scrollbar-hide pb-20">
+            {/* Course Overview Button */}
+            <div className="border-b border-zinc-200">
+              <button 
+                onClick={() => {
+                  setIsViewingCourseOverview(true);
+                  setCurrentLesson(null);
+                  setSelectedSection(null);
+                  setActiveSection(null);
+                }}
+                className={cn(
+                  "w-full flex items-center gap-4 px-8 py-6 text-left transition-all group",
+                  isViewingCourseOverview ? "bg-white border-l-[6px] border-emerald-600" : "hover:bg-zinc-100 border-l-[6px] border-transparent"
+                )}
+              >
+                <div className={cn(
+                  "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-sm",
+                  isViewingCourseOverview ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-400 group-hover:bg-zinc-200"
+                )}>
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-1">Introduction</p>
+                  <h4 className="font-black text-zinc-900 text-sm tracking-tight">Course Overview</h4>
+                </div>
+              </button>
+            </div>
+
             {sections.map((section, sIdx) => {
               const isExpanded = expandedSections.includes(section.name);
+              const isSectionActive = selectedSection?.id === section.id && !currentLesson;
               return (
-                <div key={section.name} className="border-b border-zinc-200 last:border-0">
+                <div key={section.id} className="border-b border-zinc-200 last:border-0">
                   <button 
-                    onClick={() => {
-                      toggleSection(section.name);
-                      setActiveSection(section.name);
-                      setCurrentLesson(null);
-                    }}
+                    onClick={() => toggleSection(section)}
                     className={cn(
-                      "w-full flex items-center justify-between px-8 py-6 text-left transition-all group",
-                      isExpanded || activeSection === section.name ? "bg-white" : "hover:bg-zinc-100"
+                      "w-full flex items-center justify-between px-8 py-6 text-left transition-all group border-l-[6px]",
+                      isSectionActive ? "bg-white border-emerald-600" : "hover:bg-zinc-100 border-transparent"
                     )}
                   >
                     <div className="flex-1">
@@ -1011,7 +1139,8 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                 <button
                                   onClick={() => {
                                     setCurrentLesson(main);
-                                    setActiveSection(null);
+                                    setSelectedSection(section);
+                                    setIsViewingCourseOverview(false);
                                     setAudioUrl(null);
                                     if (isMobile) {
                                       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1077,7 +1206,8 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                             key={sub.id}
                                             onClick={() => {
                                               setCurrentLesson(sub);
-                                              setActiveSection(null);
+                                              setSelectedSection(section);
+                                              setIsViewingCourseOverview(false);
                                               setAudioUrl(null);
                                               if (isMobile) {
                                                 window.scrollTo({ top: 0, behavior: 'smooth' });

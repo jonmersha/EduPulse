@@ -34,6 +34,9 @@ service cloud.firestore {
     //
     // ===============================================================
 
+    // Collection: sections
+    // Fields: courseId, name, overview, order
+    //
     // ===============================================================
     // Helper Functions
     // ===============================================================
@@ -186,9 +189,29 @@ service cloud.firestore {
              data.content is string && data.content.size() > 0 && data.content.size() < 5000;
     }
 
+    function isValidSection(data) {
+      return data.courseId is string && data.name is string && data.name.size() > 0 &&
+             (!('overview' in data) || data.overview == null || data.overview == "" || (data.overview is string && data.overview.size() < 10000)) &&
+             (!('order' in data) || data.order is number);
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
+
+    match /sections/{sectionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || (isTeacher() && isCourseTeacher(request.resource.data.courseId) && isValidSection(request.resource.data));
+      allow update: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId) && isValidSection(request.resource.data));
+      allow delete: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId));
+    }
+
+    match /sections/{sectionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || (isTeacher() && isCourseTeacher(request.resource.data.courseId) && isValidSection(request.resource.data));
+      allow update: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId) && isValidSection(request.resource.data));
+      allow delete: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId));
+    }
 
     match /users/{uid} {
       allow read: if isAuthenticated() && (isOwner(uid) || isAdmin() || getUserData().schoolId == get(/databases/$(database)/documents/users/$(uid)).data.schoolId);

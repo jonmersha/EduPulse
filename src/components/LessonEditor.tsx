@@ -11,18 +11,41 @@ interface LessonEditorProps {
 }
 
 export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) => {
+  const [course, setCourse] = useState<any>(null);
   const [lessons, setLessons] = useState<any[]>([]);
+  const [sectionMetadata, setSectionMetadata] = useState<any[]>([]);
   const [resources, setResources] = useState<any[]>([]);
   const [activeView, setActiveView] = useState<'content' | 'resources'>('content');
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
+  const [selectedSectionName, setSelectedSectionName] = useState<string | null>(null);
+  const [isEditingCourse, setIsEditingCourse] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
+  const [editingSection, setEditingSection] = useState<any>(null);
+  const [editingCourseData, setEditingCourseData] = useState<any>(null);
   const [showSectionInput, setShowSectionInput] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
   const [showAddResource, setShowAddResource] = useState(false);
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<{ id: string, type: 'lesson' | 'resource' } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string, type: 'lesson' | 'resource' | 'section' } | null>(null);
   const [newResource, setNewResource] = useState({ title: '', url: '', type: 'link', lessonId: '', section: 'General' });
+
+  useEffect(() => {
+    const unsubCourse = onSnapshot(doc(db, 'courses', courseId), (doc) => {
+      if (doc.exists()) {
+        setCourse({ id: doc.id, ...doc.data() });
+      }
+    });
+    return () => unsubCourse();
+  }, [courseId]);
+
+  useEffect(() => {
+    const q = query(collection(db, 'sections'), where('courseId', '==', courseId), orderBy('order', 'asc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setSectionMetadata(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubscribe();
+  }, [courseId]);
 
   useEffect(() => {
     const q = query(collection(db, 'lessons'), where('courseId', '==', courseId), orderBy('order', 'asc'));
@@ -49,14 +72,27 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
       sectionMap[s].push(l);
     });
 
-    return Object.entries(sectionMap).map(([name, items]) => ({
-      name,
-      mainLessons: items.filter(l => !l.parentId).sort((a, b) => (a.order || 0) - (b.order || 0)).map(main => ({
-        ...main,
-        subs: items.filter(sub => sub.parentId === main.id).sort((a, b) => (a.order || 0) - (b.order || 0))
-      }))
-    }));
-  }, [lessons]);
+    // Ensure all metadata sections are included even if they have no lessons
+    sectionMetadata.forEach(sm => {
+      if (!sectionMap[sm.name]) sectionMap[sm.name] = [];
+    });
+
+    // Ensure General is always included
+    if (!sectionMap['General']) sectionMap['General'] = [];
+
+    return Object.entries(sectionMap).map(([name, items]) => {
+      const metadata = sectionMetadata.find(sm => sm.name === name);
+      return {
+        id: metadata?.id || name,
+        name,
+        metadata,
+        mainLessons: items.filter(l => !l.parentId).sort((a, b) => (a.order || 0) - (b.order || 0)).map(main => ({
+          ...main,
+          subs: items.filter(sub => sub.parentId === main.id).sort((a, b) => (a.order || 0) - (b.order || 0))
+        }))
+      };
+    }).sort((a, b) => (a.metadata?.order || 999) - (b.metadata?.order || 999));
+  }, [lessons, sectionMetadata]);
 
   const selectedLesson = useMemo(() => {
     if (!selectedLessonId) return null;
@@ -66,21 +102,71 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
   useEffect(() => {
     if (selectedLesson) {
       setEditingLesson({ ...selectedLesson });
+      setSelectedSectionName(null);
+      setIsEditingCourse(false);
     } else {
       setEditingLesson(null);
     }
   }, [selectedLesson]);
 
+  useEffect(() => {
+    if (selectedSectionName) {
+      const meta = sectionMetadata.find(sm => sm.name === selectedSectionName);
+      setEditingSection(meta || { name: selectedSectionName, overview: '', courseId, order: sectionMetadata.length });
+      setSelectedLessonId(null);
+      setIsEditingCourse(false);
+    } else {
+      setEditingSection(null);
+    }
+  }, [selectedSectionName, sectionMetadata, courseId]);
+
+  useEffect(() => {
+    if (isEditingCourse && course) {
+      setEditingCourseData({ ...course });
+      setSelectedLessonId(null);
+      setSelectedSectionName(null);
+    } else {
+      setEditingCourseData(null);
+    }
+  }, [isEditingCourse, course]);
+
   const handleSave = async () => {
-    if (!editingLesson) return;
     setIsSaving(true);
     try {
-      await setDoc(doc(db, 'lessons', editingLesson.id), {
-        ...editingLesson,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      if (editingLesson) {
+        await setDoc(doc(db, 'lessons', editingLesson.id), {
+          ...editingLesson,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      } else if (editingSection) {
+        const sectionId = editingSection.id || `${courseId}_${editingSection.name.replace(/\s+/g, '_')}`;
+        
+        // If name changed, update all lessons in this section
+        if (editingSection.id && editingSection.name !== sectionMetadata.find(sm => sm.id === editingSection.id)?.name) {
+          const oldName = sectionMetadata.find(sm => sm.id === editingSection.id)?.name;
+          const lessonsToUpdate = lessons.filter(l => l.section === oldName);
+          for (const lesson of lessonsToUpdate) {
+            await setDoc(doc(db, 'lessons', lesson.id), { section: editingSection.name }, { merge: true });
+          }
+        }
+
+        await setDoc(doc(db, 'sections', sectionId), {
+          ...editingSection,
+          courseId,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+        
+        if (!editingSection.id) {
+          setSelectedSectionName(editingSection.name);
+        }
+      } else if (editingCourseData) {
+        await setDoc(doc(db, 'courses', courseId), {
+          ...editingCourseData,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      }
     } catch (error) {
-      console.error("Error saving lesson:", error);
+      console.error("Error saving:", error);
     } finally {
       setIsSaving(false);
     }
@@ -161,11 +247,28 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'lessons', id));
-      if (selectedLessonId === id) setSelectedLessonId(null);
+      if (confirmDelete?.type === 'section') {
+        const section = sectionMetadata.find(s => s.id === id);
+        if (section) {
+          // Delete section metadata
+          await deleteDoc(doc(db, 'sections', id));
+          
+          // Move lessons in this section to "General"
+          const sectionLessons = lessons.filter(l => l.section === section.name);
+          for (const lesson of sectionLessons) {
+            await setDoc(doc(db, 'lessons', lesson.id), { section: 'General' }, { merge: true });
+          }
+          
+          if (selectedSectionName === section.name) setSelectedSectionName(null);
+          if (editingSection?.id === id) setEditingSection(null);
+        }
+      } else {
+        await deleteDoc(doc(db, 'lessons', id));
+        if (selectedLessonId === id) setSelectedLessonId(null);
+      }
       setConfirmDelete(null);
     } catch (error) {
-      console.error("Error deleting lesson:", error);
+      console.error(`Error deleting ${confirmDelete?.type || 'item'}:`, error);
     }
   };
 
@@ -264,7 +367,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
               )}
             </AnimatePresence>
           </div>
-          {editingLesson && (
+          {(editingLesson || editingSection || editingCourseData) && (
             <button 
               onClick={handleSave}
               disabled={isSaving}
@@ -306,7 +409,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                   Cancel
                 </button>
                 <button 
-                  onClick={() => confirmDelete.type === 'lesson' ? handleDelete(confirmDelete.id) : handleDeleteResource(confirmDelete.id)}
+                  onClick={() => handleDelete(confirmDelete.id)}
                   className="flex-1 py-4 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200"
                 >
                   Delete
@@ -320,27 +423,51 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside className="w-80 border-r border-black/5 overflow-y-auto bg-zinc-50/30 p-4 space-y-6">
-          <div className="flex items-center justify-between px-2 mb-4">
-            <h3 className="text-xs font-black text-zinc-900 uppercase tracking-[0.2em]">Curriculum</h3>
-            <button 
-              onClick={() => setActiveView('resources')}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded-lg text-[10px] font-bold transition-all"
+          <div className="space-y-2">
+            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-2">Course Settings</span>
+            <div 
+              onClick={() => setIsEditingCourse(true)}
+              className={cn(
+                "group flex items-center gap-2 p-2 rounded-xl cursor-pointer transition-all",
+                isEditingCourse ? "bg-emerald-50 text-emerald-700 shadow-sm ring-1 ring-emerald-200" : "hover:bg-zinc-100 text-zinc-600"
+              )}
             >
-              <FileText className="w-3 h-3" />
-              Manage Resources
-            </button>
+              <Settings className="w-3.5 h-3.5" />
+              <span className="text-sm font-bold">Course Overview</span>
+            </div>
           </div>
 
           {sections.map((section) => (
             <div key={section.name} className="space-y-2">
               <div className="flex items-center justify-between px-2">
-                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{section.name}</span>
-                <button 
-                  onClick={() => addLesson(section.name)}
-                  className="p-1 hover:bg-zinc-200 rounded text-zinc-400 hover:text-zinc-900"
+                <div 
+                  onClick={() => setSelectedSectionName(section.name)}
+                  className={cn(
+                    "flex items-center gap-2 cursor-pointer group",
+                    selectedSectionName === section.name ? "text-emerald-600" : "text-zinc-400 hover:text-zinc-900"
+                  )}
                 >
-                  <Plus className="w-3 h-3" />
-                </button>
+                  <span className="text-[10px] font-black uppercase tracking-widest">{section.name}</span>
+                  <Pencil className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => addLesson(section.name)}
+                    className="p-1 hover:bg-zinc-200 rounded text-zinc-400 hover:text-zinc-900"
+                    title="Add Lesson"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                  {section.id !== section.name && ( // Only show delete if it's a real section with metadata
+                    <button 
+                      onClick={() => setConfirmDelete({ id: section.id, type: 'section' })}
+                      className="p-1 hover:bg-red-100 rounded text-zinc-400 hover:text-red-600"
+                      title="Delete Section"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
               </div>
               
               <div className="space-y-1">
@@ -601,6 +728,78 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                   )}
                 </div>
               </motion.div>
+            ) : editingCourseData ? (
+              <motion.div 
+                key="course-edit"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="max-w-3xl mx-auto space-y-8"
+              >
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-1 bg-zinc-100 text-zinc-500 text-[10px] font-bold uppercase rounded-md tracking-wider">
+                      Course Settings
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Course Title</label>
+                    <input 
+                      value={editingCourseData.title}
+                      onChange={e => setEditingCourseData({...editingCourseData, title: e.target.value})}
+                      className="w-full text-4xl font-black tracking-tight border-none focus:ring-0 p-0 placeholder:text-zinc-200"
+                      placeholder="Course Title"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Course Overview (Markdown)</label>
+                    <textarea 
+                      value={editingCourseData.description || ''}
+                      onChange={e => setEditingCourseData({...editingCourseData, description: e.target.value})}
+                      className="w-full px-4 py-3 bg-zinc-50 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm font-mono min-h-[400px]"
+                      placeholder="Write a comprehensive overview of your course..."
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            ) : editingSection ? (
+              <motion.div 
+                key="section-edit"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="max-w-3xl mx-auto space-y-8"
+              >
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-1 bg-zinc-100 text-zinc-500 text-[10px] font-bold uppercase rounded-md tracking-wider">
+                      Section Settings
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Section Name</label>
+                    <input 
+                      value={editingSection.name}
+                      onChange={e => setEditingSection({...editingSection, name: e.target.value})}
+                      className="w-full text-4xl font-black tracking-tight border-none focus:ring-0 p-0 placeholder:text-zinc-200"
+                      placeholder="Section Name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Section Overview (Markdown)</label>
+                    <textarea 
+                      value={editingSection.overview || ''}
+                      onChange={e => setEditingSection({...editingSection, overview: e.target.value})}
+                      className="w-full px-4 py-3 bg-zinc-50 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm font-mono min-h-[300px]"
+                      placeholder="Write an overview for this section..."
+                    />
+                  </div>
+                </div>
+              </motion.div>
             ) : editingLesson ? (
               <motion.div 
                 key={editingLesson.id}
@@ -667,11 +866,15 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Section</label>
-                      <input 
+                      <select 
                         value={editingLesson.section}
                         onChange={e => setEditingLesson({...editingLesson, section: e.target.value})}
                         className="w-full px-4 py-3 bg-zinc-50 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm font-medium"
-                      />
+                      >
+                        {sections.map(s => (
+                          <option key={s.name} value={s.name}>{s.name}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 

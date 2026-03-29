@@ -67,6 +67,18 @@
       },
       "required": ["title", "teacherId"]
     },
+    "Section": {
+      "title": "Section",
+      "description": "A section within a course.",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string" },
+        "name": { "type": "string" },
+        "overview": { "type": "string", "description": "Markdown content for section overview" },
+        "order": { "type": "integer" }
+      },
+      "required": ["courseId", "name"]
+    },
     "Lesson": {
       "title": "Lesson",
       "description": "A specific lesson within a course.",
