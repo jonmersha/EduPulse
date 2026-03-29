@@ -74,6 +74,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
   const [newQuestion, setNewQuestion] = useState('');
   const [newAnswer, setNewAnswer] = useState<{ [key: string]: string }>({});
   const [showAddResource, setShowAddResource] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch course details
@@ -167,18 +168,16 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
       setShowAddResource(false);
     } catch (error) {
       console.error("Error adding resource:", error);
-      alert("Failed to add resource. You might not have permission.");
     }
   };
 
   const handleDeleteResource = async (id: string) => {
     if (!isTeacherOrAdmin) return;
-    if (!window.confirm('Are you sure you want to delete this resource?')) return;
     try {
       await deleteDoc(doc(db, 'resources', id));
+      setConfirmDeleteId(null);
     } catch (error) {
       console.error("Error deleting resource:", error);
-      alert("Failed to delete resource.");
     }
   };
 
@@ -378,8 +377,8 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                   className="flex flex-col"
                 >
                   {/* Media Player Section */}
-                  <div className="bg-black aspect-video w-full relative group shadow-2xl">
-                    {currentLesson.type === 'video' && currentLesson.videoUrl ? (
+                  {currentLesson.type === 'video' && currentLesson.videoUrl && (
+                    <div className="bg-black aspect-video w-full relative group shadow-2xl">
                       <iframe
                         width="100%"
                         height="100%"
@@ -390,18 +389,8 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                         allowFullScreen
                         className="w-full h-full"
                       ></iframe>
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 gap-6 bg-zinc-900">
-                        <div className="w-24 h-24 rounded-3xl bg-zinc-800 flex items-center justify-center shadow-inner">
-                          {currentLesson.type === 'pdf' ? <FileText className="w-12 h-12 text-emerald-500" /> : <BookOpen className="w-12 h-12 text-emerald-500" />}
-                        </div>
-                        <div className="text-center">
-                          <p className="font-black text-xs uppercase tracking-[0.3em] text-zinc-400 mb-2">Reading Material</p>
-                          <h3 className="text-xl font-bold text-white">{currentLesson.title}</h3>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Content Section */}
                   <div className="p-8 md:p-12 space-y-10">
@@ -632,7 +621,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                           </a>
                                           {isTeacherOrAdmin && (
                                             <button 
-                                              onClick={() => handleDeleteResource(resource.id)}
+                                              onClick={() => setConfirmDeleteId(resource.id)}
                                               className="p-2 hover:bg-red-50 rounded-lg text-zinc-400 hover:text-red-600 transition-all"
                                             >
                                               <Trash2 className="w-4 h-4" />
@@ -675,7 +664,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                           </a>
                                           {isTeacherOrAdmin && (
                                             <button 
-                                              onClick={() => handleDeleteResource(resource.id)}
+                                              onClick={() => setConfirmDeleteId(resource.id)}
                                               className="p-2 hover:bg-red-50 rounded-lg text-zinc-400 hover:text-red-600 transition-all"
                                             >
                                               <Trash2 className="w-4 h-4" />
@@ -718,7 +707,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                           </a>
                                           {isTeacherOrAdmin && (
                                             <button 
-                                              onClick={() => handleDeleteResource(resource.id)}
+                                              onClick={() => setConfirmDeleteId(resource.id)}
                                               className="p-2 hover:bg-red-50 rounded-lg text-zinc-400 hover:text-red-600 transition-all"
                                             >
                                               <Trash2 className="w-4 h-4" />
@@ -905,6 +894,46 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
             </AnimatePresence>
           </div>
         </main>
+
+        <AnimatePresence>
+          {confirmDeleteId && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+              >
+                <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-6">
+                  <Trash2 className="w-8 h-8" />
+                </div>
+                <h3 className="text-2xl font-black text-zinc-900 mb-2">Delete Resource?</h3>
+                <p className="text-zinc-500 font-medium mb-8">
+                  This action cannot be undone. This resource will be permanently removed from the course.
+                </p>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setConfirmDeleteId(null)}
+                    className="flex-1 py-4 bg-zinc-100 text-zinc-900 rounded-2xl font-bold hover:bg-zinc-200 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteResource(confirmDeleteId)}
+                    className="flex-1 py-4 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Sidebar - Course Content */}
         <aside 

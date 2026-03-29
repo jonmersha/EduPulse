@@ -10,7 +10,8 @@ export const SeedData: React.FC = () => {
 
   const seed = async () => {
     if (!auth.currentUser) {
-      alert('Please log in first');
+      console.error('Please log in first');
+      setStatus('error');
       return;
     }
     setLoading(true);

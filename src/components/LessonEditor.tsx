@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, orderBy, onSnapshot, doc, setDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ChevronRight, Plus, Settings, Trash2, GripVertical, Video, FileText, Type, Layers, Save, ArrowLeft, ExternalLink, Download, X, Link as LinkIcon, BookOpen } from 'lucide-react';
+import { ChevronRight, Plus, Settings, Trash2, GripVertical, Video, FileText, Type, Layers, Save, ArrowLeft, ExternalLink, Download, X, Link as LinkIcon, BookOpen, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../firebase';
 import { cn } from '../lib/utils';
@@ -20,6 +20,8 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
   const [showSectionInput, setShowSectionInput] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
   const [showAddResource, setShowAddResource] = useState(false);
+  const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string, type: 'lesson' | 'resource' } | null>(null);
   const [newResource, setNewResource] = useState({ title: '', url: '', type: 'link', lessonId: '', section: 'General' });
 
   useEffect(() => {
@@ -100,7 +102,6 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
       setSelectedLessonId(docRef.id);
     } catch (error) {
       console.error("Error adding lesson:", error);
-      alert("Failed to add lesson. Please check your permissions.");
     }
   };
 
@@ -117,33 +118,52 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
     if (!newResource.title || !newResource.url) return;
     
     try {
-      await addDoc(collection(db, 'resources'), {
-        ...newResource,
-        courseId,
-        createdAt: serverTimestamp()
-      });
+      if (editingResourceId) {
+        await setDoc(doc(db, 'resources', editingResourceId), {
+          ...newResource,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      } else {
+        await addDoc(collection(db, 'resources'), {
+          ...newResource,
+          courseId,
+          createdAt: serverTimestamp()
+        });
+      }
       setNewResource({ title: '', url: '', type: 'link', lessonId: '', section: 'General' });
       setShowAddResource(false);
+      setEditingResourceId(null);
     } catch (error) {
-      console.error("Error adding resource:", error);
+      console.error("Error saving resource:", error);
     }
   };
 
+  const handleEditResource = (resource: any) => {
+    setNewResource({
+      title: resource.title,
+      url: resource.url,
+      type: resource.type,
+      lessonId: resource.lessonId || '',
+      section: resource.section || 'General'
+    });
+    setEditingResourceId(resource.id);
+    setShowAddResource(true);
+  };
+
   const handleDeleteResource = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this resource?')) {
-      try {
-        await deleteDoc(doc(db, 'resources', id));
-      } catch (error) {
-        console.error("Error deleting resource:", error);
-      }
+    try {
+      await deleteDoc(doc(db, 'resources', id));
+      setConfirmDelete(null);
+    } catch (error) {
+      console.error("Error deleting resource:", error);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this lesson?')) return;
     try {
       await deleteDoc(doc(db, 'lessons', id));
       if (selectedLessonId === id) setSelectedLessonId(null);
+      setConfirmDelete(null);
     } catch (error) {
       console.error("Error deleting lesson:", error);
     }
@@ -257,6 +277,46 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
         </div>
       </header>
 
+      <AnimatePresence>
+        {confirmDelete && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+            >
+              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-6">
+                <Trash2 className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black text-zinc-900 mb-2">Are you sure?</h3>
+              <p className="text-zinc-500 font-medium mb-8">
+                This action cannot be undone. All associated data will be permanently removed.
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setConfirmDelete(null)}
+                  className="flex-1 py-4 bg-zinc-100 text-zinc-900 rounded-2xl font-bold hover:bg-zinc-200 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => confirmDelete.type === 'lesson' ? handleDelete(confirmDelete.id) : handleDeleteResource(confirmDelete.id)}
+                  className="flex-1 py-4 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside className="w-80 border-r border-black/5 overflow-y-auto bg-zinc-50/30 p-4 space-y-6">
@@ -310,7 +370,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                           <Plus className="w-3 h-3" />
                         </button>
                         <button 
-                          onClick={(e) => { e.stopPropagation(); handleDelete(main.id); }}
+                          onClick={(e) => { e.stopPropagation(); setConfirmDelete({ id: main.id, type: 'lesson' }); }}
                           className="p-1 hover:bg-red-100 rounded text-red-600"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -338,7 +398,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                               )}
                             </div>
                             <button 
-                              onClick={(e) => { e.stopPropagation(); handleDelete(sub.id); }}
+                              onClick={(e) => { e.stopPropagation(); setConfirmDelete({ id: sub.id, type: 'lesson' }); }}
                               className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded text-red-600 transition-all"
                             >
                               <Trash2 className="w-2.5 h-2.5" />
@@ -383,7 +443,15 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                     <p className="text-zinc-500 font-medium">Manage all downloadable materials and external links for this course.</p>
                   </div>
                   <button 
-                    onClick={() => setShowAddResource(!showAddResource)}
+                    onClick={() => {
+                      if (showAddResource) {
+                        setShowAddResource(false);
+                        setEditingResourceId(null);
+                        setNewResource({ title: '', url: '', type: 'link', lessonId: '', section: 'General' });
+                      } else {
+                        setShowAddResource(true);
+                      }
+                    }}
                     className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
                   >
                     {showAddResource ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
@@ -468,7 +536,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                     </div>
 
                     <button type="submit" className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-zinc-200">
-                      Save Resource
+                      {editingResourceId ? 'Update Resource' : 'Save Resource'}
                     </button>
                   </motion.form>
                 )}
@@ -511,7 +579,13 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                           <ExternalLink className="w-5 h-5" />
                         </a>
                         <button 
-                          onClick={() => handleDeleteResource(resource.id)}
+                          onClick={() => handleEditResource(resource)}
+                          className="p-3 bg-zinc-50 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                        >
+                          <Pencil className="w-5 h-5" />
+                        </button>
+                        <button 
+                          onClick={() => setConfirmDelete({ id: resource.id, type: 'resource' })}
                           className="p-3 bg-zinc-50 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
                         >
                           <Trash2 className="w-5 h-5" />
