@@ -5,3 +5,20 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
+
+@layer base {
+  :root {
+    --background: #F9F9F8;
+    --foreground: #18181b;
+  }
+  .dark {
+    --background: #09090b;
+    --foreground: #fafafa;
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    transition-property: background-color, color;
+    transition-duration: 300ms;
+  }
+}

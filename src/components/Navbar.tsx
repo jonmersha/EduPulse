@@ -10,9 +10,12 @@ import {
   Users, 
   MessageSquare,
   Menu,
-  X
+  X,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -23,6 +26,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const { profile, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const menuItems = [
@@ -38,18 +42,18 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
   return (
     <>
-      <nav className="h-16 border-b border-black/5 bg-white/80 backdrop-blur-md sticky top-0 z-50 px-6 flex items-center justify-between">
+      <nav className="h-16 border-b border-black/5 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md sticky top-0 z-50 px-6 flex items-center justify-between transition-colors duration-300">
         <div className="flex items-center gap-4 lg:gap-8">
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="xl:hidden p-2 hover:bg-zinc-100 rounded-lg transition-colors"
+            className="xl:hidden p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
           >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isMobileMenuOpen ? <X className="w-6 h-6 dark:text-zinc-400" /> : <Menu className="w-6 h-6 dark:text-zinc-400" />}
           </button>
 
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
             <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold italic">E</div>
-            <span className="font-bold text-xl tracking-tight hidden sm:block">EduPulse</span>
+            <span className="font-bold text-xl tracking-tight hidden sm:block dark:text-white">EduPulse</span>
           </div>
 
           <div className="hidden xl:flex items-center gap-1">
@@ -60,8 +64,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 className={cn(
                   "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all",
                   activeTab === item.id 
-                    ? "bg-emerald-50 text-emerald-700" 
-                    : "text-zinc-600 hover:bg-zinc-50"
+                    ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" 
+                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                 )}
               >
                 <item.icon className="w-4 h-4" />
@@ -72,24 +76,32 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
         </div>
         
         <div className="flex items-center gap-3 lg:gap-6">
+          <button
+            onClick={toggleTheme}
+            className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-600 dark:text-zinc-400"
+            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          >
+            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+          </button>
+
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <input 
               type="text" 
               placeholder="Search courses..." 
-              className="pl-10 pr-4 py-2 bg-zinc-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all w-40 lg:w-64"
+              className="pl-10 pr-4 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all w-40 lg:w-64 dark:text-white dark:placeholder-zinc-500"
             />
           </div>
           
           {profile && (
             <div className="flex items-center gap-4">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium leading-none">{profile.displayName}</p>
+                <p className="text-sm font-medium leading-none dark:text-white">{profile.displayName}</p>
                 <p className="text-xs text-zinc-500 capitalize">{profile.role}</p>
               </div>
               <button 
                 onClick={logout}
-                className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-600"
+                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-600 dark:text-zinc-400"
                 title="Logout"
               >
                 <LogOut className="w-5 h-5" />
@@ -105,7 +117,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="xl:hidden fixed inset-x-0 top-16 bg-white border-b border-black/5 z-40 p-4 shadow-xl"
+            className="xl:hidden fixed inset-x-0 top-16 bg-white dark:bg-zinc-900 border-b border-black/5 dark:border-white/5 z-40 p-4 shadow-xl"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {menuItems.map((item) => (
@@ -118,8 +130,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                   className={cn(
                     "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
                     activeTab === item.id 
-                      ? "bg-emerald-50 text-emerald-700" 
-                      : "text-zinc-600 hover:bg-zinc-50"
+                      ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" 
+                      : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                   )}
                 >
                   <item.icon className="w-5 h-5" />

@@ -125,9 +125,10 @@
         "enrolledAt": { "type": "string", "format": "date-time" },
         "progress": { "type": "number" },
         "completedLessons": { "type": "array", "items": { "type": "string" } },
-        "paymentVerified": { "type": "boolean", "description": "For paid public content" }
+        "paymentVerified": { "type": "boolean", "description": "For paid public content" },
+        "status": { "type": "string", "enum": ["pending", "approved", "denied"], "description": "Enrollment approval status" }
       },
-      "required": ["studentId"]
+      "required": ["studentId", "courseId", "status"]
     },
     "Exam": {
       "title": "Exam",

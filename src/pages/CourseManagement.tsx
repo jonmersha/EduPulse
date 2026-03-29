@@ -13,10 +13,11 @@ import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 export const CourseManagement: React.FC = () => {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'courses' | 'exams' | 'results'>('courses');
+  const [activeTab, setActiveTab] = useState<'courses' | 'exams' | 'results' | 'enrollments'>('courses');
   const [courses, setCourses] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
   const [studentResults, setStudentResults] = useState<any[]>([]);
+  const [enrollmentRequests, setEnrollmentRequests] = useState<any[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
@@ -73,6 +74,31 @@ export const CourseManagement: React.FC = () => {
     return () => unsubResults();
   }, [profile, exams]);
 
+  useEffect(() => {
+    if (!profile || (courses.length === 0 && exams.length === 0)) {
+      setEnrollmentRequests([]);
+      return;
+    }
+
+    const courseIds = courses.map(c => c.id);
+    const examIds = exams.map(e => e.id);
+    const allIds = [...courseIds, ...examIds];
+
+    if (allIds.length === 0) return;
+
+    const enrollQuery = query(
+      collection(db, 'enrollments'),
+      where('status', '==', 'pending')
+    );
+
+    const unsubEnroll = onSnapshot(enrollQuery, (snapshot) => {
+      const allRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      setEnrollmentRequests(allRequests.filter(req => allIds.includes(req.courseId || req.examId)));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
+
+    return () => unsubEnroll();
+  }, [profile, courses, exams]);
+
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
@@ -109,6 +135,14 @@ export const CourseManagement: React.FC = () => {
       setNewExam({ title: '', description: '', duration: 60, passingScore: 70, isPublic: false, price: 0, maxAttempts: 0 });
     } catch (error) {
       console.error("Error saving exam:", error);
+    }
+  };
+
+  const handleEnrollmentAction = async (requestId: string, status: 'approved' | 'denied') => {
+    try {
+      await setDoc(doc(db, 'enrollments', requestId), { status }, { merge: true });
+    } catch (error) {
+      console.error("Error updating enrollment status:", error);
     }
   };
 
@@ -191,24 +225,25 @@ export const CourseManagement: React.FC = () => {
         </div>
       </header>
 
-      <div className="flex items-center gap-2 p-1 bg-zinc-100 w-fit rounded-2xl">
+      <div className="flex items-center gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 w-fit rounded-2xl">
         {[
           { id: 'courses', label: 'My Courses', count: courses.length },
           { id: 'exams', label: 'Exams', count: exams.length },
-          { id: 'results', label: 'Student Results', count: studentResults.length }
+          { id: 'results', label: 'Student Results', count: studentResults.length },
+          { id: 'enrollments', label: 'Enrollment Requests', count: enrollmentRequests.length }
         ].map((tab) => (
           <button 
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={cn(
               "px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2",
-              activeTab === tab.id ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-900"
+              activeTab === tab.id ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
             )}
           >
             {tab.label}
             <span className={cn(
               "px-1.5 py-0.5 rounded-md text-[10px] font-black",
-              activeTab === tab.id ? "bg-zinc-100 text-zinc-600" : "bg-zinc-200/50 text-zinc-400"
+              activeTab === tab.id ? "bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400" : "bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-400"
             )}>
               {tab.count}
             </span>
@@ -260,37 +295,37 @@ export const CourseManagement: React.FC = () => {
               {exams.map(exam => (
                 <div 
                   key={exam.id} 
-                  className="bg-white border border-black/5 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all group cursor-pointer relative flex flex-col"
+                  className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all group cursor-pointer relative flex flex-col"
                   onClick={() => setEditingExamId(exam.id)}
                 >
                   <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                     <button 
                       onClick={(e) => { e.stopPropagation(); startEditExam(exam); }}
-                      className="p-2 bg-zinc-50 text-zinc-600 rounded-lg hover:text-blue-600"
+                      className="p-2 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-lg hover:text-blue-600"
                     >
                       <Settings className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: exam.id, type: 'exam' }); }}
-                      className="p-2 bg-zinc-50 text-zinc-600 rounded-lg hover:text-red-600"
+                      className="p-2 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-lg hover:text-red-600"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="px-2.5 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-lg tracking-wider">Exam</span>
+                    <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase rounded-lg tracking-wider">Exam</span>
                     <span className="text-xs font-bold text-zinc-400">{exam.duration}m</span>
                   </div>
-                  <h3 className="font-bold text-xl mb-2 group-hover:text-blue-600 transition-colors leading-tight">{exam.title}</h3>
+                  <h3 className="font-bold text-xl mb-2 group-hover:text-blue-600 transition-colors leading-tight dark:text-white">{exam.title}</h3>
                   <p className="text-sm text-zinc-500 line-clamp-2 mb-6 flex-1">{exam.description}</p>
-                  <div className="flex items-center justify-between pt-4 border-t border-black/5">
+                  <div className="flex items-center justify-between pt-4 border-t border-black/5 dark:border-white/5">
                     <div className="flex flex-col">
-                      <span className="text-sm font-black text-zinc-900">{exam.price > 0 ? `$${exam.price}` : 'FREE'}</span>
+                      <span className="text-sm font-black text-zinc-900 dark:text-white">{exam.price > 0 ? `$${exam.price}` : 'FREE'}</span>
                       <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">{exam.maxAttempts > 0 ? `${exam.maxAttempts} Attempts` : 'Unlimited'}</span>
                     </div>
                     <button 
                       onClick={(e) => { e.stopPropagation(); setSelectedExamSummary(exam); }}
-                      className="px-3 py-1.5 bg-zinc-100 text-zinc-600 rounded-lg text-xs font-bold hover:bg-zinc-200 transition-colors"
+                      className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-lg text-xs font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                     >
                       Stats
                     </button>
@@ -299,20 +334,20 @@ export const CourseManagement: React.FC = () => {
               ))}
               <button 
                 onClick={() => { setEditingItem(null); setShowCreate(true); }}
-                className="aspect-[4/5] border-2 border-dashed border-zinc-200 rounded-3xl flex flex-col items-center justify-center gap-3 text-zinc-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50/30 transition-all group"
+                className="aspect-[4/5] border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl flex flex-col items-center justify-center gap-3 text-zinc-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50/30 transition-all group"
               >
-                <div className="w-12 h-12 rounded-full bg-zinc-50 flex items-center justify-center group-hover:bg-blue-100">
+                <div className="w-12 h-12 rounded-full bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-blue-100">
                   <Plus className="w-6 h-6" />
                 </div>
                 <span className="font-bold text-sm">Create New Exam</span>
               </button>
             </div>
-          ) : (
-            <div className="bg-white border border-black/5 rounded-[2.5rem] overflow-hidden shadow-sm">
+          ) : activeTab === 'results' ? (
+            <div className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-zinc-50/50 border-b border-black/5">
+                    <tr className="bg-zinc-50/50 dark:bg-zinc-800/50 border-b border-black/5 dark:border-white/5">
                       <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Student</th>
                       <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Exam</th>
                       <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Score</th>
@@ -320,22 +355,22 @@ export const CourseManagement: React.FC = () => {
                       <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-black/5">
+                  <tbody className="divide-y divide-black/5 dark:divide-white/5">
                     {studentResults.length > 0 ? studentResults.map((result) => (
-                      <tr key={result.id} className="hover:bg-zinc-50/50 transition-colors group">
+                      <tr key={result.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors group">
                         <td className="px-8 py-5">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400 font-bold">
+                            <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold">
                               {result.studentName?.charAt(0)}
                             </div>
                             <div>
-                              <div className="font-bold text-zinc-900">{result.studentName}</div>
+                              <div className="font-bold text-zinc-900 dark:text-white">{result.studentName}</div>
                               <div className="text-[10px] text-zinc-400 font-medium tracking-tight uppercase">{result.studentId.slice(0, 8)}</div>
                             </div>
                           </div>
                         </td>
                         <td className="px-8 py-5">
-                          <div className="font-bold text-zinc-700">{result.examTitle || 'Unknown Exam'}</div>
+                          <div className="font-bold text-zinc-700 dark:text-zinc-300">{result.examTitle || 'Unknown Exam'}</div>
                         </td>
                         <td className="px-8 py-5 text-center">
                           <div className={`text-xl font-black ${result.score >= 70 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -347,7 +382,7 @@ export const CourseManagement: React.FC = () => {
                         </td>
                         <td className="px-8 py-5 text-right">
                           <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider ${
-                            result.score >= 70 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                            result.score >= 70 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'
                           }`}>
                             {result.score >= 70 ? 'Passed' : 'Failed'}
                           </span>
@@ -359,6 +394,70 @@ export const CourseManagement: React.FC = () => {
                           <div className="flex flex-col items-center gap-2 text-zinc-400">
                             <Users className="w-8 h-8 opacity-20" />
                             <p className="italic font-medium">No student results found yet.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-zinc-50/50 dark:bg-zinc-800/50 border-b border-black/5 dark:border-white/5">
+                      <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Student</th>
+                      <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Course/Exam</th>
+                      <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Date</th>
+                      <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                    {enrollmentRequests.length > 0 ? enrollmentRequests.map((req) => (
+                      <tr key={req.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors group">
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold">
+                              {req.studentName?.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="font-bold text-zinc-900 dark:text-white">{req.studentName}</div>
+                              <div className="text-[10px] text-zinc-400 font-medium tracking-tight uppercase">{req.studentId.slice(0, 8)}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="font-bold text-zinc-700 dark:text-zinc-300">{req.title}</div>
+                          <div className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">{req.type}</div>
+                        </td>
+                        <td className="px-8 py-5 text-sm font-medium text-zinc-500">
+                          {new Date(req.enrolledAt?.toMillis()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button 
+                              onClick={() => handleEnrollmentAction(req.id, 'approved')}
+                              className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+                            >
+                              Approve
+                            </button>
+                            <button 
+                              onClick={() => handleEnrollmentAction(req.id, 'denied')}
+                              className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                            >
+                              Deny
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={4} className="px-8 py-20 text-center">
+                          <div className="flex flex-col items-center gap-2 text-zinc-400">
+                            <Clock className="w-8 h-8 opacity-20" />
+                            <p className="italic font-medium">No pending enrollment requests.</p>
                           </div>
                         </td>
                       </tr>

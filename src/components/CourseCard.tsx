@@ -12,9 +12,9 @@ interface CourseCardProps {
 export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, progress }) => (
   <div 
     onClick={onClick}
-    className="bg-white border border-black/5 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all group cursor-pointer flex flex-col h-full"
+    className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all group cursor-pointer flex flex-col h-full"
   >
-    <div className="aspect-video bg-zinc-100 relative overflow-hidden">
+    <div className="aspect-video bg-zinc-100 dark:bg-zinc-800 relative overflow-hidden">
       <img 
         src={course.thumbnail || `https://picsum.photos/seed/${course.id}/800/450`} 
         alt={course.title} 
@@ -25,7 +25,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, progres
         <PlayCircle className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 scale-50 group-hover:scale-100 transition-all duration-300" />
       </div>
       {course.price > 0 && !progress && (
-        <div className="absolute top-4 right-4 px-3 py-1.5 bg-white/90 backdrop-blur-md rounded-xl text-xs font-black shadow-xl">
+        <div className="absolute top-4 right-4 px-3 py-1.5 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-xl text-xs font-black shadow-xl dark:text-white">
           ${course.price}
         </div>
       )}
@@ -41,21 +41,21 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, progres
     </div>
     <div className="p-6 flex flex-col flex-1">
       <div className="flex items-center justify-between mb-3">
-        <span className="px-2.5 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase rounded-lg tracking-widest">
+        <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase rounded-lg tracking-widest">
           {course.category || 'General'}
         </span>
         {progress !== undefined && (
-          <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{progress}% DONE</span>
+          <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">{progress}% DONE</span>
         )}
       </div>
-      <h3 className="font-black text-xl leading-tight mb-3 group-hover:text-emerald-600 transition-colors line-clamp-2">{course.title}</h3>
+      <h3 className="font-black text-xl leading-tight mb-3 group-hover:text-emerald-600 transition-colors line-clamp-2 dark:text-white">{course.title}</h3>
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] font-black text-zinc-400">
+        <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-black text-zinc-400">
           {course.teacherName?.charAt(0) || 'I'}
         </div>
-        <span className="text-xs font-bold text-zinc-500">By {course.teacherName || 'Instructor'}</span>
+        <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">By {course.teacherName || 'Instructor'}</span>
       </div>
-      <div className="flex items-center justify-between pt-5 mt-auto border-t border-black/5">
+      <div className="flex items-center justify-between pt-5 mt-auto border-t border-black/5 dark:border-white/5">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 text-zinc-400">
             <Users className="w-3.5 h-3.5" />
@@ -66,7 +66,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, progres
             <span className="text-[10px] font-black uppercase tracking-tighter">12h 30m</span>
           </div>
         </div>
-        <div className="w-8 h-8 rounded-full bg-zinc-50 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all">
+        <div className="w-8 h-8 rounded-full bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all dark:text-zinc-400">
           <ChevronRight className="w-4 h-4" />
         </div>
       </div>

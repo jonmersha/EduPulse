@@ -18,8 +18,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
   const [activeTab, setActiveTab] = useState<'courses' | 'exams'>('courses');
   const [courses, setCourses] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
-  const [enrolledCourseIds, setEnrolledCourseIds] = useState<string[]>([]);
-  const [enrolledExamIds, setEnrolledExamIds] = useState<string[]>([]);
+  const [enrollments, setEnrollments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -39,9 +38,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
     if (profile) {
       const enrollQuery = query(collection(db, 'enrollments'), where('studentId', '==', profile.uid));
       const unsubEnroll = onSnapshot(enrollQuery, (snapshot) => {
-        const data = snapshot.docs.map(doc => doc.data());
-        setEnrolledCourseIds(data.filter(d => d.courseId).map(d => d.courseId));
-        setEnrolledExamIds(data.filter(d => d.examId).map(d => d.examId));
+        setEnrollments(snapshot.docs.map(doc => doc.data()));
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
       return () => {
         unsubCourses();
@@ -62,11 +59,12 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
       const enrollmentId = `${profile.uid}_${item.id}`;
       await setDoc(doc(db, 'enrollments', enrollmentId), {
         studentId: profile.uid,
+        studentName: profile.displayName,
         [type === 'course' ? 'courseId' : 'examId']: item.id,
         title: item.title,
         enrolledAt: Timestamp.now(),
         progress: 0,
-        status: 'active',
+        status: 'pending',
         paymentVerified: item.price === 0,
         type: type
       });
@@ -158,18 +156,34 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
-          {filteredItems.map((item) => (
-            activeTab === 'courses' ? (
+          {filteredItems.map((item) => {
+            const enrollment = enrollments.find(e => (activeTab === 'courses' ? e.courseId : e.examId) === item.id);
+            const isEnrolled = !!enrollment;
+            const isApproved = enrollment?.status === 'approved';
+            const isPending = enrollment?.status === 'pending';
+            const isDenied = enrollment?.status === 'denied';
+
+            return activeTab === 'courses' ? (
               <div key={item.id} className="relative group">
                 <CourseCard 
                   course={item} 
-                  onClick={() => enrolledCourseIds.includes(item.id) ? onSelectCourse(item.id) : handleEnroll(item, 'course')}
+                  onClick={() => isApproved ? onSelectCourse(item.id) : !isEnrolled && handleEnroll(item, 'course')}
                 />
-                {!enrolledCourseIds.includes(item.id) && (
+                {!isEnrolled && (
                   <div className="absolute top-6 left-6">
                     <div className="px-3 py-1 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5">
                       <Sparkles className="w-3 h-3" />
                       New
+                    </div>
+                  </div>
+                )}
+                {isEnrolled && (
+                  <div className="absolute top-6 left-6">
+                    <div className={cn(
+                      "px-3 py-1 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5",
+                      isApproved ? "bg-emerald-600" : isPending ? "bg-amber-500" : "bg-red-500"
+                    )}>
+                      {isApproved ? "Enrolled" : isPending ? "Pending Approval" : "Denied"}
                     </div>
                   </div>
                 )}
@@ -179,36 +193,50 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                 key={item.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="group bg-white border border-black/5 rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer flex flex-col h-full"
-                onClick={() => enrolledExamIds.includes(item.id) ? onSelectExam(item.id) : handleEnroll(item, 'exam')}
+                className="group bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer flex flex-col h-full"
+                onClick={() => isApproved ? onSelectExam(item.id) : !isEnrolled && handleEnroll(item, 'exam')}
               >
                 <div className="aspect-video bg-zinc-900 relative flex items-center justify-center overflow-hidden">
                   <Trophy className="w-20 h-20 text-zinc-700 group-hover:scale-110 transition-transform duration-700" />
                   <div className="absolute inset-0 bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors" />
-                  <div className="absolute top-6 right-6 px-4 py-2 bg-white/90 backdrop-blur-md rounded-2xl text-xs font-black shadow-2xl">
+                  <div className="absolute top-6 right-6 px-4 py-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md rounded-2xl text-xs font-black shadow-2xl dark:text-white">
                     {item.price > 0 ? `$${item.price}` : 'FREE'}
                   </div>
+                  {isEnrolled && (
+                    <div className="absolute top-6 left-6">
+                      <div className={cn(
+                        "px-3 py-1 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5",
+                        isApproved ? "bg-emerald-600" : isPending ? "bg-amber-500" : "bg-red-500"
+                      )}>
+                        {isApproved ? "Enrolled" : isPending ? "Pending" : "Denied"}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="p-8 flex-1 flex flex-col">
                   <div className="flex items-center gap-3 mb-4">
-                    <span className="px-3 py-1 bg-amber-50 text-amber-600 text-[10px] font-black uppercase rounded-lg tracking-widest">Certification</span>
+                    <span className="px-3 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase rounded-lg tracking-widest">Certification</span>
                     <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">By {item.teacherName}</span>
                   </div>
-                  <h3 className="font-black text-2xl leading-tight mb-4 group-hover:text-emerald-600 transition-colors line-clamp-2">{item.title}</h3>
+                  <h3 className="font-black text-2xl leading-tight mb-4 group-hover:text-emerald-600 transition-colors line-clamp-2 dark:text-white">{item.title}</h3>
                   <p className="text-zinc-500 font-medium line-clamp-2 mb-8 flex-1">{item.description}</p>
                   
                   <button className={cn(
                     "w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl",
-                    enrolledExamIds.includes(item.id)
+                    isApproved
                       ? "bg-zinc-900 text-white hover:bg-black"
-                      : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
+                      : isPending
+                        ? "bg-amber-500 text-white cursor-not-allowed"
+                        : isDenied
+                          ? "bg-red-500 text-white cursor-not-allowed"
+                          : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
                   )}>
-                    {enrolledExamIds.includes(item.id) ? 'Open Exam' : (item.price > 0 ? 'Purchase Exam' : 'Enroll Free')}
+                    {isApproved ? 'Open Exam' : isPending ? 'Pending Approval' : isDenied ? 'Enrollment Denied' : (item.price > 0 ? 'Purchase Exam' : 'Enroll Free')}
                   </button>
                 </div>
               </motion.div>
-            )
-          ))}
+            );
+          })}
         </div>
       )}
 

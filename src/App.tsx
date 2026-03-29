@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { Login } from './pages/Login';
 import { MainApp } from './components/MainApp';
 
@@ -13,7 +14,7 @@ function AuthContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F9F9F8]">
+      <div className="min-h-screen flex items-center justify-center bg-[#F9F9F8] dark:bg-zinc-950 transition-colors duration-300">
         <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -24,8 +25,10 @@ function AuthContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AuthContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AuthContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
