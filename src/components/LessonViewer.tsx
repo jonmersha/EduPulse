@@ -8,7 +8,10 @@ import {
   doc, 
   updateDoc, 
   Timestamp,
-  getDoc
+  getDoc,
+  addDoc,
+  deleteDoc,
+  serverTimestamp
 } from 'firebase/firestore';
 import { 
   BookOpen, 
@@ -26,7 +29,15 @@ import {
   ChevronDown,
   PlayCircle,
   Trophy,
-  Users
+  Users,
+  Plus,
+  Trash2,
+  Send,
+  ExternalLink,
+  Download,
+  Paperclip,
+  MessageCircle,
+  User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
@@ -53,6 +64,16 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
   const [expandedLessons, setExpandedLessons] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'resources' | 'qa'>('overview');
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Resource & Q&A State
+  const [resources, setResources] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [answers, setAnswers] = useState<{ [key: string]: any[] }>({});
+  const [newResource, setNewResource] = useState({ title: '', url: '', type: 'link', context: 'lesson' as 'lesson' | 'section' | 'course' });
+  const [newQuestion, setNewQuestion] = useState('');
+  const [newAnswer, setNewAnswer] = useState<{ [key: string]: string }>({});
+  const [showAddResource, setShowAddResource] = useState(false);
 
   useEffect(() => {
     // Fetch course details
@@ -75,14 +96,120 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
           setCompletedLessons(doc.data().completedLessons || []);
         }
       });
+
+      // Fetch Resources
+      const resourcesQ = query(collection(db, 'resources'), where('courseId', '==', courseId));
+      const unsubResources = onSnapshot(resourcesQ, (snapshot) => {
+        setResources(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+
+      // Fetch Questions
+      const questionsQ = query(
+        collection(db, 'questions'), 
+        where('courseId', '==', courseId),
+        orderBy('createdAt', 'desc')
+      );
+      const unsubQuestions = onSnapshot(questionsQ, (snapshot) => {
+        const qDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setQuestions(qDocs);
+        
+        // Fetch Answers for each question
+        qDocs.forEach(q => {
+          const answersQ = query(
+            collection(db, 'answers'), 
+            where('questionId', '==', q.id),
+            orderBy('createdAt', 'asc')
+          );
+          onSnapshot(answersQ, (ansSnapshot) => {
+            setAnswers(prev => ({
+              ...prev,
+              [q.id]: ansSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+            }));
+          });
+        });
+      });
+
       return () => {
         unsubscribe();
         unsubEnroll();
+        unsubResources();
+        unsubQuestions();
       };
     }
 
     return () => unsubscribe();
   }, [courseId, profile]);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const isTeacherOrAdmin = profile?.role === 'admin' || profile?.role === 'super_admin' || (profile?.role === 'teacher' && course?.teacherId === profile?.uid);
+
+  const handleAddResource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || !newResource.title || !newResource.url || !isTeacherOrAdmin) return;
+    
+    try {
+      await addDoc(collection(db, 'resources'), {
+        title: newResource.title,
+        url: newResource.url,
+        type: newResource.type,
+        courseId,
+        lessonId: newResource.context === 'lesson' ? currentLesson?.id : null,
+        section: newResource.context === 'course' ? 'General' : currentLesson?.section || 'General',
+        createdAt: serverTimestamp()
+      });
+      setNewResource({ title: '', url: '', type: 'link', context: 'lesson' });
+      setShowAddResource(false);
+    } catch (error) {
+      console.error("Error adding resource:", error);
+      alert("Failed to add resource. You might not have permission.");
+    }
+  };
+
+  const handleDeleteResource = async (id: string) => {
+    if (!isTeacherOrAdmin) return;
+    if (!window.confirm('Are you sure you want to delete this resource?')) return;
+    try {
+      await deleteDoc(doc(db, 'resources', id));
+    } catch (error) {
+      console.error("Error deleting resource:", error);
+      alert("Failed to delete resource.");
+    }
+  };
+
+  const handleAddQuestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || !newQuestion.trim()) return;
+
+    await addDoc(collection(db, 'questions'), {
+      courseId,
+      lessonId: currentLesson?.id || null,
+      studentId: profile.uid,
+      studentName: profile.displayName || 'Anonymous',
+      content: newQuestion,
+      createdAt: serverTimestamp()
+    });
+    setNewQuestion('');
+  };
+
+  const handleAddAnswer = async (questionId: string) => {
+    if (!profile || !newAnswer[questionId]?.trim()) return;
+
+    await addDoc(collection(db, 'answers'), {
+      questionId,
+      userId: profile.uid,
+      userName: profile.displayName || 'Anonymous',
+      userRole: profile.role,
+      content: newAnswer[questionId],
+      createdAt: serverTimestamp()
+    });
+    setNewAnswer(prev => ({ ...prev, [questionId]: '' }));
+  };
 
   // Auto-expand current lesson's section and parent
   useEffect(() => {
@@ -386,16 +513,336 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                       )}
 
                       {activeTab === 'resources' && (
-                        <div className="flex flex-col items-center justify-center py-32 text-zinc-400 bg-zinc-50 rounded-[3rem] border-2 border-dashed border-zinc-200">
-                          <BookOpen className="w-16 h-16 mb-6 opacity-10" />
-                          <p className="font-black uppercase tracking-widest text-sm">No resources available</p>
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-black text-zinc-900 uppercase tracking-widest">Resources & Materials</h3>
+                            {isTeacherOrAdmin && (
+                              <button 
+                                onClick={() => setShowAddResource(!showAddResource)}
+                                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all text-sm font-bold"
+                              >
+                                {showAddResource ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                                {showAddResource ? 'Cancel' : 'Add Resource'}
+                              </button>
+                            )}
+                          </div>
+
+                          {showAddResource && (
+                            <motion.form 
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              onSubmit={handleAddResource}
+                              className="p-8 bg-zinc-50 rounded-[2.5rem] border border-zinc-200 space-y-6 overflow-hidden mb-8 shadow-sm"
+                            >
+                              <div className="flex items-center justify-between mb-4">
+                                <h4 className="font-black text-zinc-900 uppercase tracking-widest text-sm">Add New Resource</h4>
+                                <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg tracking-widest uppercase">
+                                  Contextual Resource
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                  <label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Resource Title</label>
+                                  <input 
+                                    type="text" 
+                                    placeholder="e.g. Course Syllabus"
+                                    value={newResource.title}
+                                    onChange={e => setNewResource({...newResource, title: e.target.value})}
+                                    className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                                    required
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Resource URL</label>
+                                  <input 
+                                    type="url" 
+                                    placeholder="https://example.com/file.pdf"
+                                    value={newResource.url}
+                                    onChange={e => setNewResource({...newResource, url: e.target.value})}
+                                    className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                                    required
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                  <label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Type</label>
+                                  <select 
+                                    value={newResource.type}
+                                    onChange={e => setNewResource({...newResource, type: e.target.value})}
+                                    className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                                  >
+                                    <option value="link">Link</option>
+                                    <option value="pdf">PDF</option>
+                                    <option value="video">Video</option>
+                                    <option value="document">Document</option>
+                                    <option value="other">Other</option>
+                                  </select>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Context</label>
+                                  <select 
+                                    value={newResource.context}
+                                    onChange={e => setNewResource({...newResource, context: e.target.value as any})}
+                                    className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                                  >
+                                    <option value="lesson">For this Lesson ({currentLesson?.title})</option>
+                                    <option value="section">For this Section ({currentLesson?.section})</option>
+                                    <option value="course">Course Wide</option>
+                                  </select>
+                                </div>
+                              </div>
+
+                              <button type="submit" className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-zinc-200">
+                                Save Resource
+                              </button>
+                            </motion.form>
+                          )}
+
+                          {resources.length > 0 ? (
+                            <div className="space-y-12">
+                              {/* Lesson Resources */}
+                              {resources.some(r => r.lessonId === currentLesson?.id) && (
+                                <div className="space-y-6">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-1 h-6 bg-emerald-500 rounded-full" />
+                                    <h4 className="font-black text-zinc-900 uppercase tracking-widest text-sm">For this Lesson</h4>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {resources.filter(r => r.lessonId === currentLesson?.id).map((resource) => (
+                                      <div key={resource.id} className="group relative flex items-center gap-4 p-6 bg-white border border-zinc-100 rounded-3xl hover:shadow-xl transition-all">
+                                        <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-all">
+                                          {resource.type === 'pdf' ? <FileText className="w-6 h-6" /> : 
+                                           resource.type === 'video' ? <Video className="w-6 h-6" /> : 
+                                           <ExternalLink className="w-6 h-6" />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <h4 className="font-bold text-zinc-900 truncate">{resource.title}</h4>
+                                          <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest mt-1">{resource.type}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <a 
+                                            href={resource.url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-emerald-600 transition-all"
+                                          >
+                                            <Download className="w-4 h-4" />
+                                          </a>
+                                          {isTeacherOrAdmin && (
+                                            <button 
+                                              onClick={() => handleDeleteResource(resource.id)}
+                                              className="p-2 hover:bg-red-50 rounded-lg text-zinc-400 hover:text-red-600 transition-all"
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Section Resources */}
+                              {resources.some(r => r.section === currentLesson?.section && !r.lessonId) && (
+                                <div className="space-y-6">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-1 h-6 bg-blue-500 rounded-full" />
+                                    <h4 className="font-black text-zinc-900 uppercase tracking-widest text-sm">For this Section</h4>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {resources.filter(r => r.section === currentLesson?.section && !r.lessonId).map((resource) => (
+                                      <div key={resource.id} className="group relative flex items-center gap-4 p-6 bg-white border border-zinc-100 rounded-3xl hover:shadow-xl transition-all">
+                                        <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
+                                          {resource.type === 'pdf' ? <FileText className="w-6 h-6" /> : 
+                                           resource.type === 'video' ? <Video className="w-6 h-6" /> : 
+                                           <ExternalLink className="w-6 h-6" />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <h4 className="font-bold text-zinc-900 truncate">{resource.title}</h4>
+                                          <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest mt-1">{resource.type}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <a 
+                                            href={resource.url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-blue-600 transition-all"
+                                          >
+                                            <Download className="w-4 h-4" />
+                                          </a>
+                                          {isTeacherOrAdmin && (
+                                            <button 
+                                              onClick={() => handleDeleteResource(resource.id)}
+                                              className="p-2 hover:bg-red-50 rounded-lg text-zinc-400 hover:text-red-600 transition-all"
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Course Resources */}
+                              {resources.some(r => !r.lessonId && (!r.section || r.section === 'General' || (r.section !== currentLesson?.section && r.section !== 'General'))) && (
+                                <div className="space-y-6">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-1 h-6 bg-zinc-300 rounded-full" />
+                                    <h4 className="font-black text-zinc-900 uppercase tracking-widest text-sm">Course Wide</h4>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {resources.filter(r => !r.lessonId && (!r.section || r.section === 'General' || (r.section !== currentLesson?.section && r.section !== 'General'))).map((resource) => (
+                                      <div key={resource.id} className="group relative flex items-center gap-4 p-6 bg-white border border-zinc-100 rounded-3xl hover:shadow-xl transition-all">
+                                        <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-zinc-100 group-hover:text-zinc-600 transition-all">
+                                          {resource.type === 'pdf' ? <FileText className="w-6 h-6" /> : 
+                                           resource.type === 'video' ? <Video className="w-6 h-6" /> : 
+                                           <ExternalLink className="w-6 h-6" />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <h4 className="font-bold text-zinc-900 truncate">{resource.title}</h4>
+                                          <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest mt-1">{resource.type}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <a 
+                                            href={resource.url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-zinc-600 transition-all"
+                                          >
+                                            <Download className="w-4 h-4" />
+                                          </a>
+                                          {isTeacherOrAdmin && (
+                                            <button 
+                                              onClick={() => handleDeleteResource(resource.id)}
+                                              className="p-2 hover:bg-red-50 rounded-lg text-zinc-400 hover:text-red-600 transition-all"
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center py-32 text-zinc-400 bg-zinc-50 rounded-[3rem] border-2 border-dashed border-zinc-200">
+                              <BookOpen className="w-16 h-16 mb-6 opacity-10" />
+                              <p className="font-black uppercase tracking-widest text-sm">No resources available</p>
+                            </div>
+                          )}
                         </div>
                       )}
 
                       {activeTab === 'qa' && (
-                        <div className="flex flex-col items-center justify-center py-32 text-zinc-400 bg-zinc-50 rounded-[3rem] border-2 border-dashed border-zinc-200">
-                          <MessageSquare className="w-16 h-16 mb-6 opacity-10" />
-                          <p className="font-black uppercase tracking-widest text-sm">Q&A section coming soon</p>
+                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-black text-zinc-900 uppercase tracking-widest">Questions & Answers</h3>
+                          </div>
+
+                          {/* Ask Question Form */}
+                          <form onSubmit={handleAddQuestion} className="relative">
+                            <textarea 
+                              placeholder="Ask a question about this course..."
+                              value={newQuestion}
+                              onChange={e => setNewQuestion(e.target.value)}
+                              className="w-full p-6 bg-zinc-50 border border-zinc-200 rounded-[2rem] focus:ring-2 focus:ring-emerald-500 outline-none min-h-[120px] resize-none pr-20"
+                              required
+                            />
+                            <button 
+                              type="submit"
+                              className="absolute bottom-4 right-4 p-4 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all shadow-lg"
+                            >
+                              <Send className="w-5 h-5" />
+                            </button>
+                          </form>
+
+                          {/* Questions List */}
+                          <div className="space-y-8">
+                            {questions.length > 0 ? (
+                              questions.map((q) => (
+                                <div key={q.id} className="space-y-4">
+                                  <div className="flex gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-zinc-100 flex items-center justify-center shrink-0">
+                                      <User className="w-6 h-6 text-zinc-400" />
+                                    </div>
+                                    <div className="flex-1 p-6 bg-white border border-zinc-100 rounded-3xl shadow-sm">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <h4 className="font-bold text-zinc-900">{q.studentName}</h4>
+                                        <span className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">
+                                          {q.createdAt?.toDate ? q.createdAt.toDate().toLocaleDateString() : 'Just now'}
+                                        </span>
+                                      </div>
+                                      <p className="text-zinc-600 leading-relaxed">{q.content}</p>
+                                    </div>
+                                  </div>
+
+                                  {/* Answers */}
+                                  <div className="ml-16 space-y-4">
+                                    {answers[q.id]?.map((ans) => (
+                                      <div key={ans.id} className="flex gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                                          {ans.userRole === 'teacher' || ans.userRole === 'admin' ? (
+                                            <Trophy className="w-5 h-5 text-emerald-600" />
+                                          ) : (
+                                            <User className="w-5 h-5 text-zinc-400" />
+                                          )}
+                                        </div>
+                                        <div className="flex-1 p-5 bg-zinc-50 rounded-2xl border border-zinc-100">
+                                          <div className="flex items-center justify-between mb-1">
+                                            <div className="flex items-center gap-2">
+                                              <h5 className="font-bold text-zinc-900 text-sm">{ans.userName}</h5>
+                                              {(ans.userRole === 'teacher' || ans.userRole === 'admin') && (
+                                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[8px] font-black uppercase rounded-md tracking-widest">Staff</span>
+                                              )}
+                                            </div>
+                                            <span className="text-[9px] text-zinc-400 font-black uppercase tracking-widest">
+                                              {ans.createdAt?.toDate ? ans.createdAt.toDate().toLocaleDateString() : 'Just now'}
+                                            </span>
+                                          </div>
+                                          <p className="text-sm text-zinc-600 leading-relaxed">{ans.content}</p>
+                                        </div>
+                                      </div>
+                                    ))}
+
+                                    {/* Reply Form */}
+                                    <div className="flex gap-4">
+                                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center shrink-0">
+                                        <MessageCircle className="w-5 h-5 text-zinc-400" />
+                                      </div>
+                                      <div className="flex-1 relative">
+                                        <input 
+                                          type="text" 
+                                          placeholder="Write a reply..."
+                                          value={newAnswer[q.id] || ''}
+                                          onChange={e => setNewAnswer(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                          onKeyDown={e => e.key === 'Enter' && handleAddAnswer(q.id)}
+                                          className="w-full px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm pr-12"
+                                        />
+                                        <button 
+                                          onClick={() => handleAddAnswer(q.id)}
+                                          className="absolute right-2 top-1.5 p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                        >
+                                          <Send className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="flex flex-col items-center justify-center py-32 text-zinc-400 bg-zinc-50 rounded-[3rem] border-2 border-dashed border-zinc-200">
+                                <MessageSquare className="w-16 h-16 mb-6 opacity-10" />
+                                <p className="font-black uppercase tracking-widest text-sm">No questions yet. Be the first to ask!</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -459,193 +906,194 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
           </div>
         </main>
 
-        {/* Right Sidebar - Course Content */}
-        <AnimatePresence initial={false}>
-          {isSidebarOpen && (
-            <motion.aside 
-              initial={{ x: 400, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 400, opacity: 0 }}
-              transition={{ type: 'spring', damping: 30, stiffness: 200 }}
-              className="w-[420px] bg-zinc-50 border-l border-zinc-200 flex flex-col shrink-0 z-10 absolute right-0 md:relative h-full shadow-2xl md:shadow-none"
-            >
-              <div className="p-8 bg-white border-b border-zinc-200 flex flex-col gap-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-black text-zinc-900 uppercase tracking-[0.2em] text-xs">Course Contents</h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg tracking-widest">{progress}% COMPLETE</span>
-                  </div>
-                </div>
-                <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto scrollbar-hide pb-20">
-                {sections.map((section, sIdx) => {
-                  const isExpanded = expandedSections.includes(section.name);
-                  return (
-                    <div key={section.name} className="border-b border-zinc-200 last:border-0">
-                      <button 
-                        onClick={() => {
-                          toggleSection(section.name);
-                          setActiveSection(section.name);
-                          setCurrentLesson(null);
-                        }}
-                        className={cn(
-                          "w-full flex items-center justify-between px-8 py-6 text-left transition-all group",
-                          isExpanded || activeSection === section.name ? "bg-white" : "hover:bg-zinc-100"
-                        )}
-                      >
-                        <div className="flex-1">
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-1.5">Module {sIdx + 1}</p>
-                          <h4 className="font-black text-zinc-900 text-sm tracking-tight">{section.name}</h4>
-                        </div>
-                        <div className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center transition-all",
-                          isExpanded ? "bg-zinc-900 text-white rotate-90" : "bg-zinc-200 text-zinc-500 group-hover:bg-zinc-300"
-                        )}>
-                          <ChevronRight className="w-4 h-4" />
-                        </div>
-                      </button>
-                      
-                      <AnimatePresence initial={false}>
-                        {isExpanded && (
-                          <motion.div 
-                            initial={{ height: 0 }}
-                            animate={{ height: 'auto' }}
-                            exit={{ height: 0 }}
-                            className="overflow-hidden bg-white"
-                          >
-                            {section.mainLessons.map((main) => {
-                              const hasSubs = main.subs.length > 0;
-                              const isLessonExpanded = expandedLessons.includes(main.id);
-                              const isActive = currentLesson?.id === main.id;
-                              const isCompleted = completedLessons.includes(main.id);
-                              
-                              return (
-                                <div key={main.id}>
-                                  <div className={cn(
-                                    "flex items-stretch group border-l-[6px] transition-all",
-                                    isActive ? "border-emerald-600 bg-emerald-50/40" : "border-transparent hover:bg-zinc-50"
-                                  )}>
-                                    <button
-                                      onClick={() => {
-                                        setCurrentLesson(main);
-                                        setActiveSection(null);
-                                        setAudioUrl(null);
-                                        if (window.innerWidth < 768) setIsSidebarOpen(false);
-                                      }}
-                                      className="flex-1 flex items-start gap-5 px-8 py-5 text-left"
-                                    >
-                                      <div className={cn(
-                                        "mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border-2 transition-all shadow-sm",
-                                        isCompleted 
-                                          ? "bg-emerald-600 border-emerald-600 text-white" 
-                                          : isActive 
-                                            ? "border-emerald-600 text-emerald-600 bg-white" 
-                                            : "border-zinc-200 text-zinc-300 bg-white group-hover:border-zinc-400"
-                                      )}>
-                                        {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span className="text-[10px] font-black">{main.order}</span>}
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className={cn(
-                                          "text-sm font-black leading-snug tracking-tight",
-                                          isActive ? "text-emerald-900" : "text-zinc-800",
-                                          isCompleted && !isActive && "text-zinc-400"
-                                        )}>{main.title}</p>
-                                        <div className="flex items-center gap-3 mt-1.5">
-                                          <div className="flex items-center gap-1.5">
-                                            {main.type === 'video' ? <Video className="w-3 h-3 text-zinc-400" /> : <FileText className="w-3 h-3 text-zinc-400" />}
-                                            <span className="text-[9px] text-zinc-400 font-black uppercase tracking-widest">{main.type}</span>
-                                          </div>
-                                          {hasSubs && (
-                                            <span className="text-[9px] text-zinc-300 font-black uppercase tracking-widest">{main.subs.length} sub-lessons</span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </button>
-                                    {hasSubs && (
-                                      <button 
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          toggleLesson(main.id);
-                                        }}
-                                        className="px-5 hover:bg-zinc-100 text-zinc-400 transition-colors"
-                                      >
-                                        <ChevronRight className={cn("w-4 h-4 transition-transform duration-300", isLessonExpanded && "rotate-90")} />
-                                      </button>
-                                    )}
-                                  </div>
-
-                                  {/* Sub-lessons */}
-                                  {hasSubs && (
-                                    <AnimatePresence initial={false}>
-                                      {isLessonExpanded && (
-                                        <motion.div 
-                                          initial={{ height: 0 }}
-                                          animate={{ height: 'auto' }}
-                                          exit={{ height: 0 }}
-                                          className="overflow-hidden bg-zinc-50/80"
-                                        >
-                                          {main.subs.map((sub) => {
-                                            const isSubActive = currentLesson?.id === sub.id;
-                                            const isSubCompleted = completedLessons.includes(sub.id);
-                                            return (
-                                              <button
-                                                key={sub.id}
-                                                onClick={() => {
-                                                  setCurrentLesson(sub);
-                                                  setActiveSection(null);
-                                                  setAudioUrl(null);
-                                                  if (window.innerWidth < 768) setIsSidebarOpen(false);
-                                                }}
-                                                className={cn(
-                                                  "w-full flex items-start gap-5 px-14 py-4 text-left transition-all border-l-[6px]",
-                                                  isSubActive ? "border-emerald-600 bg-emerald-50/60" : "border-transparent hover:bg-zinc-100"
-                                                )}
-                                              >
-                                                <div className={cn(
-                                                  "mt-0.5 w-5 h-5 rounded-md flex items-center justify-center shrink-0 border-2 transition-all",
-                                                  isSubCompleted 
-                                                    ? "bg-emerald-600 border-emerald-600 text-white" 
-                                                    : isSubActive 
-                                                      ? "border-emerald-600 text-emerald-600 bg-white" 
-                                                      : "border-zinc-200 text-zinc-300 bg-white"
-                                                )}>
-                                                  {isSubCompleted ? <CheckCircle2 className="w-3 h-3" /> : <span className="text-[9px] font-black">{sub.order}</span>}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                  <p className={cn(
-                                                    "text-xs font-bold leading-snug tracking-tight",
-                                                    isSubActive ? "text-emerald-900" : "text-zinc-700",
-                                                    isSubCompleted && !isSubActive && "text-zinc-400"
-                                                  )}>{sub.title}</p>
-                                                </div>
-                                              </button>
-                                            );
-                                          })}
-                                        </motion.div>
-                                      )}
-                                    </AnimatePresence>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.aside>
+        {/* Sidebar - Course Content */}
+        <aside 
+          className={cn(
+            "bg-zinc-50 flex flex-col shrink-0 z-30",
+            "w-full border-t border-zinc-200 mt-12",
+            "md:relative md:inset-auto md:h-full md:w-[420px] md:rounded-none md:shadow-none md:border-t-0 md:border-l md:mt-0",
+            isMobile ? "block" : (isSidebarOpen ? "block" : "hidden")
           )}
-        </AnimatePresence>
+        >
+          <div className="p-8 bg-white border-b border-zinc-200 flex flex-col gap-6 shrink-0">
+            <div className="flex items-center justify-between">
+              <h3 className="font-black text-zinc-900 uppercase tracking-[0.2em] text-xs">Course Contents</h3>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg tracking-widest">{progress}% COMPLETE</span>
+              </div>
+            </div>
+            <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+              />
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto scrollbar-hide pb-20">
+            {sections.map((section, sIdx) => {
+              const isExpanded = expandedSections.includes(section.name);
+              return (
+                <div key={section.name} className="border-b border-zinc-200 last:border-0">
+                  <button 
+                    onClick={() => {
+                      toggleSection(section.name);
+                      setActiveSection(section.name);
+                      setCurrentLesson(null);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-8 py-6 text-left transition-all group",
+                      isExpanded || activeSection === section.name ? "bg-white" : "hover:bg-zinc-100"
+                    )}
+                  >
+                    <div className="flex-1">
+                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-1.5">Module {sIdx + 1}</p>
+                      <h4 className="font-black text-zinc-900 text-sm tracking-tight">{section.name}</h4>
+                    </div>
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                      isExpanded ? "bg-zinc-900 text-white rotate-90" : "bg-zinc-200 text-zinc-500 group-hover:bg-zinc-300"
+                    )}>
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </button>
+                  
+                  <AnimatePresence initial={false}>
+                    {isExpanded && (
+                      <motion.div 
+                        initial={{ height: 0 }}
+                        animate={{ height: 'auto' }}
+                        exit={{ height: 0 }}
+                        className="overflow-hidden bg-white"
+                      >
+                        {section.mainLessons.map((main) => {
+                          const hasSubs = main.subs.length > 0;
+                          const isLessonExpanded = expandedLessons.includes(main.id);
+                          const isActive = currentLesson?.id === main.id;
+                          const isCompleted = completedLessons.includes(main.id);
+                          
+                          return (
+                            <div key={main.id}>
+                              <div className={cn(
+                                "flex items-stretch group border-l-[6px] transition-all",
+                                isActive ? "border-emerald-600 bg-emerald-50/40" : "border-transparent hover:bg-zinc-50"
+                              )}>
+                                <button
+                                  onClick={() => {
+                                    setCurrentLesson(main);
+                                    setActiveSection(null);
+                                    setAudioUrl(null);
+                                    if (isMobile) {
+                                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }
+                                  }}
+                                  className="flex-1 flex items-start gap-5 px-8 py-5 text-left"
+                                >
+                                  <div className={cn(
+                                    "mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border-2 transition-all shadow-sm",
+                                    isCompleted 
+                                      ? "bg-emerald-600 border-emerald-600 text-white" 
+                                      : isActive 
+                                        ? "border-emerald-600 text-emerald-600 bg-white" 
+                                        : "border-zinc-200 text-zinc-300 bg-white group-hover:border-zinc-400"
+                                  )}>
+                                    {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span className="text-[10px] font-black">{main.order}</span>}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className={cn(
+                                      "text-sm font-black leading-snug tracking-tight",
+                                      isActive ? "text-emerald-900" : "text-zinc-800",
+                                      isCompleted && !isActive && "text-zinc-400"
+                                    )}>{main.title}</p>
+                                    <div className="flex items-center gap-3 mt-1.5">
+                                      <div className="flex items-center gap-1.5">
+                                        {main.type === 'video' ? <Video className="w-3 h-3 text-zinc-400" /> : <FileText className="w-3 h-3 text-zinc-400" />}
+                                        <span className="text-[9px] text-zinc-400 font-black uppercase tracking-widest">{main.type}</span>
+                                      </div>
+                                      {hasSubs && (
+                                        <span className="text-[9px] text-zinc-300 font-black uppercase tracking-widest">{main.subs.length} sub-lessons</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </button>
+                                {hasSubs && (
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleLesson(main.id);
+                                    }}
+                                    className="px-5 hover:bg-zinc-100 text-zinc-400 transition-colors"
+                                  >
+                                    <ChevronRight className={cn("w-4 h-4 transition-transform duration-300", isLessonExpanded && "rotate-90")} />
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Sub-lessons */}
+                              {hasSubs && (
+                                <AnimatePresence initial={false}>
+                                  {isLessonExpanded && (
+                                    <motion.div 
+                                      initial={{ height: 0 }}
+                                      animate={{ height: 'auto' }}
+                                      exit={{ height: 0 }}
+                                      className="overflow-hidden bg-zinc-50/80"
+                                    >
+                                      {main.subs.map((sub) => {
+                                        const isSubActive = currentLesson?.id === sub.id;
+                                        const isSubCompleted = completedLessons.includes(sub.id);
+                                        return (
+                                          <button
+                                            key={sub.id}
+                                            onClick={() => {
+                                              setCurrentLesson(sub);
+                                              setActiveSection(null);
+                                              setAudioUrl(null);
+                                              if (isMobile) {
+                                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                              }
+                                            }}
+                                            className={cn(
+                                              "w-full flex items-start gap-5 px-14 py-4 text-left transition-all border-l-[6px]",
+                                              isSubActive ? "border-emerald-600 bg-emerald-50/60" : "border-transparent hover:bg-zinc-100"
+                                            )}
+                                          >
+                                            <div className={cn(
+                                              "mt-0.5 w-5 h-5 rounded-md flex items-center justify-center shrink-0 border-2 transition-all",
+                                              isSubCompleted 
+                                                ? "bg-emerald-600 border-emerald-600 text-white" 
+                                                : isSubActive 
+                                                  ? "border-emerald-600 text-emerald-600 bg-white" 
+                                                  : "border-zinc-200 text-zinc-300 bg-white"
+                                            )}>
+                                              {isSubCompleted ? <CheckCircle2 className="w-3 h-3" /> : <span className="text-[9px] font-black">{sub.order}</span>}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <p className={cn(
+                                                "text-xs font-bold leading-snug tracking-tight",
+                                                isSubActive ? "text-emerald-900" : "text-zinc-700",
+                                                isSubCompleted && !isSubActive && "text-zinc-400"
+                                              )}>{sub.title}</p>
+                                            </div>
+                                          </button>
+                                        );
+                                      })}
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
       </div>
     </div>
   );

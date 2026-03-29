@@ -161,6 +161,48 @@
         "completedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["examId", "studentId", "score"]
+    },
+    "Resource": {
+      "title": "Resource",
+      "description": "A resource linked to a course or lesson.",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string" },
+        "lessonId": { "type": "string", "description": "Optional: link to specific lesson" },
+        "title": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "type": { "type": "string", "enum": ["pdf", "link", "video", "document", "other"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["courseId", "title", "url", "type"]
+    },
+    "Question": {
+      "title": "Question",
+      "description": "A question asked by a student in a course.",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string" },
+        "lessonId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["courseId", "studentId", "content"]
+    },
+    "Answer": {
+      "title": "Answer",
+      "description": "An answer to a question.",
+      "type": "object",
+      "properties": {
+        "questionId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userRole": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["questionId", "userId", "content"]
     }
   },
   "firestore": {
@@ -173,6 +215,9 @@
     "/submissions/{submissionId}": { "schema": "Submission", "description": "Student submissions" },
     "/enrollments/{enrollmentId}": { "schema": "Enrollment", "description": "Course enrollments" },
     "/exams/{examId}": { "schema": "Exam", "description": "Exams" },
-    "/examResults/{resultId}": { "schema": "ExamResult", "description": "Exam results" }
+    "/examResults/{resultId}": { "schema": "ExamResult", "description": "Exam results" },
+    "/resources/{resourceId}": { "schema": "Resource", "description": "Course resources" },
+    "/questions/{questionId}": { "schema": "Question", "description": "Course questions" },
+    "/answers/{answerId}": { "schema": "Answer", "description": "Question answers" }
   }
 }

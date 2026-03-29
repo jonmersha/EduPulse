@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Database, CheckCircle2, AlertCircle } from 'lucide-react';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
@@ -27,6 +27,12 @@ export const SeedData: React.FC = () => {
 
     try {
       const teacherId = auth.currentUser.uid;
+
+      // Update current user to be a teacher
+      await setDoc(doc(db, 'users', teacherId), {
+        role: 'teacher',
+        updatedAt: serverTimestamp()
+      }, { merge: true });
 
       // 1. Create Course: Mastering React & TypeScript
       const course1Ref = await addDocWithLogging('courses', {
@@ -148,6 +154,69 @@ export const SeedData: React.FC = () => {
       for (const lesson of lessons2) {
         await addDocWithLogging('lessons', lesson);
       }
+
+      // 4. Create Sample Resources
+      const sampleResources = [
+        {
+          courseId: course1Ref.id,
+          title: 'React Documentation',
+          url: 'https://react.dev',
+          type: 'link',
+          createdAt: serverTimestamp()
+        },
+        {
+          courseId: course1Ref.id,
+          title: 'TypeScript Handbook',
+          url: 'https://www.typescriptlang.org/docs/handbook/intro.html',
+          type: 'pdf',
+          createdAt: serverTimestamp()
+        },
+        {
+          courseId: course2Ref.id,
+          title: 'Tailwind CSS Cheat Sheet',
+          url: 'https://nerdcave.com/tailwind-cheat-sheet',
+          type: 'link',
+          createdAt: serverTimestamp()
+        }
+      ];
+      for (const res of sampleResources) {
+        await addDocWithLogging('resources', res);
+      }
+
+      // 5. Create Sample Questions & Answers
+      const q1Ref = await addDocWithLogging('questions', {
+        courseId: course1Ref.id,
+        studentId: teacherId, // Using teacherId as a proxy for a student for seeding
+        studentName: 'Test Student',
+        content: 'How do I handle complex state transitions in React?',
+        createdAt: serverTimestamp()
+      });
+
+      await addDocWithLogging('answers', {
+        questionId: q1Ref.id,
+        userId: teacherId,
+        userName: 'Dr. Sarah Chen',
+        userRole: 'teacher',
+        content: 'For complex state, I highly recommend using the useReducer hook. It provides a more predictable way to manage state transitions compared to multiple useState calls.',
+        createdAt: serverTimestamp()
+      });
+
+      const q2Ref = await addDocWithLogging('questions', {
+        courseId: course2Ref.id,
+        studentId: teacherId,
+        studentName: 'Design Enthusiast',
+        content: 'Is Tailwind better than Bootstrap for large scale projects?',
+        createdAt: serverTimestamp()
+      });
+
+      await addDocWithLogging('answers', {
+        questionId: q2Ref.id,
+        userId: teacherId,
+        userName: 'Marcus Aurelius',
+        userRole: 'teacher',
+        content: 'Tailwind offers more flexibility and results in smaller CSS bundles because it only includes the utilities you actually use. For large projects, this maintainability is a huge win.',
+        createdAt: serverTimestamp()
+      });
 
       // 3. Create Exams
       await addDocWithLogging('exams', {

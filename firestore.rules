@@ -23,6 +23,15 @@ service cloud.firestore {
     // Collection: examResults
     // Fields: examId, studentId, score, totalQuestions, correctAnswers, feedback, completedAt
     //
+    // Collection: resources
+    // Fields: courseId, lessonId, title, url, type, createdAt
+    //
+    // Collection: questions
+    // Fields: courseId, lessonId, studentId, studentName, content, createdAt
+    //
+    // Collection: answers
+    // Fields: questionId, userId, userName, userRole, content, createdAt
+    //
     // ===============================================================
 
     // ===============================================================
@@ -69,6 +78,14 @@ service cloud.firestore {
 
     function isExamTeacher(examId) {
       return examId != null && exists(/databases/$(database)/documents/exams/$(examId)) && get(/databases/$(database)/documents/exams/$(examId)).data.teacherId == request.auth.uid;
+    }
+
+    function isQuestionOwner(questionId) {
+      return isAuthenticated() && exists(/databases/$(database)/documents/questions/$(questionId)) && get(/databases/$(database)/documents/questions/$(questionId)).data.studentId == request.auth.uid;
+    }
+
+    function isAnswerOwner(answerId) {
+      return isAuthenticated() && exists(/databases/$(database)/documents/answers/$(answerId)) && get(/databases/$(database)/documents/answers/$(answerId)).data.userId == request.auth.uid;
     }
 
     function isTeacherInSchool(schoolId) {
@@ -152,6 +169,23 @@ service cloud.firestore {
              (!('enrolledAt' in data) || data.enrolledAt is timestamp);
     }
 
+    function isValidResource(data) {
+      return data.courseId is string && data.title is string && data.title.size() > 0 &&
+             data.url is string && data.type in ['pdf', 'link', 'video', 'document', 'other'] &&
+             (!('lessonId' in data) || data.lessonId == null || data.lessonId is string) &&
+             (!('section' in data) || data.section == null || data.section is string);
+    }
+
+    function isValidQuestion(data) {
+      return data.courseId is string && data.studentId == request.auth.uid &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 5000;
+    }
+
+    function isValidAnswer(data) {
+      return data.questionId is string && data.userId == request.auth.uid &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 5000;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -229,6 +263,27 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isAdmin());
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.studentId && isValidExamResult(request.resource.data);
       allow update: if isAdmin();
+    }
+
+    match /resources/{resourceId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || (isTeacher() && isCourseTeacher(request.resource.data.courseId) && isValidResource(request.resource.data));
+      allow update: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId) && isValidResource(request.resource.data));
+      allow delete: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId));
+    }
+
+    match /questions/{questionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidQuestion(request.resource.data);
+      allow update: if isAdmin() || (isQuestionOwner(questionId) && isValidQuestion(request.resource.data));
+      allow delete: if isAdmin() || isQuestionOwner(questionId);
+    }
+
+    match /answers/{answerId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidAnswer(request.resource.data);
+      allow update: if isAdmin() || (isAnswerOwner(answerId) && isValidAnswer(request.resource.data));
+      allow delete: if isAdmin() || isAnswerOwner(answerId);
     }
 
     match /_connection_test_/{docId} {
