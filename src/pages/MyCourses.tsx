@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, getDoc, doc } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, onSnapshot, getDoc, doc } from 'firebase/firestore';
 import { BookOpen, GraduationCap, Trophy } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -28,7 +28,7 @@ export const MyCourses: React.FC<MyCoursesProps> = ({ onSelectCourse, onSelectEx
     }
 
     setLoading(true);
-    const q = query(collection(db, 'enrollments'), where('studentId', '==', profile.uid));
+    const q = query(collectionGroup(db, 'enrollments'), where('studentId', '==', profile.uid));
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const enrollmentData = snapshot.docs.map(doc => doc.data());
       const approvedEnrollments = enrollmentData.filter(e => e.status === 'approved');

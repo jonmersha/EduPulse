@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare } from 'lucide-react';
 import { Navbar } from './Navbar';
 import { LessonViewer } from './LessonViewer';
+import { ExamViewer } from './ExamViewer';
 import { Dashboard } from '../pages/Dashboard';
 import { Marketplace } from '../pages/Marketplace';
 import { MyCourses } from '../pages/MyCourses';
@@ -12,17 +13,22 @@ import { ParentView } from '../pages/ParentView';
 import { SettingsView } from '../pages/SettingsView';
 import { SeedData } from './SeedData';
 
-import { ExamViewer } from './ExamViewer';
+import { CourseEditorPage } from '../pages/CourseEditorPage';
+import { ExamEditor } from './ExamEditor';
 
 export const MainApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [selectedCourseForEdit, setSelectedCourseForEdit] = useState<string | null>(null);
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
+  const [selectedExamForEdit, setSelectedExamForEdit] = useState<string | null>(null);
   
   const handleTabChange = (t: string) => {
     setActiveTab(t);
     setSelectedCourse(null);
+    setSelectedCourseForEdit(null);
     setSelectedExam(null);
+    setSelectedExamForEdit(null);
   };
 
   return (
@@ -33,7 +39,7 @@ export const MainApp: React.FC = () => {
           <SeedData />
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeTab + (selectedCourse || '') + (selectedExam || '')}
+              key={activeTab + (selectedCourse || '') + (selectedCourseForEdit || '') + (selectedExam || '') + (selectedExamForEdit || '')}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -41,14 +47,18 @@ export const MainApp: React.FC = () => {
             >
               {selectedCourse ? (
                 <LessonViewer courseId={selectedCourse} onBack={() => setSelectedCourse(null)} />
+              ) : selectedCourseForEdit ? (
+                <CourseEditorPage courseId={selectedCourseForEdit} onBack={() => setSelectedCourseForEdit(null)} />
               ) : selectedExam ? (
                 <ExamViewer examId={selectedExam} onBack={() => setSelectedExam(null)} />
+              ) : selectedExamForEdit ? (
+                <ExamEditor examId={selectedExamForEdit} onBack={() => setSelectedExamForEdit(null)} />
               ) : (
                 <>
                   {activeTab === 'dashboard' && <Dashboard onSelectCourse={setSelectedCourse} onSelectExam={setSelectedExam} />}
                   {activeTab === 'marketplace' && <Marketplace onSelectCourse={setSelectedCourse} onSelectExam={setSelectedExam} />}
                   {activeTab === 'courses' && <MyCourses onSelectCourse={setSelectedCourse} onSelectExam={setSelectedExam} />}
-                  {activeTab === 'my-courses' && <CourseManagement />}
+                  {activeTab === 'my-courses' && <CourseManagement onEditCourse={setSelectedCourseForEdit} onEditExam={setSelectedExamForEdit} />}
                   {activeTab === 'school' && <AdminView />}
                   {activeTab === 'parent' && <ParentView />}
                   {activeTab === 'messages' && (

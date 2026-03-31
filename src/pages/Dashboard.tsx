@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, getDoc, doc, getDocs } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, onSnapshot, getDoc, doc, getDocs } from 'firebase/firestore';
 import { BookOpen, CheckCircle2, GraduationCap, Trophy } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -27,7 +27,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
     }
 
     // Listener for enrollments
-    const enrollmentsQ = query(collection(db, 'enrollments'), where('studentId', '==', profile.uid));
+    const enrollmentsQ = query(collectionGroup(db, 'enrollments'), where('studentId', '==', profile.uid));
     const unsubEnrollments = onSnapshot(enrollmentsQ, async (snapshot) => {
       const allDocs = snapshot.docs.map(doc => doc.data());
       const docs = allDocs.filter(d => d.status === 'approved');
@@ -63,7 +63,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
       // We'll use a separate effect or just fetch them here by querying enrollments once.
       try {
         const enrollmentsSnap = await getDocs(query(
-          collection(db, 'enrollments'), 
+          collectionGroup(db, 'enrollments'), 
           where('studentId', '==', profile.uid),
           where('status', '==', 'approved')
         ));

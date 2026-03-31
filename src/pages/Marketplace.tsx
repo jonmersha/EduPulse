@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, setDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, onSnapshot, setDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
@@ -36,7 +36,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'exams'));
 
     if (profile) {
-      const enrollQuery = query(collection(db, 'enrollments'), where('studentId', '==', profile.uid));
+      const enrollQuery = query(collectionGroup(db, 'enrollments'), where('studentId', '==', profile.uid));
       const unsubEnroll = onSnapshot(enrollQuery, (snapshot) => {
         setEnrollments(snapshot.docs.map(doc => doc.data()));
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
@@ -56,8 +56,9 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
   const handleEnroll = async (item: any, type: 'course' | 'exam') => {
     if (!profile) return;
     try {
+      const parentCollection = type === 'course' ? 'courses' : 'exams';
       const enrollmentId = `${profile.uid}_${item.id}`;
-      await setDoc(doc(db, 'enrollments', enrollmentId), {
+      await setDoc(doc(db, parentCollection, item.id, 'enrollments', enrollmentId), {
         studentId: profile.uid,
         studentName: profile.displayName,
         teacherId: item.teacherId,

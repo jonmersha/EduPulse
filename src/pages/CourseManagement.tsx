@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, setDoc, Timestamp, deleteDoc } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, onSnapshot, doc, setDoc, Timestamp, deleteDoc } from 'firebase/firestore';
 import { Plus, Trash2, Settings, Search, Filter, BookOpen, Trophy, Users, Eye, CheckCircle, Clock, LayoutDashboard, GraduationCap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { CourseCard } from '../components/CourseCard';
-import { LessonEditor } from '../components/LessonEditor';
-import { ExamEditor } from '../components/ExamEditor';
 import { Modal } from '../components/Modal';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
-export const CourseManagement: React.FC = () => {
+interface CourseManagementProps {
+  onEditCourse: (courseId: string) => void;
+  onEditExam: (examId: string) => void;
+}
+
+export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse, onEditExam }) => {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<'courses' | 'exams' | 'results' | 'enrollments'>('courses');
   const [courses, setCourses] = useState<any[]>([]);
@@ -20,8 +23,6 @@ export const CourseManagement: React.FC = () => {
   const [enrollmentRequests, setEnrollmentRequests] = useState<any[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
-  const [editingExamId, setEditingExamId] = useState<string | null>(null);
   const [newCourse, setNewCourse] = useState({ title: '', description: '', category: 'General', isPublic: false, price: 0 });
   const [newExam, setNewExam] = useState({ title: '', description: '', duration: 60, passingScore: 70, isPublic: false, price: 0, maxAttempts: 0 });
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'course' | 'exam' } | null>(null);
@@ -81,7 +82,7 @@ export const CourseManagement: React.FC = () => {
     }
 
     const enrollQuery = query(
-      collection(db, 'enrollments'),
+      collectionGroup(db, 'enrollments'),
       where('teacherId', '==', profile.uid)
     );
 
@@ -131,9 +132,11 @@ export const CourseManagement: React.FC = () => {
     }
   };
 
-  const handleEnrollmentAction = async (requestId: string, status: 'approved' | 'denied') => {
+  const handleEnrollmentAction = async (req: any, status: 'approved' | 'denied') => {
     try {
-      await setDoc(doc(db, 'enrollments', requestId), { status }, { merge: true });
+      const parentCollection = req.courseId ? 'courses' : 'exams';
+      const parentId = req.courseId || req.examId;
+      await setDoc(doc(db, parentCollection, parentId, 'enrollments', req.id), { status }, { merge: true });
     } catch (error) {
       console.error("Error updating enrollment status:", error);
     }
@@ -151,29 +154,11 @@ export const CourseManagement: React.FC = () => {
   };
 
   const startEditCourse = (course: any) => {
-    setEditingItem(course);
-    setNewCourse({
-      title: course.title,
-      description: course.description,
-      category: course.category || 'General',
-      isPublic: course.isPublic || false,
-      price: course.price || 0
-    });
-    setShowCreate(true);
+    onEditCourse(course.id);
   };
 
   const startEditExam = (exam: any) => {
-    setEditingItem(exam);
-    setNewExam({
-      title: exam.title,
-      description: exam.description,
-      duration: exam.duration || 60,
-      passingScore: exam.passingScore || 70,
-      isPublic: exam.isPublic || false,
-      price: exam.price || 0,
-      maxAttempts: exam.maxAttempts || 0
-    });
-    setShowCreate(true);
+    onEditExam(exam.id);
   };
 
   const getExamSummary = (examId: string) => {
@@ -191,14 +176,6 @@ export const CourseManagement: React.FC = () => {
       uniqueStudents: new Set(results.map(r => r.studentId)).size
     };
   };
-
-  if (editingCourseId) {
-    return <LessonEditor courseId={editingCourseId} onBack={() => setEditingCourseId(null)} />;
-  }
-
-  if (editingExamId) {
-    return <ExamEditor examId={editingExamId} onBack={() => setEditingExamId(null)} />;
-  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
@@ -256,7 +233,7 @@ export const CourseManagement: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {courses.map(course => (
                 <div key={course.id} className="relative group">
-                  <CourseCard course={course} onClick={() => setEditingCourseId(course.id)} />
+                  <CourseCard course={course} onClick={() => onEditCourse(course.id)} />
                   <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
                     <button 
                       onClick={(e) => { e.stopPropagation(); startEditCourse(course); }}
@@ -289,7 +266,7 @@ export const CourseManagement: React.FC = () => {
                 <div 
                   key={exam.id} 
                   className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all group cursor-pointer relative flex flex-col"
-                  onClick={() => setEditingExamId(exam.id)}
+                  onClick={() => onEditExam(exam.id)}
                 >
                   <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                     <button 
@@ -396,87 +373,89 @@ export const CourseManagement: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-zinc-50/50 dark:bg-zinc-800/50 border-b border-black/5 dark:border-white/5">
-                      <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Student</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Course/Exam</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Date</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                    {enrollmentRequests.length > 0 ? enrollmentRequests.map((req) => (
-                      <tr key={req.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors group">
-                        <td className="px-8 py-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold">
-                              {req.studentName?.charAt(0)}
-                            </div>
-                            <div>
-                              <div className="font-bold text-zinc-900 dark:text-white">{req.studentName}</div>
-                              <div className="text-[10px] text-zinc-400 font-medium tracking-tight uppercase">{req.studentId.slice(0, 8)}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-8 py-5">
-                          <div className="font-bold text-zinc-700 dark:text-zinc-300">{req.title}</div>
-                          <div className="text-[10px] text-zinc-400 font-black uppercase tracking-widest">{req.type}</div>
-                        </td>
-                        <td className="px-8 py-5 text-sm font-medium text-zinc-500">
-                          {new Date(req.enrolledAt?.toMillis()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </td>
-                        <td className="px-8 py-5 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {req.status === 'pending' ? (
-                              <>
-                                <button 
-                                  onClick={() => handleEnrollmentAction(req.id, 'approved')}
-                                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
-                                >
-                                  Approve
-                                </button>
-                                <button 
-                                  onClick={() => handleEnrollmentAction(req.id, 'denied')}
-                                  className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
-                                >
-                                  Deny
-                                </button>
-                              </>
-                            ) : (
+            <div className="space-y-8">
+              {Object.entries(enrollmentRequests.reduce((acc, req) => {
+                const key = req.title || 'Unknown';
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(req);
+                return acc;
+              }, {} as Record<string, any[]>)).map(([title, reqs]: [string, any[]]) => (
+                <div key={title} className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm">
+                  <div className="px-8 py-5 border-b border-black/5 dark:border-white/5 bg-zinc-50/50 dark:bg-zinc-800/50">
+                    <h3 className="font-black text-lg text-zinc-900 dark:text-white">{title}</h3>
+                    <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{reqs[0].type}</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-black/5 dark:border-white/5">
+                          <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Student</th>
+                          <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status</th>
+                          <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Date</th>
+                          <th className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                        {reqs.map((req) => (
+                          <tr key={req.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50 transition-colors group">
+                            <td className="px-8 py-4">
                               <div className="flex items-center gap-3">
-                                <span className={cn(
-                                  "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider",
-                                  req.status === 'approved' ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"
-                                )}>
-                                  {req.status}
-                                </span>
-                                <button 
-                                  onClick={() => handleEnrollmentAction(req.id, req.status === 'approved' ? 'denied' : 'approved')}
-                                  className="text-[10px] font-black text-zinc-400 hover:text-zinc-900 uppercase tracking-widest underline underline-offset-4"
-                                >
-                                  Change to {req.status === 'approved' ? 'Denied' : 'Approved'}
-                                </button>
+                                <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-xs">
+                                  {req.studentName?.charAt(0)}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-zinc-900 dark:text-white text-sm">{req.studentName}</div>
+                                  <div className="text-[10px] text-zinc-400 font-medium tracking-tight uppercase">{req.studentId.slice(0, 8)}</div>
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )) : (
-                      <tr>
-                        <td colSpan={4} className="px-8 py-20 text-center">
-                          <div className="flex flex-col items-center gap-2 text-zinc-400">
-                            <Clock className="w-8 h-8 opacity-20" />
-                            <p className="italic font-medium">No enrollments found.</p>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                            </td>
+                            <td className="px-8 py-4">
+                              <span className={cn(
+                                "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider",
+                                req.status === 'approved' ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : 
+                                req.status === 'pending' ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400" :
+                                "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"
+                              )}>
+                                {req.status}
+                              </span>
+                            </td>
+                            <td className="px-8 py-4 text-xs font-medium text-zinc-500">
+                              {new Date(req.enrolledAt?.toMillis()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </td>
+                            <td className="px-8 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {req.status === 'pending' ? (
+                                  <>
+                                    <button 
+                                      onClick={() => handleEnrollmentAction(req, 'approved')}
+                                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button 
+                                      onClick={() => handleEnrollmentAction(req, 'denied')}
+                                      className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                                    >
+                                      Deny
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button 
+                                    onClick={() => handleEnrollmentAction(req, req.status === 'approved' ? 'denied' : 'approved')}
+                                    className="text-[10px] font-black text-zinc-400 hover:text-zinc-900 uppercase tracking-widest underline underline-offset-4"
+                                  >
+                                    Change to {req.status === 'approved' ? 'Denied' : 'Approved'}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </motion.div>

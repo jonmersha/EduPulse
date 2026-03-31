@@ -669,8 +669,8 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                 )}
 
                 <div className="grid grid-cols-1 gap-4">
-                  {resources.length > 0 ? resources.map((resource) => (
-                    <div key={resource.id} className="group flex items-center gap-6 p-6 bg-white border border-zinc-100 rounded-[2rem] hover:shadow-xl transition-all">
+                  {resources.length > 0 ? resources.map((resource, index) => (
+                    <div key={`${resource.id}-${index}`} className="group flex items-center gap-6 p-6 bg-white border border-zinc-100 rounded-[2rem] hover:shadow-xl transition-all">
                       <div className="w-16 h-16 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-all">
                         {resource.type === 'pdf' ? <FileText className="w-8 h-8" /> : 
                          resource.type === 'video' ? <Video className="w-8 h-8" /> : 

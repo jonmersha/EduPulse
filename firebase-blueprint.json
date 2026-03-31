@@ -263,7 +263,7 @@
     "/lessons/{lessonId}": { "schema": "Lesson", "description": "Lesson content" },
     "/assignments/{assignmentId}": { "schema": "Assignment", "description": "Assignments" },
     "/submissions/{submissionId}": { "schema": "Submission", "description": "Student submissions" },
-    "/enrollments/{enrollmentId}": { "schema": "Enrollment", "description": "Course enrollments" },
+    "/courses/{courseId}/enrollments/{enrollmentId}": { "schema": "Enrollment", "description": "Course enrollments" },
     "/exams/{examId}": { "schema": "Exam", "description": "Exams" },
     "/examResults/{resultId}": { "schema": "ExamResult", "description": "Exam results" },
     "/resources/{resourceId}": { "schema": "Resource", "description": "Course resources" },

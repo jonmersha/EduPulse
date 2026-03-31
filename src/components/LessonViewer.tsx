@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   collection, 
+  collectionGroup,
   query, 
   where, 
   orderBy, 
   onSnapshot, 
   doc, 
   updateDoc, 
+  setDoc,
   Timestamp,
   getDoc,
   addDoc,
@@ -47,6 +49,8 @@ import { cn } from '../lib/utils';
 import { CourseChat } from './CourseChat';
 import { AISummary } from './AISummary';
 import { RelatedCourses } from './RelatedCourses';
+import { useEnrollment } from '../hooks/useEnrollment';
+import { OperationType, handleFirestoreError } from '../lib/firestore-errors';
 
 interface LessonViewerProps {
   courseId: string;
@@ -55,6 +59,7 @@ interface LessonViewerProps {
 
 export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) => {
   const { profile } = useAuth();
+  const { enrollment, loading: enrollmentLoading } = useEnrollment(courseId);
   const [course, setCourse] = useState<any>(null);
   const [lessons, setLessons] = useState<any[]>([]);
   const [sectionMetadata, setSectionMetadata] = useState<any[]>([]);
@@ -68,7 +73,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [expandedLessons, setExpandedLessons] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'resources' | 'qa' | 'chat'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'resources' | 'qa' | 'chat' | 'students'>('overview');
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -76,6 +81,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
   const [resources, setResources] = useState<any[]>([]);
   const [questions, setQuestions] = useState<any[]>([]);
   const [answers, setAnswers] = useState<{ [key: string]: any[] }>({});
+  const [enrolledStudents, setEnrolledStudents] = useState<any[]>([]);
   const [newResource, setNewResource] = useState({ title: '', url: '', type: 'link', context: 'lesson' as 'lesson' | 'section' | 'course' });
   const [newQuestion, setNewQuestion] = useState('');
   const [newAnswer, setNewAnswer] = useState<{ [key: string]: string }>({});
@@ -92,29 +98,32 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setLessons(docs);
-      // Don't auto-set current lesson if we want to show course overview first
       setLoading(false);
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'lessons'));
 
     // Fetch section metadata
     const sectionsQ = query(collection(db, 'sections'), where('courseId', '==', courseId), orderBy('order', 'asc'));
     const unsubSections = onSnapshot(sectionsQ, (snapshot) => {
       setSectionMetadata(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'sections'));
+
+    let unsubEnroll: any = null;
+    let unsubResources: any = null;
+    let unsubQuestions: any = null;
 
     if (profile) {
       const enrollRef = doc(db, 'enrollments', `${profile.uid}_${courseId}`);
-      const unsubEnroll = onSnapshot(enrollRef, (doc) => {
+      unsubEnroll = onSnapshot(enrollRef, (doc) => {
         if (doc.exists()) {
           setCompletedLessons(doc.data().completedLessons || []);
         }
-      });
+      }, (error) => handleFirestoreError(error, OperationType.GET, `courses/${courseId}/enrollments/${profile.uid}`));
 
       // Fetch Resources
       const resourcesQ = query(collection(db, 'resources'), where('courseId', '==', courseId));
-      const unsubResources = onSnapshot(resourcesQ, (snapshot) => {
+      unsubResources = onSnapshot(resourcesQ, (snapshot) => {
         setResources(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      });
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'resources'));
 
       // Fetch Questions
       const questionsQ = query(
@@ -122,7 +131,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
         where('courseId', '==', courseId),
         orderBy('createdAt', 'desc')
       );
-      const unsubQuestions = onSnapshot(questionsQ, (snapshot) => {
+      unsubQuestions = onSnapshot(questionsQ, (snapshot) => {
         const qDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setQuestions(qDocs);
         
@@ -138,24 +147,41 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
               ...prev,
               [q.id]: ansSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
             }));
-          });
+          }, (error) => handleFirestoreError(error, OperationType.LIST, 'answers'));
         });
-      });
-
-      return () => {
-        unsubscribe();
-        unsubEnroll();
-        unsubResources();
-        unsubQuestions();
-        unsubSections();
-      };
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'questions'));
     }
 
     return () => {
       unsubscribe();
       unsubSections();
+      if (unsubEnroll) unsubEnroll();
+      if (unsubResources) unsubResources();
+      if (unsubQuestions) unsubQuestions();
     };
   }, [courseId, profile]);
+
+  useEffect(() => {
+    if (!profile || !course) return;
+
+    const isTeacherOrAdmin = profile.role === 'admin' || profile.role === 'super_admin' || (profile.role === 'teacher' && course.teacherId === profile.uid);
+
+    if (!isTeacherOrAdmin) return;
+
+    // Fetch Enrolled Students
+    const enrollQ = query(
+      collectionGroup(db, 'enrollments'),
+      where('courseId', '==', courseId),
+      where('status', '==', 'approved')
+    );
+    const unsubEnrollments = onSnapshot(enrollQ, (snapshot) => {
+      setEnrolledStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
+
+    return () => {
+      unsubEnrollments();
+    };
+  }, [courseId, profile, course]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -335,7 +361,40 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
 
   const progress = lessons.length > 0 ? Math.round((completedLessons.length / lessons.length) * 100) : 0;
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /></div>;
+  const handleEnroll = async () => {
+    if (!profile) return;
+    try {
+      const enrollRef = doc(db, 'courses', courseId, 'enrollments', profile.uid);
+      await setDoc(enrollRef, {
+        studentId: profile.uid,
+        courseId: courseId,
+        status: 'approved',
+        enrolledAt: Timestamp.now(),
+        progress: 0,
+        completedLessons: []
+      });
+    } catch (error) {
+      console.error("Error enrolling:", error);
+    }
+  };
+
+  if (loading || enrollmentLoading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /></div>;
+
+  if (!enrollment) {
+    return (
+      <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-8">
+        <h2 className="text-4xl font-black mb-4">{course?.title}</h2>
+        <p className="text-xl text-zinc-500 mb-8">{course?.description}</p>
+        <button 
+          onClick={handleEnroll}
+          className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-black text-lg hover:bg-emerald-700 transition-all"
+        >
+          Enroll Now
+        </button>
+        <button onClick={onBack} className="mt-4 text-zinc-500 hover:text-zinc-900">Back</button>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-white flex flex-col overflow-hidden">
@@ -545,7 +604,8 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                         { id: 'overview', label: 'Overview' },
                         { id: 'resources', label: 'Resources' },
                         { id: 'qa', label: 'Q&A' },
-                        { id: 'chat', label: 'Chat' }
+                        { id: 'chat', label: 'Chat' },
+                        { id: 'students', label: 'Students' }
                       ].map((tab) => (
                         <button
                           key={tab.id}
@@ -615,6 +675,25 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                       {activeTab === 'chat' && (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                           <CourseChat courseId={courseId} />
+                        </div>
+                      )}
+
+                      {activeTab === 'students' && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          <h3 className="text-xl font-black text-zinc-900 uppercase tracking-widest">Enrolled Students ({enrolledStudents.length})</h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {enrolledStudents.map((student, index) => (
+                              <div key={`${student.studentId}-${index}`} className="flex items-center gap-4 p-4 bg-zinc-50 border border-zinc-100 rounded-2xl">
+                                <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400 font-bold text-sm">
+                                  {student.studentName?.charAt(0)}
+                                </div>
+                                <div className="font-bold text-zinc-900 text-sm">{student.studentName}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {enrolledStudents.length === 0 && (
+                            <p className="text-zinc-500 italic">No enrolled students found.</p>
+                          )}
                         </div>
                       )}
 
@@ -716,8 +795,8 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                     <h4 className="font-black text-zinc-900 uppercase tracking-widest text-sm">For this Lesson</h4>
                                   </div>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {resources.filter(r => r.lessonId === currentLesson?.id).map((resource) => (
-                                      <div key={resource.id} className="group relative flex items-center gap-4 p-6 bg-white border border-zinc-100 rounded-3xl hover:shadow-xl transition-all">
+                                    {resources.filter(r => r.lessonId === currentLesson?.id).map((resource, index) => (
+                                      <div key={`lesson-${resource.id}-${index}`} className="group relative flex items-center gap-4 p-6 bg-white border border-zinc-100 rounded-3xl hover:shadow-xl transition-all">
                                         <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-all">
                                           {resource.type === 'pdf' ? <FileText className="w-6 h-6" /> : 
                                            resource.type === 'video' ? <Video className="w-6 h-6" /> : 
@@ -759,8 +838,8 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                     <h4 className="font-black text-zinc-900 uppercase tracking-widest text-sm">For this Section</h4>
                                   </div>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {resources.filter(r => r.section === currentLesson?.section && !r.lessonId).map((resource) => (
-                                      <div key={resource.id} className="group relative flex items-center gap-4 p-6 bg-white border border-zinc-100 rounded-3xl hover:shadow-xl transition-all">
+                                    {resources.filter(r => r.section === currentLesson?.section && !r.lessonId).map((resource, index) => (
+                                      <div key={`section-${resource.id}-${index}`} className="group relative flex items-center gap-4 p-6 bg-white border border-zinc-100 rounded-3xl hover:shadow-xl transition-all">
                                         <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
                                           {resource.type === 'pdf' ? <FileText className="w-6 h-6" /> : 
                                            resource.type === 'video' ? <Video className="w-6 h-6" /> : 
@@ -802,8 +881,8 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                     <h4 className="font-black text-zinc-900 uppercase tracking-widest text-sm">Course Wide</h4>
                                   </div>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {resources.filter(r => !r.lessonId && (!r.section || r.section === 'General' || (r.section !== currentLesson?.section && r.section !== 'General'))).map((resource) => (
-                                      <div key={resource.id} className="group relative flex items-center gap-4 p-6 bg-white border border-zinc-100 rounded-3xl hover:shadow-xl transition-all">
+                                    {resources.filter(r => !r.lessonId && (!r.section || r.section === 'General' || (r.section !== currentLesson?.section && r.section !== 'General'))).map((resource, index) => (
+                                      <div key={`course-${resource.id}-${index}`} className="group relative flex items-center gap-4 p-6 bg-white border border-zinc-100 rounded-3xl hover:shadow-xl transition-all">
                                         <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-zinc-100 group-hover:text-zinc-600 transition-all">
                                           {resource.type === 'pdf' ? <FileText className="w-6 h-6" /> : 
                                            resource.type === 'video' ? <Video className="w-6 h-6" /> : 
