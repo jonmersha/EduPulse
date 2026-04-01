@@ -18,7 +18,7 @@ service cloud.firestore {
     // Fields: courseId, title, content, type, order
     //
     // Collection: exams
-    // Fields: courseId, title, description, duration, passingScore, questions, isPublic, price, teacherId, createdAt
+    // Fields: courseId, lessonId, sectionId, type, title, description, duration, passingScore, questions, isPublic, price, teacherId, createdAt
     //
     // Collection: examResults
     // Fields: examId, studentId, score, totalQuestions, correctAnswers, feedback, completedAt
@@ -156,6 +156,9 @@ service cloud.firestore {
              (!('passingScore' in data) || data.passingScore == null || data.passingScore is number) &&
              (!('maxAttempts' in data) || data.maxAttempts == null || data.maxAttempts is number) &&
              data.questions is list &&
+             data.type in ['lesson', 'section', 'final'] &&
+             (!('lessonId' in data) || data.lessonId is string) &&
+             (!('sectionId' in data) || data.sectionId is string) &&
              (!('teacherId' in data) || data.teacherId == request.auth.uid || isAdmin());
     }
 

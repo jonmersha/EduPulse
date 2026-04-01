@@ -4,6 +4,7 @@ import { ChevronRight, Plus, Settings, Trash2, GripVertical, Video, FileText, Ty
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../firebase';
 import { cn } from '../lib/utils';
+import { QuizEditor } from './QuizEditor';
 
 interface LessonEditorProps {
   courseId: string;
@@ -26,6 +27,8 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
   const [showSectionInput, setShowSectionInput] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
   const [showAddResource, setShowAddResource] = useState(false);
+  const [showQuizEditor, setShowQuizEditor] = useState(false);
+  const [quizType, setQuizType] = useState<'lesson' | 'section' | 'final'>('lesson');
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string, type: 'lesson' | 'resource' | 'section' } | null>(null);
   const [newResource, setNewResource] = useState({ title: '', url: '', type: 'link', lessonId: '', section: 'General' });
@@ -737,10 +740,18 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                 className="max-w-3xl mx-auto space-y-8"
               >
                 <div className="space-y-6">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-1 bg-zinc-100 text-zinc-500 text-[10px] font-bold uppercase rounded-md tracking-wider">
-                      Course Settings
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-1 bg-zinc-100 text-zinc-500 text-[10px] font-bold uppercase rounded-md tracking-wider">
+                        Course Settings
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => { setQuizType('final'); setShowQuizEditor(true); }}
+                      className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-emerald-700"
+                    >
+                      Add Final Exam
+                    </button>
                   </div>
 
                   <div className="space-y-2">
@@ -773,10 +784,18 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                 className="max-w-3xl mx-auto space-y-8"
               >
                 <div className="space-y-6">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-1 bg-zinc-100 text-zinc-500 text-[10px] font-bold uppercase rounded-md tracking-wider">
-                      Section Settings
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-1 bg-zinc-100 text-zinc-500 text-[10px] font-bold uppercase rounded-md tracking-wider">
+                        Section Settings
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => { setQuizType('section'); setShowQuizEditor(true); }}
+                      className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-emerald-700"
+                    >
+                      Add Section Quiz
+                    </button>
                   </div>
 
                   <div className="space-y-2">
@@ -811,6 +830,12 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => { setQuizType('lesson'); setShowQuizEditor(true); }}
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-emerald-700"
+                      >
+                        Add Quiz
+                      </button>
                       <span className="px-2 py-1 bg-zinc-100 text-zinc-500 text-[10px] font-bold uppercase rounded-md tracking-wider">
                         {editingLesson.parentId ? 'Sub-lesson' : 'Main Lesson'}
                       </span>
@@ -945,6 +970,16 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
           </AnimatePresence>
         </main>
       </div>
+      {showQuizEditor && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <QuizEditor 
+            courseId={courseId} 
+            type={quizType} 
+            lessonId={editingLesson?.id} 
+            onClose={() => setShowQuizEditor(false)} 
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -144,10 +144,13 @@
     },
     "Exam": {
       "title": "Exam",
-      "description": "An examination or quiz.",
+      "description": "An examination, quiz, or assignment test.",
       "type": "object",
       "properties": {
         "courseId": { "type": "string" },
+        "lessonId": { "type": "string", "description": "If quiz is for a lesson" },
+        "sectionId": { "type": "string", "description": "If quiz is for a section" },
+        "type": { "type": "string", "enum": ["lesson", "section", "final"] },
         "title": { "type": "string" },
         "description": { "type": "string" },
         "duration": { "type": "integer", "description": "Minutes" },
@@ -158,7 +161,7 @@
         "teacherId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["title", "teacherId"]
+      "required": ["title", "teacherId", "type"]
     },
     "ExamResult": {
       "title": "ExamResult",
