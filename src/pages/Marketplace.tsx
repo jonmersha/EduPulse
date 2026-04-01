@@ -169,7 +169,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
               <div key={item.id} className="relative group">
                 <CourseCard 
                   course={item} 
-                  onClick={() => isApproved ? onSelectCourse(item.id) : (!isEnrolled || isDenied) && handleEnroll(item, 'course')}
+                  onClick={() => (isApproved || item.isPublic) ? onSelectCourse(item.id) : (!isEnrolled || isDenied) && handleEnroll(item, 'course')}
                 />
                 {(!isEnrolled || isDenied) && (
                   <div className="absolute top-6 left-6">

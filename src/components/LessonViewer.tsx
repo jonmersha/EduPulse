@@ -379,7 +379,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
 
   if (loading || enrollmentLoading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /></div>;
 
-  if (!enrollment) {
+  if (!enrollment && !course?.isPublic) {
     return (
       <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-8">
         <h2 className="text-4xl font-black mb-4">{course?.title}</h2>
