@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, collectionGroup, query, where, onSnapshot, doc, setDoc, Timestamp, deleteDoc } from 'firebase/firestore';
-import { Plus, Trash2, Settings, Search, Filter, BookOpen, Trophy, Users, Eye, CheckCircle, Clock, LayoutDashboard, GraduationCap } from 'lucide-react';
+import { Plus, Trash2, Settings, Search, Filter, BookOpen, Trophy, Users, Eye, EyeOff, BarChart, CheckCircle, Clock, LayoutDashboard, GraduationCap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { db } from '../firebase';
@@ -92,6 +92,14 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
 
     return () => unsubEnroll();
   }, [profile]);
+
+  const toggleCourseVisibility = async (course: any) => {
+    try {
+      await setDoc(doc(db, 'courses', course.id), { isPublic: !course.isPublic }, { merge: true });
+    } catch (error) {
+      console.error("Error toggling visibility:", error);
+    }
+  };
 
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,14 +244,30 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                   <CourseCard course={course} onClick={() => onEditCourse(course.id)} />
                   <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
                     <button 
-                      onClick={(e) => { e.stopPropagation(); startEditCourse(course); }}
+                      onClick={(e) => { e.stopPropagation(); toggleCourseVisibility(course); }}
                       className="p-2.5 bg-white text-zinc-600 rounded-xl hover:text-emerald-600 shadow-xl border border-black/5"
+                      title={course.isPublic ? "Unpublish" : "Publish"}
+                    >
+                      {course.isPublic ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); startEditCourse(course); }}
+                      className="p-2.5 bg-white text-zinc-600 rounded-xl hover:text-blue-600 shadow-xl border border-black/5"
+                      title="Edit Course"
                     >
                       <Settings className="w-4 h-4" />
                     </button>
                     <button 
+                      onClick={(e) => { e.stopPropagation(); /* TODO: Implement analytics */ }}
+                      className="p-2.5 bg-white text-zinc-600 rounded-xl hover:text-amber-600 shadow-xl border border-black/5"
+                      title="View Analytics"
+                    >
+                      <BarChart className="w-4 h-4" />
+                    </button>
+                    <button 
                       onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: course.id, type: 'course' }); }}
                       className="p-2.5 bg-white text-zinc-600 rounded-xl hover:text-red-600 shadow-xl border border-black/5"
+                      title="Delete Course"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
