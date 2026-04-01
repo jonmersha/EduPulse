@@ -222,6 +222,17 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
     }
   };
 
+  const handleDeleteEnrollment = async (enrollmentId: string) => {
+    if (!isTeacherOrAdmin) return;
+    try {
+      const student = enrolledStudents.find(s => s.id === enrollmentId);
+      if (!student) return;
+      await deleteDoc(doc(db, 'courses', student.courseId, 'enrollments', enrollmentId));
+    } catch (error) {
+      console.error("Error deleting enrollment:", error);
+    }
+  };
+
   const handleAddQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile || !newQuestion.trim()) return;
@@ -956,13 +967,33 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                       {activeTab === 'students' && (
                         <div className="space-y-6 animate-in fade-in duration-500">
                           <h3 className="text-xl font-bold text-zinc-900 mb-6">Enrolled Students ({enrolledStudents.length})</h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 gap-4">
                             {enrolledStudents.map((student, index) => (
-                              <div key={`${student.studentId}-${index}`} className="flex items-center gap-4 p-4 bg-white border border-zinc-200 rounded-xl shadow-sm">
-                                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
-                                  {student.studentName?.charAt(0)}
+                              <div key={`${student.studentId}-${index}`} className="flex items-center justify-between p-4 bg-white border border-zinc-200 rounded-xl shadow-sm">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
+                                    {student.studentName?.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <div className="font-semibold text-zinc-900 text-sm">{student.studentName}</div>
+                                    <div className="text-xs text-zinc-500">Enrolled: {new Date(student.enrolledAt?.toMillis()).toLocaleDateString()}</div>
+                                  </div>
                                 </div>
-                                <div className="font-semibold text-zinc-900 text-sm">{student.studentName}</div>
+                                <div className="flex items-center gap-4">
+                                  <div className="w-32 h-2 bg-zinc-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-emerald-500" style={{ width: `${student.progress || 0}%` }} />
+                                  </div>
+                                  <span className="text-sm font-bold text-zinc-900">{student.progress || 0}%</span>
+                                  {isTeacherOrAdmin && (
+                                    <button 
+                                      onClick={() => handleDeleteEnrollment(student.id)}
+                                      className="p-2 text-zinc-400 hover:text-red-600 transition-colors"
+                                      title="Remove Enrollment"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             ))}
                           </div>
