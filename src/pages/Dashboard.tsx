@@ -45,7 +45,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
         return { id: d.id, ...d.data(), progress: e.progress };
       });
       const courses = await Promise.all(coursePromises);
-      setRecentCourses(courses.filter((c: any) => c && c.title));
+      const validCourses = courses.filter((c: any) => c && c.title);
+      const uniqueCourses = Array.from(new Map(validCourses.map((c: any) => [c.id, c])).values());
+      setRecentCourses(uniqueCourses);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
 
     // Listener for exam results
@@ -83,7 +85,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
           return null;
         });
         const exams = await Promise.all(examPromises);
-        setUpcomingExams(exams.filter(e => e !== null).slice(0, 3));
+        const validExams = exams.filter(e => e !== null);
+        const uniqueExams = Array.from(new Map(validExams.map((e: any) => [e.id, e])).values());
+        setUpcomingExams(uniqueExams.slice(0, 3));
       } catch (error) {
         handleFirestoreError(error, OperationType.LIST, 'enrollments');
       }

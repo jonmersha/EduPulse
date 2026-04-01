@@ -10,6 +10,7 @@ interface ExamEditorProps {
 }
 
 interface Question {
+  id: string;
   text: string;
   options: string[];
   correctAnswer: number;
@@ -26,14 +27,19 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         setExam(data);
-        setQuestions(data.questions || []);
+        // Ensure all questions have an ID
+        const questionsWithIds = (data.questions || []).map((q: any, index: number) => ({
+          id: q.id || `q-${index}-${Date.now()}`,
+          ...q
+        }));
+        setQuestions(questionsWithIds);
       }
     });
     return () => unsub();
   }, [examId]);
 
   const handleAddQuestion = () => {
-    setQuestions([...questions, { text: '', options: ['', '', '', ''], correctAnswer: 0, explanation: '' }]);
+    setQuestions([...questions, { id: Date.now().toString(), text: '', options: ['', '', '', ''], correctAnswer: 0, explanation: '' }]);
   };
 
   const handleRemoveQuestion = (index: number) => {
@@ -114,7 +120,7 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
         <AnimatePresence initial={false}>
           {questions.map((q, qIndex) => (
             <motion.div
-              key={qIndex}
+              key={q.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -143,7 +149,7 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {q.options.map((option, oIndex) => (
                     <div 
-                      key={oIndex}
+                      key={`${q.id}-opt-${oIndex}`}
                       className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${
                         q.correctAnswer === oIndex 
                           ? "border-emerald-500 bg-emerald-50" 

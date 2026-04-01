@@ -68,8 +68,11 @@ export const MyCourses: React.FC<MyCoursesProps> = ({ onSelectCourse, onSelectEx
         Promise.all(examPromises)
       ]);
 
-      setCourses(courseDetails.filter(c => c !== null));
-      setExams(examDetails.filter(e => e !== null));
+      const uniqueCourses = Array.from(new Map(courseDetails.filter(c => c !== null).map(c => [c.id, c])).values());
+      const uniqueExams = Array.from(new Map(examDetails.filter(e => e !== null).map(e => [e.id, e])).values());
+
+      setCourses(uniqueCourses);
+      setExams(uniqueExams);
       setLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'enrollments');

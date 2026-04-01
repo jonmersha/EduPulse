@@ -58,10 +58,16 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
         setExam(data);
         
         if (data.questions && data.questions.length > 0) {
+          // Add a unique ID to each question before shuffling
+          const questionsWithIds = data.questions.map((q: any, index: number) => ({
+            ...q,
+            tempId: `q-${index}`
+          }));
+
           // Shuffle questions
-          const questions = shuffleArray(data.questions).map((q: any) => {
+          const questions = shuffleArray(questionsWithIds).map((q: any) => {
             // Shuffle options for each question
-            const originalOptions = q.options.map((text: string, index: number) => ({ text, index }));
+            const originalOptions = q.options.map((text: string, index: number) => ({ text, index, tempId: `opt-${q.tempId}-${index}` }));
             const shuffledOptions = shuffleArray(originalOptions);
             
             // Find the new index of the correct answer
@@ -69,7 +75,7 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
             
             return {
               ...q,
-              options: shuffledOptions.map(opt => opt.text),
+              options: shuffledOptions,
               correctAnswer: newCorrectIndex,
               originalQuestion: q // Keep reference for review if needed
             };
@@ -170,13 +176,12 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
           </header>
 
           <div className="space-y-6">
-            {shuffledQuestions.map((q: any, idx: number) => {
-              const isCorrect = answers[idx] === q.correctAnswer;
+            {shuffledQuestions.map((q: any) => {
+              const isCorrect = answers[q.tempId] === q.correctAnswer;
               return (
-                <div key={idx} className={`bg-white border rounded-[2rem] p-8 shadow-sm space-y-4 ${isCorrect ? 'border-emerald-100' : 'border-red-100'}`}>
+                <div key={q.tempId} className={`bg-white border rounded-[2rem] p-8 shadow-sm space-y-4 ${isCorrect ? 'border-emerald-100' : 'border-red-100'}`}>
                   <div className="flex items-start justify-between gap-4">
                     <h3 className="text-xl font-bold leading-tight">
-                      <span className="text-zinc-300 mr-2">{idx + 1}.</span>
                       {q.text}
                     </h3>
                     {isCorrect ? (
@@ -187,17 +192,17 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
                   </div>
 
                   <div className="grid grid-cols-1 gap-2">
-                    {q.options.map((option: string, oIdx: number) => {
+                    {q.options.map((option: any) => {
                       let style = "border-zinc-100 text-zinc-500";
-                      if (oIdx === q.correctAnswer) {
+                      if (option.index === q.correctAnswer) {
                         style = "border-emerald-500 bg-emerald-50 text-emerald-700";
-                      } else if (oIdx === answers[idx] && !isCorrect) {
+                      } else if (option.index === answers[q.tempId] && !isCorrect) {
                         style = "border-red-500 bg-red-50 text-red-700";
                       }
 
                       return (
-                        <div key={oIdx} className={`p-4 rounded-xl border-2 font-medium ${style}`}>
-                          {option}
+                        <div key={option.tempId} className={`p-4 rounded-xl border-2 font-medium ${style}`}>
+                          {option.text}
                         </div>
                       );
                     })}
@@ -296,22 +301,22 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
         <div className="space-y-6">
           <h3 className="text-2xl font-bold leading-tight">{currentQuestion.text}</h3>
           <div className="grid grid-cols-1 gap-3">
-            {currentQuestion.options.map((option: string, idx: number) => (
+            {currentQuestion.options.map((option: any) => (
               <button
-                key={idx}
-                onClick={() => setAnswers({ ...answers, [currentQuestionIndex]: idx })}
+                key={option.tempId}
+                onClick={() => setAnswers({ ...answers, [currentQuestion.tempId]: option.index })}
                 className={`flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left font-bold ${
-                  answers[currentQuestionIndex] === idx
+                  answers[currentQuestion.tempId] === option.index
                     ? "border-emerald-500 bg-emerald-50 text-emerald-700"
                     : "border-zinc-100 hover:border-zinc-200 text-zinc-600"
                 }`}
               >
                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                  answers[currentQuestionIndex] === idx ? "border-emerald-500 bg-emerald-500 text-white" : "border-zinc-200"
+                  answers[currentQuestion.tempId] === option.index ? "border-emerald-500 bg-emerald-500 text-white" : "border-zinc-200"
                 }`}>
-                  {answers[currentQuestionIndex] === idx && <CheckCircle2 className="w-4 h-4" />}
+                  {answers[currentQuestion.tempId] === option.index && <CheckCircle2 className="w-4 h-4" />}
                 </div>
-                {option}
+                {option.text}
               </button>
             ))}
           </div>

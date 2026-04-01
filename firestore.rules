@@ -268,24 +268,31 @@ service cloud.firestore {
     }
 
     match /{path=**}/enrollments/{enrollmentId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.studentId ||
+      allow get: if isAuthenticated() && (
+        (resource != null && request.auth.uid == resource.data.studentId) ||
         isAdmin() ||
-        (resource.data.courseId != null && exists(/databases/$(database)/documents/courses/$(resource.data.courseId)) && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid) ||
-        (resource.data.examId != null && exists(/databases/$(database)/documents/exams/$(resource.data.examId)) && get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid)
+        (resource != null && resource.data.courseId != null && exists(/databases/$(database)/documents/courses/$(resource.data.courseId)) && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid) ||
+        (resource != null && resource.data.examId != null && exists(/databases/$(database)/documents/exams/$(resource.data.examId)) && get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid)
       );
+      allow list: if isAuthenticated() && (isAdmin() || isTeacher());
       allow create: if isAuthenticated() && (isAdmin() || (request.auth.uid == request.resource.data.studentId && isValidEnrollment(request.resource.data)));
       allow update: if isAuthenticated() && isValidEnrollment(request.resource.data) && (
         isAdmin() ||
-        (request.auth.uid == resource.data.studentId && request.resource.data.status == resource.data.status) ||
+        (request.auth.uid == resource.data.studentId && 
+         request.resource.data.studentId == resource.data.studentId &&
+         ((request.resource.data.courseId == resource.data.courseId) || (request.resource.data.examId == resource.data.examId))) ||
         (resource.data.courseId != null && exists(/databases/$(database)/documents/courses/$(resource.data.courseId)) && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid) ||
         (resource.data.examId != null && exists(/databases/$(database)/documents/exams/$(resource.data.examId)) && get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid)
       );
     }
 
     match /courses/{courseId}/enrollments/{enrollmentId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.studentId ||
+      allow get: if isAuthenticated() && (
+        (resource != null && request.auth.uid == resource.data.studentId) ||
+        isAdmin() ||
+        isCourseTeacher(courseId)
+      );
+      allow list: if isAuthenticated() && (
         isAdmin() ||
         isCourseTeacher(courseId)
       );

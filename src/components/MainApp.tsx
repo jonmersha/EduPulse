@@ -32,12 +32,11 @@ export const MainApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F9F9F8] text-zinc-900 font-sans">
+    <div className="h-screen flex flex-col bg-[#F9F9F8] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans overflow-hidden">
       <Navbar activeTab={activeTab} setActiveTab={handleTabChange} />
-      <div className="flex">
-        <main className="flex-1 p-8 overflow-y-auto h-[calc(100vh-64px)]">
-          <SeedData />
-          <AnimatePresence mode="wait">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-20 md:pb-8 relative">
+        <SeedData />
+        <AnimatePresence mode="wait">
             <motion.div
               key={activeTab + (selectedCourse || '') + (selectedCourseForEdit || '') + (selectedExam || '') + (selectedExamForEdit || '')}
               initial={{ opacity: 0, y: 10 }}
@@ -72,8 +71,7 @@ export const MainApp: React.FC = () => {
               )}
             </motion.div>
           </AnimatePresence>
-        </main>
-      </div>
+      </main>
     </div>
   );
 };

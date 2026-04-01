@@ -437,8 +437,8 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
             </div>
           </div>
 
-          {sections.map((section) => (
-            <div key={section.name} className="space-y-2">
+          {sections.map((section, sIdx) => (
+            <div key={`section-${section.name}-${sIdx}`} className="space-y-2">
               <div className="flex items-center justify-between px-2">
                 <div 
                   onClick={() => setSelectedSectionName(section.name)}
@@ -642,8 +642,8 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                           className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
                         >
                           <option value="General">General (Course Wide)</option>
-                          {sections.map(s => (
-                            <option key={s.name} value={s.name}>{s.name}</option>
+                          {sections.map((s) => (
+                            <option key={s.id} value={s.name}>{s.name}</option>
                           ))}
                         </select>
                       </div>
@@ -871,8 +871,8 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                         onChange={e => setEditingLesson({...editingLesson, section: e.target.value})}
                         className="w-full px-4 py-3 bg-zinc-50 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm font-medium"
                       >
-                        {sections.map(s => (
-                          <option key={s.name} value={s.name}>{s.name}</option>
+                        {sections.map((s, index) => (
+                          <option key={s.id} value={s.name}>{s.name}</option>
                         ))}
                       </select>
                     </div>

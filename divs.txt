@@ -1,0 +1,134 @@
+380:  if (loading || enrollmentLoading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /></div>;
+384:      <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-8">
+399:    <div className={cn("flex flex-col bg-zinc-50", isMobile ? "" : "h-full")}>
+400:      <div className="p-6 bg-white border-b border-zinc-200 flex flex-col gap-4 shrink-0">
+401:        <div className="flex items-center justify-between">
+403:          <div className="flex items-center gap-2">
+407:        <div className="w-full h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+416:      <div className={cn("pb-20", isMobile ? "" : "flex-1 overflow-y-auto scrollbar-hide")}>
+418:        <div className="border-b border-zinc-200">
+431:            <div className={cn(
+437:            <div>
+448:            <div key={`section-${section.name}-${sIdx}`} className="border-b border-zinc-200 last:border-0">
+456:                <div className="flex-1">
+460:                <div className={cn(
+483:                        <div key={`${main.id}-${index}`}>
+484:                          <div className={cn(
+501:                              <div className={cn(
+511:                              <div className="flex-1 min-w-0">
+517:                                <div className="flex items-center gap-2 mt-1">
+518:                                  <div className="flex items-center gap-1">
+572:                                        <div className={cn(
+582:                                        <div className="flex-1 min-w-0">
+610:    <div className="fixed inset-0 z-50 bg-white flex flex-col overflow-hidden">
+613:        <div className="flex items-center gap-4">
+621:          <div className="hidden md:block">
+623:            <div className="flex items-center gap-3 mt-0.5">
+624:              <div className="w-40 h-1 bg-white/10 rounded-full overflow-hidden">
+636:        <div className="flex items-center gap-2 md:gap-6">
+637:          <div className="hidden sm:flex items-center gap-1 bg-white/5 rounded-xl p-1">
+645:            <div className="px-4 text-[10px] font-black text-zinc-400 border-x border-white/10 tracking-widest">
+667:      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+673:            <div className="bg-black w-full aspect-video md:max-h-[60vh] relative shrink-0 z-10">
+688:          <div className="flex-1 overflow-y-auto scroll-smooth">
+689:            <div className="max-w-5xl mx-auto w-full">
+701:                      <div className="border-b border-zinc-200 flex overflow-x-auto scrollbar-hide sticky top-0 bg-white z-10">
+726:                      <div className="p-6 md:p-12 space-y-8">
+727:                        <div className="space-y-4">
+731:                        <div className="prose prose-zinc max-w-none text-zinc-700 leading-relaxed">
+735:                          <div className="pt-12 border-t border-zinc-100">
+737:                            <div className="space-y-4">
+739:                                <div key={`${section.id}-${idx}`} className="p-6 bg-zinc-50 rounded-2xl border border-zinc-100">
+740:                                  <div className="flex items-center gap-4 mb-2">
+765:                    <div className="border-b border-zinc-200 flex overflow-x-auto scrollbar-hide sticky top-0 bg-white z-10">
+790:                    <div className="p-6 md:p-12 space-y-8">
+791:                      <div className="space-y-4">
+792:                        <div className="flex items-center gap-3">
+799:                      <div className="prose prose-zinc max-w-none text-zinc-700 leading-relaxed">
+803:                      <div className="pt-12 border-t border-zinc-100">
+805:                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+812:                              <div className="w-10 h-10 rounded-lg bg-zinc-50 border border-zinc-200 text-zinc-500 flex items-center justify-center text-sm font-bold group-hover:bg-emerald-50 group-hover:text-emerald-700 group-hover:border-emerald-200 transition-all">
+815:                              <div>
+835:                  <div className="p-6 md:p-12 space-y-8">
+836:                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+837:                      <div className="flex-1 space-y-3">
+838:                        <div className="flex items-center gap-2">
+850:                      <div className="flex items-center gap-3 shrink-0">
+856:                          {isSpeaking ? <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /> : <Volume2 className="w-4 h-4" />}
+875:                    <div className="border-b border-zinc-200 flex overflow-x-auto scrollbar-hide sticky top-0 bg-white z-10">
+901:                    <div className="min-h-[500px] pb-20">
+905:                        <div className="space-y-8 animate-in fade-in duration-500">
+913:                            <div className="w-full h-[600px] md:h-[800px] rounded-2xl overflow-hidden border border-zinc-200 shadow-sm bg-zinc-50">
+918:                          <div className="prose prose-zinc max-w-none text-zinc-700">
+927:                            <div className="pt-8 border-t border-zinc-200">
+929:                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+936:                                    <div className="w-8 h-8 rounded-lg bg-zinc-50 border border-zinc-200 text-zinc-500 flex items-center justify-center text-xs font-bold group-hover:bg-emerald-50 group-hover:text-emerald-700 group-hover:border-emerald-200 transition-all">
+939:                                    <div>
+951:                        <div className="animate-in fade-in duration-500">
+957:                        <div className="space-y-6 animate-in fade-in duration-500">
+959:                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+961:                              <div key={`${student.studentId}-${index}`} className="flex items-center gap-4 p-4 bg-white border border-zinc-200 rounded-xl shadow-sm">
+962:                                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
+965:                                <div className="font-semibold text-zinc-900 text-sm">{student.studentName}</div>
+976:                        <div className="space-y-8 animate-in fade-in duration-500">
+977:                          <div className="flex items-center justify-between">
+997:                              <div className="flex items-center justify-between mb-2">
+1003:                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+1004:                                <div className="space-y-2">
+1015:                                <div className="space-y-2">
+1028:                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+1029:                                <div className="space-y-2">
+1043:                                <div className="space-y-2">
+1064:                            <div className="space-y-10">
+1067:                                <div className="space-y-4">
+1068:                                  <div className="flex items-center gap-2">
+1069:                                    <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+1072:                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+1074:                                      <div key={`lesson-${resource.id}-${index}`} className="group relative flex items-center gap-4 p-4 bg-white border border-zinc-200 rounded-xl hover:shadow-md transition-all">
+1075:                                        <div className="w-10 h-10 rounded-lg bg-zinc-50 flex items-center justify-center text-zinc-500 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-all">
+1080:                                        <div className="flex-1 min-w-0">
+1084:                                        <div className="flex items-center gap-1">
+1110:                                <div className="space-y-4">
+1111:                                  <div className="flex items-center gap-2">
+1112:                                    <div className="w-1 h-4 bg-blue-500 rounded-full" />
+1115:                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+1117:                                      <div key={`section-${resource.id}-${index}`} className="group relative flex items-center gap-4 p-4 bg-white border border-zinc-200 rounded-xl hover:shadow-md transition-all">
+1118:                                        <div className="w-10 h-10 rounded-lg bg-zinc-50 flex items-center justify-center text-zinc-500 group-hover:bg-blue-50 group-hover:text-blue-700 transition-all">
+1123:                                        <div className="flex-1 min-w-0">
+1127:                                        <div className="flex items-center gap-1">
+1153:                                <div className="space-y-4">
+1154:                                  <div className="flex items-center gap-2">
+1155:                                    <div className="w-1 h-4 bg-zinc-400 rounded-full" />
+1158:                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+1160:                                      <div key={`course-${resource.id}-${index}`} className="group relative flex items-center gap-4 p-4 bg-white border border-zinc-200 rounded-xl hover:shadow-md transition-all">
+1161:                                        <div className="w-10 h-10 rounded-lg bg-zinc-50 flex items-center justify-center text-zinc-500 group-hover:bg-zinc-100 group-hover:text-zinc-700 transition-all">
+1166:                                        <div className="flex-1 min-w-0">
+1170:                                        <div className="flex items-center gap-1">
+1195:                            <div className="flex flex-col items-center justify-center py-20 text-zinc-500 bg-zinc-50 rounded-2xl border border-dashed border-zinc-300">
+1204:                        <div className="space-y-8 animate-in fade-in duration-500">
+1205:                          <div className="flex items-center justify-between">
+1227:                          <div className="space-y-6">
+1230:                                <div key={`${q.id}-${index}`} className="space-y-4">
+1231:                                  <div className="flex gap-4">
+1232:                                    <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center shrink-0">
+1235:                                    <div className="flex-1 p-5 bg-white border border-zinc-200 rounded-xl shadow-sm">
+1236:                                      <div className="flex items-center justify-between mb-2">
+1247:                                  <div className="ml-14 space-y-4">
+1249:                                      <div key={`${ans.id}-${aIndex}`} className="flex gap-4">
+1250:                                        <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+1257:                                        <div className="flex-1 p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+1258:                                          <div className="flex items-center justify-between mb-1">
+1259:                                            <div className="flex items-center gap-2">
+1275:                                    <div className="flex gap-4">
+1276:                                      <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center shrink-0">
+1279:                                      <div className="flex-1 relative">
+1300:                              <div className="flex flex-col items-center justify-center py-20 text-zinc-500 bg-zinc-50 rounded-2xl border border-dashed border-zinc-300">
+1318:                  <div className="space-y-4">
+1328:                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
+1338:                        <div className="w-12 h-12 rounded-xl bg-zinc-100 text-zinc-900 flex items-center justify-center text-lg font-bold group-hover:bg-emerald-600 group-hover:text-white transition-all shrink-0">
+1341:                        <div className="flex-1 min-w-0 pt-1">
+1352:                <div key="mobile-sidebar" className="h-full">
+1356:                <div key="empty-state" className="flex flex-col items-center justify-center h-[calc(100vh-64px)] text-zinc-400 bg-zinc-50/50">
+1362:                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-white shadow-sm border border-zinc-100 flex items-center justify-center mb-6">
+1388:                <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-5">
+1395:                <div className="flex gap-3">

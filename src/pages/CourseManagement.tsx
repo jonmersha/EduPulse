@@ -375,14 +375,14 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
           ) : (
             <div className="space-y-8">
               {Object.entries(enrollmentRequests.reduce((acc, req) => {
-                const key = req.title || 'Unknown';
+                const key = req.courseId || req.examId || 'Unknown';
                 if (!acc[key]) acc[key] = [];
                 acc[key].push(req);
                 return acc;
-              }, {} as Record<string, any[]>)).map(([title, reqs]: [string, any[]]) => (
-                <div key={title} className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm">
+              }, {} as Record<string, any[]>)).map(([id, reqs]: [string, any[]]) => (
+                <div key={`enrollment-${id}`} className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm">
                   <div className="px-8 py-5 border-b border-black/5 dark:border-white/5 bg-zinc-50/50 dark:bg-zinc-800/50">
-                    <h3 className="font-black text-lg text-zinc-900 dark:text-white">{title}</h3>
+                    <h3 className="font-black text-lg text-zinc-900 dark:text-white">{reqs[0].title}</h3>
                     <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{reqs[0].type}</p>
                   </div>
                   <div className="overflow-x-auto">
