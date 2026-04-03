@@ -45,9 +45,10 @@
         "schoolId": { "type": "string" },
         "teacherId": { "type": "string", "description": "Primary teacher for the class" },
         "grade": { "type": "string" },
+        "year": { "type": "string", "description": "Academic year" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["name", "schoolId"]
+      "required": ["name", "schoolId", "year"]
     },
     "Course": {
       "title": "Course",

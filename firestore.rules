@@ -240,7 +240,7 @@ service cloud.firestore {
 
     match /classes/{classId} {
       allow read: if isAuthenticated() && (getUserData().schoolId == resource.data.schoolId || isAdmin());
-      allow create: if isAuthenticated() && getUserData().role == 'admin' && getUserData().schoolId == request.resource.data.schoolId && isValidClass(request.resource.data);
+      allow create: if isAuthenticated() && (isAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == request.resource.data.schoolId)) && isValidClass(request.resource.data);
       allow update: if (isAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId)) && isValidClass(request.resource.data);
       allow delete: if isAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId);
     }

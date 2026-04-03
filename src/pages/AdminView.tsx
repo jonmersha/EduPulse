@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Users, Settings, Plus, School as SchoolIcon, BookOpen, UserPlus, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Users, Settings, Plus, School as SchoolIcon, BookOpen, UserPlus, Trash2, Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { collection, query, onSnapshot, doc, setDoc, Timestamp, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +7,7 @@ import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { Modal } from '../components/Modal';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import Papa from 'papaparse';
 
 export const AdminView: React.FC = () => {
   const { profile } = useAuth();
@@ -17,13 +18,21 @@ export const AdminView: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState<'all' | 'super_admin' | 'admin' | 'teacher' | 'student' | 'provider'>('all');
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [addStudentOptionsContext, setAddStudentOptionsContext] = useState<{classId?: string, schoolId?: string} | null>(null);
+  const [bulkUploadContext, setBulkUploadContext] = useState<{classId?: string, schoolId?: string} | null>(null);
+  const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null);
+  const [bulkUploadStatus, setBulkUploadStatus] = useState('');
+  const [bulkUploadProgress, setBulkUploadProgress] = useState(0);
+  const [bulkUploadRole, setBulkUploadRole] = useState<'student' | 'teacher'>('student');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
 
   // Form states
   const [newSchool, setNewSchool] = useState({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
-  const [newClass, setNewClass] = useState({ name: '', grade: '', teacherId: '', schoolId: '' });
+  const [newClass, setNewClass] = useState({ name: '', grade: '', year: '', teacherId: '', schoolId: '' });
   const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolId: '', schoolIds: [] as string[], isIndependent: false });
   const [editingItem, setEditingItem] = useState<any>(null);
 
@@ -126,7 +135,7 @@ export const AdminView: React.FC = () => {
       }, { merge: true });
       setShowAddModal(false);
       setEditingItem(null);
-      setNewClass({ name: '', grade: '', teacherId: '', schoolId: '' });
+      setNewClass({ name: '', grade: '', year: '', teacherId: '', schoolId: '' });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `classes/${editingItem?.id || 'new'}`);
     }
@@ -167,7 +176,7 @@ export const AdminView: React.FC = () => {
   const startEdit = (item: any) => {
     setEditingItem(item);
     if (activeSubTab === 'schools') setNewSchool({ name: item.name, address: item.address, adminEmail: item.adminEmail, contactPhone: item.contactPhone || '', academicStructure: item.academicStructure || 'K-12' });
-    if (activeSubTab === 'classes') setNewClass({ name: item.name, grade: item.grade, teacherId: item.teacherId || '', schoolId: item.schoolId || '' });
+    if (activeSubTab === 'classes') setNewClass({ name: item.name, grade: item.grade, year: item.year || '', teacherId: item.teacherId || '', schoolId: item.schoolId || '' });
     if (activeSubTab === 'users') setNewUser({ email: item.email, displayName: item.displayName, role: item.role, classId: item.classId || '', specialization: item.specialization || '', schoolId: item.schoolId || '', schoolIds: item.schoolIds || [], isIndependent: item.isIndependent || false });
     setShowAddModal(true);
   };
@@ -185,6 +194,109 @@ export const AdminView: React.FC = () => {
       isIndependent: role === 'provider'
     });
     setShowAddModal(true);
+  };
+
+  const handleBulkUpload = async () => {
+    if (!bulkUploadFile) return;
+    
+    setBulkUploadStatus('Parsing file...');
+    setBulkUploadProgress(0);
+    
+    Papa.parse(bulkUploadFile, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        const data = results.data as any[];
+        
+        if (data.length === 0) {
+          setBulkUploadStatus('Error: File is empty or invalid.');
+          return;
+        }
+        
+        // Check for required headers (case-insensitive)
+        const headers = Object.keys(data[0]).map(h => h.toLowerCase());
+        if (!headers.includes('email') || !headers.includes('name')) {
+          setBulkUploadStatus('Error: CSV must contain "email" and "name" columns.');
+          return;
+        }
+        if (bulkUploadRole === 'student' && !bulkUploadContext?.classId && (!headers.includes('class') || !headers.includes('year'))) {
+          setBulkUploadStatus('Error: CSV must contain "class" and "year" columns for students when not uploading directly to a class.');
+          return;
+        }
+        
+        setBulkUploadStatus(`Found ${data.length} users. Uploading...`);
+        
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (let i = 0; i < data.length; i++) {
+          const row = data[i];
+          // Find the actual keys matching 'email' and 'name' case-insensitively
+          const emailKey = Object.keys(row).find(k => k.toLowerCase() === 'email');
+          const nameKey = Object.keys(row).find(k => k.toLowerCase() === 'name');
+          const classKey = Object.keys(row).find(k => k.toLowerCase() === 'class');
+          const yearKey = Object.keys(row).find(k => k.toLowerCase() === 'year');
+          const specializationKey = Object.keys(row).find(k => k.toLowerCase() === 'specialization');
+          
+          if (!emailKey || !nameKey || !row[emailKey] || !row[nameKey]) {
+            errorCount++;
+            continue;
+          }
+          
+          try {
+            let classId = '';
+            if (bulkUploadRole === 'student') {
+               if (bulkUploadContext?.classId) {
+                 classId = bulkUploadContext.classId;
+               } else {
+                 if (!classKey || !row[classKey] || !yearKey || !row[yearKey]) {
+                   errorCount++;
+                   continue;
+                 }
+                 const matchedClass = classes.find(c => c.name.toLowerCase() === row[classKey].toLowerCase() && c.year === row[yearKey] && c.schoolId === (selectedSchoolId || profile?.schoolId));
+                 if (matchedClass) {
+                   classId = matchedClass.id;
+                 } else {
+                   errorCount++;
+                   continue;
+                 }
+               }
+            }
+            
+            const userId = doc(collection(db, 'users')).id;
+            await setDoc(doc(db, 'users', userId), {
+              email: row[emailKey].trim(),
+              displayName: row[nameKey].trim(),
+              role: bulkUploadRole,
+              classId: classId,
+              specialization: specializationKey && row[specializationKey] ? row[specializationKey].trim() : '',
+              schoolId: selectedSchoolId || profile?.schoolId || '',
+              status: 'active',
+              uid: userId,
+              createdAt: Timestamp.now()
+            });
+            successCount++;
+          } catch (err) {
+            console.error("Error creating user:", err);
+            errorCount++;
+          }
+          setBulkUploadProgress(Math.round(((i + 1) / data.length) * 100));
+        }
+        
+        setBulkUploadStatus(`Upload complete! ${successCount} successful, ${errorCount} failed.`);
+        setTimeout(() => {
+          setShowBulkUploadModal(false);
+          setBulkUploadFile(null);
+          setBulkUploadStatus('');
+          setBulkUploadProgress(0);
+          setBulkUploadContext(null);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }, 4000);
+      },
+      error: (error) => {
+        setBulkUploadStatus(`Error parsing CSV: ${error.message}`);
+      }
+    });
   };
 
   return (
@@ -219,11 +331,18 @@ export const AdminView: React.FC = () => {
                 Add Teacher
               </button>
               <button 
-                onClick={() => openAddUserModal('student')}
+                onClick={() => setAddStudentOptionsContext({})}
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
               >
                 <UserPlus className="w-4 h-4" />
                 Add Student
+              </button>
+              <button 
+                onClick={() => { setBulkUploadRole('student'); setBulkUploadContext(null); setShowBulkUploadModal(true); }}
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-md"
+              >
+                <Upload className="w-4 h-4" />
+                Bulk Upload
               </button>
             </>
           ) : activeSubTab === 'schools' ? (
@@ -379,7 +498,7 @@ export const AdminView: React.FC = () => {
                   <BookOpen className="w-6 h-6" />
                 </div>
                 <h3 className="text-xl font-bold">{cls.name}</h3>
-                <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm">Grade: {cls.grade}</p>
+                <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm">Grade: {cls.grade} • Year: {cls.year}</p>
                 {isSuperAdmin && (
                   <p className="text-[10px] text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">
                     School: {schools.find(s => s.id === cls.schoolId)?.name || 'Unknown'}
@@ -387,7 +506,7 @@ export const AdminView: React.FC = () => {
                 )}
                 <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
                   <button 
-                    onClick={() => openAddUserModal('student', cls.id, cls.schoolId)}
+                    onClick={() => setAddStudentOptionsContext({classId: cls.id, schoolId: cls.schoolId})}
                     className="flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-700"
                   >
                     <UserPlus className="w-3 h-3" />
@@ -525,6 +644,166 @@ export const AdminView: React.FC = () => {
       </div>
 
       <AnimatePresence>
+        {addStudentOptionsContext && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-zinc-900 rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-black/5"
+            >
+              <h2 className="text-2xl font-bold mb-6 text-center">Add Student</h2>
+              <div className="space-y-4">
+                <button
+                  onClick={() => {
+                    openAddUserModal('student', addStudentOptionsContext.classId, addStudentOptionsContext.schoolId);
+                    setAddStudentOptionsContext(null);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
+                >
+                  <UserPlus className="w-5 h-5" />
+                  Add Single Student
+                </button>
+                <button
+                  onClick={() => {
+                    setBulkUploadRole('student');
+                    setBulkUploadContext(addStudentOptionsContext);
+                    setShowBulkUploadModal(true);
+                    setAddStudentOptionsContext(null);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-zinc-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-md"
+                >
+                  <Upload className="w-5 h-5" />
+                  Bulk Upload Students
+                </button>
+              </div>
+              <button 
+                onClick={() => setAddStudentOptionsContext(null)}
+                className="mt-6 w-full py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-xl font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showBulkUploadModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-zinc-900 rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-black/5"
+            >
+              <h2 className="text-2xl font-bold mb-2">Bulk Upload Users</h2>
+              <p className="text-zinc-500 dark:text-zinc-400 mb-6 text-sm">Upload a CSV file to add multiple users at once.</p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">Role to Upload</label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setBulkUploadRole('student')}
+                      className={cn(
+                        "flex-1 py-2 rounded-xl font-bold text-sm transition-all",
+                        bulkUploadRole === 'student' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-2 border-emerald-500" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-2 border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                      )}
+                    >
+                      Students
+                    </button>
+                    <button
+                      onClick={() => setBulkUploadRole('teacher')}
+                      className={cn(
+                        "flex-1 py-2 rounded-xl font-bold text-sm transition-all",
+                        bulkUploadRole === 'teacher' ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-2 border-blue-500" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-2 border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                      )}
+                    >
+                      Teachers
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-zinc-200 dark:border-zinc-800">
+                  <h3 className="text-sm font-bold mb-2 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-blue-500" />
+                    CSV Format Requirements
+                  </h3>
+                  <ul className="text-xs text-zinc-500 dark:text-zinc-400 space-y-1 list-disc list-inside">
+                    <li>Must include <strong>name</strong> and <strong>email</strong> columns.</li>
+                    {bulkUploadRole === 'student' && !bulkUploadContext?.classId && <li>Must include <strong>class</strong> and <strong>year</strong> columns (must match an existing class exactly).</li>}
+                    {bulkUploadRole === 'student' && bulkUploadContext?.classId && <li>Students will be automatically added to the selected class.</li>}
+                    {bulkUploadRole === 'teacher' && <li>Optional: <strong>specialization</strong> column.</li>}
+                    <li>First row must be headers.</li>
+                  </ul>
+                  <div className="mt-3 p-2 bg-white dark:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-800 overflow-x-auto">
+                    <code className="text-[10px] text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+                      name,email{bulkUploadRole === 'student' && !bulkUploadContext?.classId ? ',class,year' : bulkUploadRole === 'teacher' ? ',specialization' : ''}<br/>
+                      John Doe,john@example.com{bulkUploadRole === 'student' && !bulkUploadContext?.classId ? ',Grade 10A,2026' : bulkUploadRole === 'teacher' ? ',Mathematics' : ''}<br/>
+                      Jane Smith,jane@example.com{bulkUploadRole === 'student' && !bulkUploadContext?.classId ? ',Grade 10B,2026' : bulkUploadRole === 'teacher' ? ',Physics' : ''}
+                    </code>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">Select CSV File</label>
+                  <input 
+                    type="file" 
+                    accept=".csv"
+                    ref={fileInputRef}
+                    onChange={(e) => setBulkUploadFile(e.target.files?.[0] || null)}
+                    className="w-full text-sm text-zinc-500 dark:text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-zinc-100 dark:file:bg-zinc-800 file:text-zinc-700 dark:file:text-zinc-300 hover:file:bg-zinc-200 dark:hover:file:bg-zinc-700 transition-all cursor-pointer"
+                  />
+                </div>
+
+                {bulkUploadStatus && (
+                  <div className={cn(
+                    "p-3 rounded-xl text-sm font-medium flex items-center gap-2",
+                    bulkUploadStatus.includes('Error') ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400" : 
+                    bulkUploadStatus.includes('complete') ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400" : 
+                    "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+                  )}>
+                    {bulkUploadStatus.includes('Error') ? <AlertCircle className="w-4 h-4" /> : 
+                     bulkUploadStatus.includes('complete') ? <CheckCircle2 className="w-4 h-4" /> : 
+                     <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />}
+                    {bulkUploadStatus}
+                  </div>
+                )}
+
+                {bulkUploadProgress > 0 && bulkUploadProgress < 100 && (
+                  <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${bulkUploadProgress}%` }}
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4">
+                  <button 
+                    type="button" 
+                    onClick={() => { setShowBulkUploadModal(false); setBulkUploadFile(null); setBulkUploadStatus(''); setBulkUploadContext(null); }} 
+                    className="flex-1 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-xl font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                    disabled={bulkUploadProgress > 0 && bulkUploadProgress < 100}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleBulkUpload}
+                    disabled={!bulkUploadFile || (bulkUploadProgress > 0 && bulkUploadProgress < 100)}
+                    className="flex-1 px-6 py-3 bg-zinc-900 text-white rounded-xl font-bold disabled:opacity-50 hover:bg-black transition-all"
+                  >
+                    Upload
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {showAddModal && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
             <motion.div 
@@ -591,6 +870,10 @@ export const AdminView: React.FC = () => {
                   <div>
                     <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Grade</label>
                     <input required className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newClass.grade} onChange={e => setNewClass({...newClass, grade: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Academic Year</label>
+                    <input required className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newClass.year} onChange={e => setNewClass({...newClass, year: e.target.value})} placeholder="e.g. 2026" />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Assign Teacher</label>

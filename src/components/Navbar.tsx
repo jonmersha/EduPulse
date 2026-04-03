@@ -47,10 +47,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           {/* Left: Logo & Search */}
           <div className="flex items-center gap-2 md:gap-4">
             <div 
-              className="w-8 h-8 bg-emerald-600 rounded flex items-center justify-center text-white font-bold italic cursor-pointer shrink-0"
+              className="bg-emerald-600 rounded px-2 h-8 flex items-center justify-center text-white font-bold italic cursor-pointer shrink-0"
               onClick={() => setActiveTab('dashboard')}
             >
-              in
+              EduPulse
             </div>
             
             <div className="relative hidden md:block group">
