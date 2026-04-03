@@ -3,6 +3,7 @@ import { collection, collectionGroup, query, where, onSnapshot, getDoc, doc } fr
 import { BookOpen, GraduationCap, Trophy } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
+import { cn } from '../lib/utils';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { CourseCard } from '../components/CourseCard';
 import { motion } from 'motion/react';
@@ -31,17 +32,23 @@ export const MyCourses: React.FC<MyCoursesProps> = ({ onSelectCourse, onSelectEx
     const q = query(collectionGroup(db, 'enrollments'), where('studentId', '==', profile.uid));
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const enrollmentData = snapshot.docs.map(doc => doc.data());
-      const approvedEnrollments = enrollmentData.filter(e => e.status === 'approved');
+      // Show both approved and pending enrollments
+      const visibleEnrollments = enrollmentData.filter(e => e.status === 'approved' || e.status === 'pending');
       
-      const courseEnrollments = approvedEnrollments.filter(e => e.courseId);
-      const examEnrollments = approvedEnrollments.filter(e => e.examId);
+      const courseEnrollments = visibleEnrollments.filter(e => e.courseId);
+      const examEnrollments = visibleEnrollments.filter(e => e.examId);
 
       // Fetch course details
       const coursePromises = courseEnrollments.map(async (enrollment) => {
         try {
           const courseDoc = await getDoc(doc(db, 'courses', enrollment.courseId));
           if (courseDoc.exists()) {
-            return { id: courseDoc.id, ...courseDoc.data(), progress: enrollment.progress };
+            return { 
+              id: courseDoc.id, 
+              ...courseDoc.data(), 
+              progress: enrollment.progress,
+              enrollmentStatus: enrollment.status 
+            };
           }
         } catch (error) {
           console.error("Error fetching course details:", error);
@@ -55,7 +62,12 @@ export const MyCourses: React.FC<MyCoursesProps> = ({ onSelectCourse, onSelectEx
           const examDoc = await getDoc(doc(db, 'exams', enrollment.examId));
           if (examDoc.exists()) {
             const resultDoc = await getDoc(doc(db, 'examResults', `${profile.uid}_${examDoc.id}`));
-            return { id: examDoc.id, ...examDoc.data(), result: resultDoc.exists() ? resultDoc.data() : null };
+            return { 
+              id: examDoc.id, 
+              ...examDoc.data(), 
+              result: resultDoc.exists() ? resultDoc.data() : null,
+              enrollmentStatus: enrollment.status
+            };
           }
         } catch (error) {
           console.error("Error fetching exam details:", error);
@@ -136,12 +148,20 @@ export const MyCourses: React.FC<MyCoursesProps> = ({ onSelectCourse, onSelectEx
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {courses.map((course) => (
-              <CourseCard 
-                key={course.id} 
-                course={course} 
-                onClick={() => onSelectCourse(course.id)}
-                progress={course.progress || 0}
-              />
+              <div key={course.id} className="relative">
+                <CourseCard 
+                  course={course} 
+                  onClick={() => course.enrollmentStatus === 'approved' && onSelectCourse(course.id)}
+                  progress={course.progress || 0}
+                />
+                {course.enrollmentStatus === 'pending' && (
+                  <div className="absolute top-6 left-6">
+                    <div className="px-3 py-1 bg-amber-500 text-white text-[10px] font-black uppercase rounded-lg shadow-lg">
+                      Pending Approval
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )
@@ -159,12 +179,22 @@ export const MyCourses: React.FC<MyCoursesProps> = ({ onSelectCourse, onSelectEx
             {exams.map((exam) => (
               <div 
                 key={exam.id} 
-                onClick={() => onSelectExam(exam.id)}
-                className="group bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer flex flex-col h-full"
+                onClick={() => exam.enrollmentStatus === 'approved' && onSelectExam(exam.id)}
+                className={cn(
+                  "group bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer flex flex-col h-full",
+                  exam.enrollmentStatus === 'pending' && "opacity-75 cursor-not-allowed"
+                )}
               >
                 <div className="aspect-video bg-zinc-900 relative flex items-center justify-center overflow-hidden">
                   <Trophy className="w-16 h-16 text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 group-hover:scale-110 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors" />
+                  {exam.enrollmentStatus === 'pending' && (
+                    <div className="absolute top-6 left-6">
+                      <div className="px-3 py-1 bg-amber-500 text-white text-[10px] font-black uppercase rounded-lg shadow-lg">
+                        Pending
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="p-8 flex-1 flex flex-col">
                   <div className="flex items-center gap-2 mb-4">

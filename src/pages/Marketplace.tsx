@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { CourseCard } from '../components/CourseCard';
-import { ShoppingBag, Search, Filter, Trophy, Sparkles } from 'lucide-react';
+import { ShoppingBag, Search, Filter, Trophy, Sparkles, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface MarketplaceProps {
@@ -284,9 +284,9 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-[3rem] overflow-hidden shadow-2xl"
+              className="relative w-full max-w-2xl max-h-[90vh] bg-white dark:bg-zinc-900 rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col"
             >
-              <div className="aspect-video bg-zinc-100 dark:bg-zinc-800 relative">
+              <div className="relative shrink-0 bg-zinc-100 dark:bg-zinc-800 h-48 md:h-64 lg:h-80">
                 {activeTab === 'courses' ? (
                   <img 
                     src={selectedItem.thumbnail || `https://picsum.photos/seed/${selectedItem.id}/800/450`} 
@@ -296,18 +296,18 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <Trophy className="w-24 h-24 text-zinc-300 dark:text-zinc-700" />
+                    <Trophy className="w-16 md:w-24 h-16 md:h-24 text-zinc-300 dark:text-zinc-700" />
                   </div>
                 )}
                 <button 
                   onClick={() => setSelectedItem(null)}
-                  className="absolute top-6 right-6 w-12 h-12 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-2xl flex items-center justify-center text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white transition-all shadow-xl"
+                  className="absolute top-4 right-4 md:top-6 md:right-6 w-10 h-10 md:w-12 md:h-12 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-xl md:rounded-2xl flex items-center justify-center text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white transition-all shadow-xl"
                 >
-                  <Sparkles className="w-5 h-5 rotate-45" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
               
-              <div className="p-8 md:p-12">
+              <div className="p-6 md:p-12 overflow-y-auto custom-scrollbar">
                 <div className="flex items-center gap-3 mb-6">
                   <span className="px-4 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase rounded-lg tracking-widest">
                     {selectedItem.category || 'General'}

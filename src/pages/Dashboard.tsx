@@ -3,6 +3,7 @@ import { collection, collectionGroup, query, where, onSnapshot, getDoc, doc, get
 import { BookOpen, CheckCircle2, GraduationCap, Trophy } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
+import { cn } from '../lib/utils';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 interface DashboardProps {
@@ -30,7 +31,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
     const enrollmentsQ = query(collectionGroup(db, 'enrollments'), where('studentId', '==', profile.uid));
     const unsubEnrollments = onSnapshot(enrollmentsQ, async (snapshot) => {
       const allDocs = snapshot.docs.map(doc => doc.data());
-      const docs = allDocs.filter(d => d.status === 'approved');
+      // Include pending in stats but maybe differentiate later if needed
+      const docs = allDocs.filter(d => d.status === 'approved' || d.status === 'pending');
       const enrolled = docs.filter(d => d.courseId).length;
       const completed = docs.filter(d => d.courseId && d.progress === 100).length;
       const totalProgress = docs.filter(d => d.courseId).reduce((acc, curr) => acc + (curr.progress || 0), 0);
@@ -42,7 +44,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
       const courseEnrollments = docs.filter(d => d.courseId).slice(0, 3);
       const coursePromises = courseEnrollments.map(async (e) => {
         const d = await getDoc(doc(db, 'courses', e.courseId));
-        return { id: d.id, ...d.data(), progress: e.progress };
+        return { id: d.id, ...d.data(), progress: e.progress, enrollmentStatus: e.status };
       });
       const courses = await Promise.all(coursePromises);
       const validCourses = courses.filter((c: any) => c && c.title);
@@ -147,14 +149,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
             {recentCourses.length > 0 ? recentCourses.map(course => (
               <div 
                 key={course.id} 
-                onClick={() => onSelectCourse(course.id)}
-                className="p-4 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all cursor-pointer"
+                onClick={() => course.enrollmentStatus === 'approved' && onSelectCourse(course.id)}
+                className={cn(
+                  "p-4 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all cursor-pointer",
+                  course.enrollmentStatus === 'pending' && "opacity-75 cursor-not-allowed"
+                )}
               >
-                <div className="w-16 h-12 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 rounded-lg overflow-hidden shrink-0">
+                <div className="w-16 h-12 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 rounded-lg overflow-hidden shrink-0 relative">
                   <img src={`https://picsum.photos/seed/${course.id}/100/100`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  {course.enrollmentStatus === 'pending' && (
+                    <div className="absolute inset-0 bg-amber-500/20 flex items-center justify-center">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-bold truncate dark:text-white">{course.title}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold truncate dark:text-white">{course.title}</h4>
+                    {course.enrollmentStatus === 'pending' && (
+                      <span className="text-[8px] font-black uppercase bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded">Pending</span>
+                    )}
+                  </div>
                   <div className="w-full bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 h-1 rounded-full mt-2 overflow-hidden">
                     <div className="bg-purple-500 h-full" style={{ width: `${course.progress}%` }} />
                   </div>
