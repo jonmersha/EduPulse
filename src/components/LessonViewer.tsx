@@ -77,6 +77,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
   const [expandedLessons, setExpandedLessons] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'resources' | 'qa' | 'chat' | 'students' | 'contents'>('overview');
   const [isMobile, setIsMobile] = useState(false);
+  const [isEnrolling, setIsEnrolling] = useState(false);
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
 
   // Resource & Q&A State
@@ -383,18 +384,22 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
 
   const handleEnroll = async () => {
     if (!profile) return;
+    setIsEnrolling(true);
     try {
       const enrollRef = doc(db, 'courses', courseId, 'enrollments', profile.uid);
       await setDoc(enrollRef, {
         studentId: profile.uid,
         courseId: courseId,
-        status: 'approved',
+        status: 'pending',
         enrolledAt: Timestamp.now(),
         progress: 0,
         completedLessons: []
       });
+      // Add a small delay for better user feedback
+      await new Promise(resolve => setTimeout(resolve, 1500));
     } catch (error) {
       console.error("Error enrolling:", error);
+      setIsEnrolling(false);
     }
   };
 
@@ -411,9 +416,10 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
         <p className="text-xl text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mb-8">{course?.description}</p>
         <button 
           onClick={handleEnroll}
-          className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-black text-lg hover:bg-purple-700 transition-all"
+          disabled={isEnrolling}
+          className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-black text-lg hover:bg-purple-700 transition-all disabled:opacity-50"
         >
-          Enroll Now
+          {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
         </button>
         <button onClick={onBack} className="mt-4 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white">Back</button>
       </div>
