@@ -40,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
             "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
             activeTab === item.id 
               ? "bg-emerald-50 text-emerald-700" 
-              : "text-zinc-600 hover:bg-zinc-50"
+              : "text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:bg-zinc-800"
           )}
         >
           <item.icon className="w-5 h-5" />

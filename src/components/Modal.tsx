@@ -25,11 +25,11 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden"
+            className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-[2rem] shadow-2xl overflow-hidden"
           >
             <div className="flex items-center justify-between p-6 border-b border-black/5">
               <h3 className="text-xl font-bold">{title}</h3>
-              <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
+              <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:bg-zinc-800 rounded-full transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>

@@ -103,39 +103,39 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
     <div className="space-y-8">
       <header>
         <h1 className="text-3xl font-bold tracking-tight dark:text-white">Welcome back, {profile?.displayName}</h1>
-        <p className="text-zinc-500 mt-1">Here's what's happening with your learning today.</p>
+        <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">Here's what's happening with your learning today.</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl shadow-sm">
+        <div className="p-6 bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl shadow-sm">
           <div className="w-10 h-10 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center mb-4">
             <BookOpen className="w-6 h-6" />
           </div>
-          <h3 className="text-zinc-500 text-sm font-medium uppercase tracking-wider">Courses</h3>
+          <h3 className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm font-medium uppercase tracking-wider">Courses</h3>
           <p className="text-3xl font-bold mt-1 dark:text-white">{stats.enrolled}</p>
         </div>
         
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl shadow-sm">
+        <div className="p-6 bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl shadow-sm">
           <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center mb-4">
             <CheckCircle2 className="w-6 h-6" />
           </div>
-          <h3 className="text-zinc-500 text-sm font-medium uppercase tracking-wider">Completed</h3>
+          <h3 className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm font-medium uppercase tracking-wider">Completed</h3>
           <p className="text-3xl font-bold mt-1 dark:text-white">{stats.completed}</p>
         </div>
 
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl shadow-sm">
+        <div className="p-6 bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl shadow-sm">
           <div className="w-10 h-10 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl flex items-center justify-center mb-4">
             <GraduationCap className="w-6 h-6" />
           </div>
-          <h3 className="text-zinc-500 text-sm font-medium uppercase tracking-wider">Avg Progress</h3>
+          <h3 className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm font-medium uppercase tracking-wider">Avg Progress</h3>
           <p className="text-3xl font-bold mt-1 dark:text-white">{stats.avgProgress}%</p>
         </div>
 
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl shadow-sm">
+        <div className="p-6 bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl shadow-sm">
           <div className="w-10 h-10 bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl flex items-center justify-center mb-4">
             <Trophy className="w-6 h-6" />
           </div>
-          <h3 className="text-zinc-500 text-sm font-medium uppercase tracking-wider">Exams Taken</h3>
+          <h3 className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm font-medium uppercase tracking-wider">Exams Taken</h3>
           <p className="text-3xl font-bold mt-1 dark:text-white">{stats.examsTaken}</p>
         </div>
       </div>
@@ -148,21 +148,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
               <div 
                 key={course.id} 
                 onClick={() => onSelectCourse(course.id)}
-                className="p-4 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all cursor-pointer"
+                className="p-4 bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all cursor-pointer"
               >
-                <div className="w-16 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-lg overflow-hidden shrink-0">
+                <div className="w-16 h-12 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 rounded-lg overflow-hidden shrink-0">
                   <img src={`https://picsum.photos/seed/${course.id}/100/100`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold truncate dark:text-white">{course.title}</h4>
-                  <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1 rounded-full mt-2 overflow-hidden">
+                  <div className="w-full bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 h-1 rounded-full mt-2 overflow-hidden">
                     <div className="bg-emerald-500 h-full" style={{ width: `${course.progress}%` }} />
                   </div>
                 </div>
-                <div className="text-xs font-bold text-zinc-400">{course.progress}%</div>
+                <div className="text-xs font-bold text-zinc-400 dark:text-zinc-500">{course.progress}%</div>
               </div>
             )) : (
-              <p className="text-zinc-400 text-sm italic">No active courses.</p>
+              <p className="text-zinc-400 dark:text-zinc-500 text-sm italic">No active courses.</p>
             )}
           </div>
         </section>
@@ -173,22 +173,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
             {recentResults.length > 0 ? recentResults.map(result => (
               <div 
                 key={result.id} 
-                className="p-4 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all"
+                className="p-4 bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all"
               >
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${result.score >= 70 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'}`}>
                   <Trophy className="w-6 h-6" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold truncate dark:text-white">{result.examTitle || 'Exam Result'}</h4>
-                  <p className="text-xs text-zinc-500">{new Date(result.completedAt?.toMillis()).toLocaleDateString()}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">{new Date(result.completedAt?.toMillis()).toLocaleDateString()}</p>
                 </div>
                 <div className="text-right">
                   <div className={`text-lg font-black ${result.score >= 70 ? 'text-emerald-600' : 'text-red-600'}`}>{result.score.toFixed(1)}%</div>
-                  <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">{result.score >= 70 ? 'Passed' : 'Failed'}</div>
+                  <div className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{result.score >= 70 ? 'Passed' : 'Failed'}</div>
                 </div>
               </div>
             )) : (
-              <p className="text-zinc-400 text-sm italic">No exam results yet.</p>
+              <p className="text-zinc-400 dark:text-zinc-500 text-sm italic">No exam results yet.</p>
             )}
           </div>
         </section>
@@ -200,19 +200,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
               <div 
                 key={exam.id} 
                 onClick={() => onSelectExam(exam.id)}
-                className="p-4 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all cursor-pointer"
+                className="p-4 bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all cursor-pointer"
               >
                 <div className="w-12 h-12 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl flex items-center justify-center shrink-0">
                   <BookOpen className="w-6 h-6" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold truncate dark:text-white">{exam.title}</h4>
-                  <p className="text-xs text-zinc-500">{exam.category} • {exam.questions?.length || 0} Questions</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">{exam.category} • {exam.questions?.length || 0} Questions</p>
                 </div>
-                <button className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-bold rounded-lg">Start</button>
+                <button className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 dark:bg-zinc-800 text-white dark:text-zinc-900 dark:text-white text-xs font-bold rounded-lg">Start</button>
               </div>
             )) : (
-              <p className="text-zinc-400 text-sm italic">No upcoming exams.</p>
+              <p className="text-zinc-400 dark:text-zinc-500 text-sm italic">No upcoming exams.</p>
             )}
           </div>
         </section>

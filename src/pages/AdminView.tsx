@@ -195,7 +195,7 @@ export const AdminView: React.FC = () => {
             {selectedSchoolId && (
               <button 
                 onClick={() => { setSelectedSchoolId(null); setActiveSubTab('schools'); }}
-                className="text-xs font-bold text-zinc-400 hover:text-zinc-900 flex items-center gap-1"
+                className="text-xs font-bold text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white dark:text-white flex items-center gap-1"
               >
                 ← Back to Schools
               </button>
@@ -204,7 +204,7 @@ export const AdminView: React.FC = () => {
           <h1 className="text-3xl font-bold tracking-tight">
             {selectedSchoolId ? schools.find(s => s.id === selectedSchoolId)?.name : (isSuperAdmin ? 'Global Administration' : 'School Administration')}
           </h1>
-          <p className="text-zinc-500 mt-1">
+          <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">
             {selectedSchoolId ? 'Manage this school\'s resources and users.' : (isSuperAdmin ? 'Manage schools and platform-wide settings.' : 'Manage your school, classes, and users.')}
           </p>
         </div>
@@ -250,7 +250,7 @@ export const AdminView: React.FC = () => {
         {isSuperAdmin && !selectedSchoolId && (
           <button 
             onClick={() => setActiveSubTab('schools')}
-            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'schools' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'schools' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
           >
             Schools
           </button>
@@ -260,25 +260,25 @@ export const AdminView: React.FC = () => {
           <>
             <button 
               onClick={() => setActiveSubTab('classes')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               Classes
             </button>
             <button 
               onClick={() => setActiveSubTab('users')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               Users
             </button>
             <button 
               onClick={() => setActiveSubTab('courses')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               Courses
             </button>
             <button 
               onClick={() => setActiveSubTab('exams')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               Exams
             </button>
@@ -289,25 +289,25 @@ export const AdminView: React.FC = () => {
           <>
             <button 
               onClick={() => setActiveSubTab('classes')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               All Classes
             </button>
             <button 
               onClick={() => setActiveSubTab('users')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               All Users
             </button>
             <button 
               onClick={() => setActiveSubTab('courses')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               All Courses
             </button>
             <button 
               onClick={() => setActiveSubTab('exams')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               All Exams
             </button>
@@ -315,14 +315,14 @@ export const AdminView: React.FC = () => {
         )}
         
         {activeSubTab === 'users' && (
-          <div className="ml-auto flex items-center gap-2 bg-zinc-100 p-1 rounded-xl">
+          <div className="ml-auto flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 p-1 rounded-xl">
             {(['all', 'super_admin', 'admin', 'teacher', 'student', 'provider'] as const).map((role) => (
               <button
                 key={role}
                 onClick={() => setRoleFilter(role)}
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all",
-                  roleFilter === role ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+                  roleFilter === role ? "bg-white dark:bg-zinc-900 dark:bg-zinc-900 text-zinc-900 dark:text-white dark:text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:text-zinc-300 dark:text-zinc-300"
                 )}
               >
                 {role === 'super_admin' ? 'Platform Admins' : role === 'admin' ? 'School Admins' : `${role}s`}
@@ -334,24 +334,24 @@ export const AdminView: React.FC = () => {
 
       <div className="grid grid-cols-1 gap-6">
         {activeSubTab === 'schools' && isSuperAdmin && (
-          <div className="bg-white border border-black/5 rounded-3xl overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 rounded-3xl overflow-hidden shadow-sm">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-zinc-50 border-b border-black/5">
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">School Name</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Address</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Admin Email</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Structure</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Actions</th>
+                <tr className="bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border-b border-black/5">
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">School Name</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Address</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Admin Email</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Structure</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {schools.map(school => (
-                  <tr key={school.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 transition-colors">
+                  <tr key={school.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 transition-colors">
                     <td className="px-6 py-4 font-bold">{school.name}</td>
-                    <td className="px-6 py-4 text-zinc-500">{school.address}</td>
-                    <td className="px-6 py-4 text-zinc-500">{school.adminEmail}</td>
-                    <td className="px-6 py-4 text-zinc-500">{school.academicStructure}</td>
+                    <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">{school.address}</td>
+                    <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">{school.adminEmail}</td>
+                    <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">{school.academicStructure}</td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
                         <button 
@@ -360,8 +360,8 @@ export const AdminView: React.FC = () => {
                         >
                           Manage
                         </button>
-                        <button onClick={() => startEdit(school)} className="text-zinc-400 hover:text-zinc-900 transition-colors"><Settings className="w-4 h-4" /></button>
-                        <button onClick={() => setDeleteConfirm({ collection: 'schools', id: school.id })} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => startEdit(school)} className="text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white dark:text-white transition-colors"><Settings className="w-4 h-4" /></button>
+                        <button onClick={() => setDeleteConfirm({ collection: 'schools', id: school.id })} className="text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -374,14 +374,14 @@ export const AdminView: React.FC = () => {
         {activeSubTab === 'classes' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {classes.map(cls => (
-              <div key={cls.id} className="p-6 bg-white border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
+              <div key={cls.id} className="p-6 bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
                 <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4">
                   <BookOpen className="w-6 h-6" />
                 </div>
                 <h3 className="text-xl font-bold">{cls.name}</h3>
-                <p className="text-zinc-500 text-sm">Grade: {cls.grade}</p>
+                <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm">Grade: {cls.grade}</p>
                 {isSuperAdmin && (
-                  <p className="text-[10px] text-zinc-400 mt-1">
+                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">
                     School: {schools.find(s => s.id === cls.schoolId)?.name || 'Unknown'}
                   </p>
                 )}
@@ -394,8 +394,8 @@ export const AdminView: React.FC = () => {
                     Add Student
                   </button>
                   <div className="flex gap-2">
-                    <button onClick={() => startEdit(cls)} className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400"><Settings className="w-4 h-4" /></button>
-                    <button onClick={() => setDeleteConfirm({ collection: 'classes', id: cls.id })} className="p-2 hover:bg-zinc-100 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => startEdit(cls)} className="p-2 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 rounded-lg text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500"><Settings className="w-4 h-4" /></button>
+                    <button onClick={() => setDeleteConfirm({ collection: 'classes', id: cls.id })} className="p-2 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               </div>
@@ -404,25 +404,25 @@ export const AdminView: React.FC = () => {
         )}
 
         {activeSubTab === 'users' && (
-          <div className="bg-white border border-black/5 rounded-3xl overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 rounded-3xl overflow-hidden shadow-sm">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-zinc-50 border-b border-black/5">
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Name</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Email</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Role</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">School</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Class / Specialization</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Actions</th>
+                <tr className="bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border-b border-black/5">
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Name</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Email</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Role</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">School</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Class / Specialization</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users
                   .filter(u => roleFilter === 'all' || u.role === roleFilter)
                   .map(user => (
-                    <tr key={user.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 transition-colors">
+                    <tr key={user.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 transition-colors">
                       <td className="px-6 py-4 font-bold">{user.displayName}</td>
-                      <td className="px-6 py-4 text-zinc-500">{user.email}</td>
+                      <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">{user.email}</td>
                       <td className="px-6 py-4">
                         <span className={cn(
                           "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
@@ -435,22 +435,22 @@ export const AdminView: React.FC = () => {
                           {user.role === 'super_admin' ? 'Platform Admin' : user.role === 'admin' ? 'School Admin' : user.role}
                         </span>
                         {user.isIndependent && (
-                          <span className="ml-2 px-1.5 py-0.5 bg-zinc-100 text-zinc-500 text-[8px] font-black uppercase rounded">Independent</span>
+                          <span className="ml-2 px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-[8px] font-black uppercase rounded">Independent</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-zinc-500 text-sm">
+                      <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm">
                         {schools.find(s => s.id === user.schoolId)?.name || '-'}
                       </td>
-                      <td className="px-6 py-4 text-zinc-500 text-sm">
+                      <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm">
                         {user.role === 'teacher' ? (
                           <div>
-                            <p className="font-medium text-zinc-700">{user.specialization || 'No specialization'}</p>
+                            <p className="font-medium text-zinc-700 dark:text-zinc-300 dark:text-zinc-300">{user.specialization || 'No specialization'}</p>
                             <p className="text-[10px]">{user.schoolIds?.length || 0} Schools</p>
                           </div>
                         ) : user.role === 'student' ? (
                           <div className="flex items-center gap-2">
                             <BookOpen className="w-3 h-3 text-emerald-500" />
-                            <span className="font-medium text-zinc-700">
+                            <span className="font-medium text-zinc-700 dark:text-zinc-300 dark:text-zinc-300">
                               {classes.find(c => c.id === user.classId)?.name || 'Unassigned'}
                             </span>
                           </div>
@@ -460,8 +460,8 @@ export const AdminView: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
-                          <button onClick={() => startEdit(user)} className="text-zinc-400 hover:text-zinc-900 transition-colors"><Settings className="w-4 h-4" /></button>
-                          <button onClick={() => setDeleteConfirm({ collection: 'users', id: user.id })} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => startEdit(user)} className="text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white dark:text-white transition-colors"><Settings className="w-4 h-4" /></button>
+                          <button onClick={() => setDeleteConfirm({ collection: 'users', id: user.id })} className="text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>
@@ -474,52 +474,52 @@ export const AdminView: React.FC = () => {
         {activeSubTab === 'courses' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map(course => (
-              <div key={course.id} className="p-6 bg-white border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
+              <div key={course.id} className="p-6 bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
                 <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
                   <BookOpen className="w-6 h-6" />
                 </div>
                 <h3 className="text-xl font-bold">{course.title}</h3>
-                <p className="text-zinc-500 text-sm line-clamp-2">{course.description}</p>
+                <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm line-clamp-2">{course.description}</p>
                 {isSuperAdmin && (
-                  <p className="text-[10px] text-zinc-400 mt-1">
+                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">
                     School: {schools.find(s => s.id === course.schoolId)?.name || 'Independent / Unknown'}
                   </p>
                 )}
                 <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-400">By {course.teacherName || 'Unknown'}</span>
+                  <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">By {course.teacherName || 'Unknown'}</span>
                   <div className="flex gap-2">
-                    <button onClick={() => setDeleteConfirm({ collection: 'courses', id: course.id })} className="p-2 hover:bg-zinc-100 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => setDeleteConfirm({ collection: 'courses', id: course.id })} className="p-2 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               </div>
             ))}
-            {courses.length === 0 && <p className="text-zinc-400 italic text-sm col-span-full py-12 text-center">No courses found for this school.</p>}
+            {courses.length === 0 && <p className="text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 italic text-sm col-span-full py-12 text-center">No courses found for this school.</p>}
           </div>
         )}
 
         {activeSubTab === 'exams' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {exams.map(exam => (
-              <div key={exam.id} className="p-6 bg-white border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
+              <div key={exam.id} className="p-6 bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
                 <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-4">
                   <BookOpen className="w-6 h-6" />
                 </div>
                 <h3 className="text-xl font-bold">{exam.title}</h3>
-                <p className="text-zinc-500 text-sm line-clamp-2">{exam.description}</p>
+                <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm line-clamp-2">{exam.description}</p>
                 {isSuperAdmin && (
-                  <p className="text-[10px] text-zinc-400 mt-1">
+                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">
                     School: {schools.find(s => s.id === exam.schoolId)?.name || 'Independent / Unknown'}
                   </p>
                 )}
                 <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-400">{exam.questions?.length || 0} Questions</span>
+                  <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">{exam.questions?.length || 0} Questions</span>
                   <div className="flex gap-2">
-                    <button onClick={() => setDeleteConfirm({ collection: 'exams', id: exam.id })} className="p-2 hover:bg-zinc-100 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => setDeleteConfirm({ collection: 'exams', id: exam.id })} className="p-2 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               </div>
             ))}
-            {exams.length === 0 && <p className="text-zinc-400 italic text-sm col-span-full py-12 text-center">No exams found for this school.</p>}
+            {exams.length === 0 && <p className="text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 italic text-sm col-span-full py-12 text-center">No exams found for this school.</p>}
           </div>
         )}
       </div>
@@ -531,7 +531,7 @@ export const AdminView: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-black/5 overflow-y-auto max-h-[90vh]"
+              className="bg-white dark:bg-zinc-900 dark:bg-zinc-900 rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-black/5 overflow-y-auto max-h-[90vh]"
             >
               <h2 className="text-2xl font-bold mb-6">
                 {editingItem ? 'Edit' : 'Add'} {activeSubTab === 'schools' ? 'School' : activeSubTab === 'classes' ? 'Class' : 'User'}
@@ -540,26 +540,26 @@ export const AdminView: React.FC = () => {
               {activeSubTab === 'schools' && (
                 <form onSubmit={handleAddSchool} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-bold text-zinc-700 mb-1">School Name</label>
-                    <input required className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newSchool.name} onChange={e => setNewSchool({...newSchool, name: e.target.value})} />
+                    <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">School Name</label>
+                    <input required className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newSchool.name} onChange={e => setNewSchool({...newSchool, name: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-zinc-700 mb-1">Address</label>
-                    <input required className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newSchool.address} onChange={e => setNewSchool({...newSchool, address: e.target.value})} />
+                    <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Address</label>
+                    <input required className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newSchool.address} onChange={e => setNewSchool({...newSchool, address: e.target.value})} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-bold text-zinc-700 mb-1">Admin Email</label>
-                      <input required type="email" className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newSchool.adminEmail} onChange={e => setNewSchool({...newSchool, adminEmail: e.target.value})} />
+                      <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Admin Email</label>
+                      <input required type="email" className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newSchool.adminEmail} onChange={e => setNewSchool({...newSchool, adminEmail: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-zinc-700 mb-1">Contact Phone</label>
-                      <input className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newSchool.contactPhone} onChange={e => setNewSchool({...newSchool, contactPhone: e.target.value})} />
+                      <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Contact Phone</label>
+                      <input className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newSchool.contactPhone} onChange={e => setNewSchool({...newSchool, contactPhone: e.target.value})} />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-zinc-700 mb-1">Academic Structure</label>
-                    <select className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newSchool.academicStructure} onChange={e => setNewSchool({...newSchool, academicStructure: e.target.value})}>
+                    <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Academic Structure</label>
+                    <select className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newSchool.academicStructure} onChange={e => setNewSchool({...newSchool, academicStructure: e.target.value})}>
                       <option value="K-12">K-12</option>
                       <option value="Primary">Primary (K-6)</option>
                       <option value="Secondary">Secondary (7-12)</option>
@@ -567,7 +567,7 @@ export const AdminView: React.FC = () => {
                     </select>
                   </div>
                   <div className="flex gap-3 pt-4">
-                    <button type="button" onClick={() => { setShowAddModal(false); setEditingItem(null); }} className="flex-1 px-6 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-bold">Cancel</button>
+                    <button type="button" onClick={() => { setShowAddModal(false); setEditingItem(null); }} className="flex-1 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 dark:text-zinc-300 rounded-xl font-bold">Cancel</button>
                     <button type="submit" className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold">{editingItem ? 'Update' : 'Add'} School</button>
                   </div>
                 </form>
@@ -577,24 +577,24 @@ export const AdminView: React.FC = () => {
                 <form onSubmit={handleAddClass} className="space-y-4">
                   {isSuperAdmin && (
                     <div>
-                      <label className="block text-sm font-bold text-zinc-700 mb-1">School</label>
-                      <select required className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newClass.schoolId} onChange={e => setNewClass({...newClass, schoolId: e.target.value})}>
+                      <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">School</label>
+                      <select required className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newClass.schoolId} onChange={e => setNewClass({...newClass, schoolId: e.target.value})}>
                         <option value="">Select School</option>
                         {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                     </div>
                   )}
                   <div>
-                    <label className="block text-sm font-bold text-zinc-700 mb-1">Class Name</label>
-                    <input required className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newClass.name} onChange={e => setNewClass({...newClass, name: e.target.value})} />
+                    <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Class Name</label>
+                    <input required className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newClass.name} onChange={e => setNewClass({...newClass, name: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-zinc-700 mb-1">Grade</label>
-                    <input required className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newClass.grade} onChange={e => setNewClass({...newClass, grade: e.target.value})} />
+                    <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Grade</label>
+                    <input required className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newClass.grade} onChange={e => setNewClass({...newClass, grade: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-zinc-700 mb-1">Assign Teacher</label>
-                    <select className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newClass.teacherId} onChange={e => setNewClass({...newClass, teacherId: e.target.value})}>
+                    <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Assign Teacher</label>
+                    <select className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newClass.teacherId} onChange={e => setNewClass({...newClass, teacherId: e.target.value})}>
                       <option value="">Select Teacher</option>
                       {users
                         .filter(u => u.role === 'teacher' && (!isSuperAdmin || !newClass.schoolId || u.schoolId === newClass.schoolId))
@@ -603,7 +603,7 @@ export const AdminView: React.FC = () => {
                     </select>
                   </div>
                   <div className="flex gap-3 pt-4">
-                    <button type="button" onClick={() => { setShowAddModal(false); setEditingItem(null); }} className="flex-1 px-6 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-bold">Cancel</button>
+                    <button type="button" onClick={() => { setShowAddModal(false); setEditingItem(null); }} className="flex-1 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 dark:text-zinc-300 rounded-xl font-bold">Cancel</button>
                     <button type="submit" className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold">{editingItem ? 'Update' : 'Add'} Class</button>
                   </div>
                 </form>
@@ -612,16 +612,16 @@ export const AdminView: React.FC = () => {
               {activeSubTab === 'users' && (
                 <form onSubmit={handleAddUser} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-bold text-zinc-700 mb-1">Display Name</label>
-                    <input required className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newUser.displayName} onChange={e => setNewUser({...newUser, displayName: e.target.value})} />
+                    <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Display Name</label>
+                    <input required className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newUser.displayName} onChange={e => setNewUser({...newUser, displayName: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-zinc-700 mb-1">Email</label>
-                    <input required type="email" className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} />
+                    <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Email</label>
+                    <input required type="email" className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-zinc-700 mb-1">Role</label>
-                    <select className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value as any, isIndependent: e.target.value === 'provider'})}>
+                    <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Role</label>
+                    <select className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value as any, isIndependent: e.target.value === 'provider'})}>
                       <option value="student">Student</option>
                       <option value="teacher">Teacher</option>
                       <option value="admin">School Admin</option>
@@ -636,12 +636,12 @@ export const AdminView: React.FC = () => {
                       onChange={e => setNewUser({...newUser, isIndependent: e.target.checked})}
                       className="w-4 h-4 text-emerald-600 rounded"
                     />
-                    <label className="text-sm font-medium text-zinc-600">Independent Account</label>
+                    <label className="text-sm font-medium text-zinc-600 dark:text-zinc-300 dark:text-zinc-300">Independent Account</label>
                   </div>
                   {isSuperAdmin && (
                     <div>
-                      <label className="block text-sm font-bold text-zinc-700 mb-1">Primary School</label>
-                      <select required className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newUser.schoolId} onChange={e => setNewUser({...newUser, schoolId: e.target.value})}>
+                      <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Primary School</label>
+                      <select required className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newUser.schoolId} onChange={e => setNewUser({...newUser, schoolId: e.target.value})}>
                         <option value="">Select School</option>
                         {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
@@ -650,13 +650,13 @@ export const AdminView: React.FC = () => {
                   {newUser.role === 'teacher' && (
                     <>
                       <div>
-                        <label className="block text-sm font-bold text-zinc-700 mb-1">Specialization</label>
-                        <input className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newUser.specialization} onChange={e => setNewUser({...newUser, specialization: e.target.value})} placeholder="e.g. Mathematics, Physics" />
+                        <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Specialization</label>
+                        <input className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newUser.specialization} onChange={e => setNewUser({...newUser, specialization: e.target.value})} placeholder="e.g. Mathematics, Physics" />
                       </div>
                       {isSuperAdmin && (
                         <div>
-                          <label className="block text-sm font-bold text-zinc-700 mb-1">Link to Schools</label>
-                          <div className="space-y-2 max-h-32 overflow-y-auto p-2 border border-zinc-200 rounded-xl">
+                          <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Link to Schools</label>
+                          <div className="space-y-2 max-h-32 overflow-y-auto p-2 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl">
                             {schools.map(s => (
                               <label key={s.id} className="flex items-center gap-2">
                                 <input 
@@ -679,8 +679,8 @@ export const AdminView: React.FC = () => {
                   )}
                   {newUser.role === 'student' && (
                     <div>
-                      <label className="block text-sm font-bold text-zinc-700 mb-1">Assign to Class</label>
-                      <select className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl" value={newUser.classId} onChange={e => setNewUser({...newUser, classId: e.target.value})}>
+                      <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">Assign to Class</label>
+                      <select className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newUser.classId} onChange={e => setNewUser({...newUser, classId: e.target.value})}>
                         <option value="">No Class</option>
                         {classes
                           .filter(c => !newUser.schoolId || c.schoolId === newUser.schoolId || c.schoolId === profile?.schoolId)
@@ -690,7 +690,7 @@ export const AdminView: React.FC = () => {
                     </div>
                   )}
                   <div className="flex gap-3 pt-4">
-                    <button type="button" onClick={() => { setShowAddModal(false); setEditingItem(null); }} className="flex-1 px-6 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-bold">Cancel</button>
+                    <button type="button" onClick={() => { setShowAddModal(false); setEditingItem(null); }} className="flex-1 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 dark:text-zinc-300 rounded-xl font-bold">Cancel</button>
                     <button type="submit" className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold">{editingItem ? 'Update' : 'Add'} User</button>
                   </div>
                 </form>
@@ -706,11 +706,11 @@ export const AdminView: React.FC = () => {
         title="Confirm Deletion"
       >
         <div className="space-y-6">
-          <p className="text-zinc-600">Are you sure you want to delete this item? This action cannot be undone.</p>
+          <p className="text-zinc-600 dark:text-zinc-300 dark:text-zinc-300">Are you sure you want to delete this item? This action cannot be undone.</p>
           <div className="flex gap-3">
             <button
               onClick={() => setDeleteConfirm(null)}
-              className="flex-1 py-3 bg-zinc-100 text-zinc-900 rounded-xl font-bold hover:bg-zinc-200 transition-all"
+              className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 text-zinc-900 dark:text-white dark:text-white rounded-xl font-bold hover:bg-zinc-200 dark:bg-zinc-700 dark:bg-zinc-700 transition-all"
             >
               Cancel
             </button>

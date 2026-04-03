@@ -79,18 +79,18 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
     <div className="space-y-8">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-2 hover:bg-zinc-100 rounded-xl transition-colors">
+          <button onClick={onBack} className="p-2 hover:bg-zinc-100 dark:bg-zinc-800 rounded-xl transition-colors">
             <ChevronLeft className="w-6 h-6" />
           </button>
           <div>
             <h1 className="text-2xl font-bold">{exam.title}</h1>
-            <p className="text-sm text-zinc-500">Editing Questions</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Editing Questions</p>
           </div>
         </div>
         <div className="flex gap-3">
           <button
             onClick={handleAddQuestion}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-900 rounded-xl font-bold hover:bg-zinc-200 transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl font-bold hover:bg-zinc-200 dark:bg-zinc-700 transition-all"
           >
             <Plus className="w-4 h-4" />
             Add Question
@@ -124,11 +124,11 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white border border-black/5 rounded-[2rem] p-8 shadow-sm space-y-6 relative group"
+              className="bg-white dark:bg-zinc-900 border border-black/5 rounded-[2rem] p-8 shadow-sm space-y-6 relative group"
             >
               <button
                 onClick={() => handleRemoveQuestion(qIndex)}
-                className="absolute top-6 right-6 p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                className="absolute top-6 right-6 p-2 text-zinc-400 dark:text-zinc-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
               >
                 <Trash2 className="w-5 h-5" />
               </button>
@@ -153,7 +153,7 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
                       className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${
                         q.correctAnswer === oIndex 
                           ? "border-emerald-500 bg-emerald-50" 
-                          : "border-zinc-100 bg-zinc-50"
+                          : "border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800"
                       }`}
                     >
                       <button
@@ -161,7 +161,7 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
                         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                           q.correctAnswer === oIndex 
                             ? "border-emerald-500 bg-emerald-500 text-white" 
-                            : "border-zinc-300 bg-white"
+                            : "border-zinc-300 bg-white dark:bg-zinc-900"
                         }`}
                       >
                         {q.correctAnswer === oIndex && <CheckCircle2 className="w-4 h-4" />}
@@ -170,19 +170,19 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
                         placeholder={`Option ${oIndex + 1}`}
                         value={option}
                         onChange={(e) => handleUpdateOption(qIndex, oIndex, e.target.value)}
-                        className="flex-1 bg-transparent border-none focus:ring-0 font-medium placeholder:text-zinc-400"
+                        className="flex-1 bg-transparent border-none focus:ring-0 font-medium placeholder:text-zinc-400 dark:text-zinc-500"
                       />
                     </div>
                   ))}
                 </div>
 
                 <div className="pt-4 border-t border-black/5">
-                  <label className="block text-sm font-bold text-zinc-500 mb-2">Explanation (Optional)</label>
+                  <label className="block text-sm font-bold text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mb-2">Explanation (Optional)</label>
                   <textarea
                     placeholder="Explain why the correct answer is right..."
                     value={q.explanation || ''}
                     onChange={(e) => handleUpdateQuestion(qIndex, 'explanation', e.target.value)}
-                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm"
+                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm"
                   />
                 </div>
               </div>
@@ -191,8 +191,8 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
         </AnimatePresence>
 
         {questions.length === 0 && (
-          <div className="py-20 text-center bg-zinc-50 rounded-[2rem] border-2 border-dashed border-zinc-200">
-            <p className="text-zinc-400 font-medium">No questions added yet. Click "Add Question" to start.</p>
+          <div className="py-20 text-center bg-zinc-50 dark:bg-zinc-800 rounded-[2rem] border-2 border-dashed border-zinc-200 dark:border-zinc-800">
+            <p className="text-zinc-400 dark:text-zinc-500 font-medium">No questions added yet. Click "Add Question" to start.</p>
           </div>
         )}
       </div>
