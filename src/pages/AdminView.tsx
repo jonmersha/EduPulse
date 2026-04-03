@@ -307,7 +307,7 @@ export const AdminView: React.FC = () => {
             {selectedSchoolId && (
               <button 
                 onClick={() => { setSelectedSchoolId(null); setActiveSubTab('schools'); }}
-                className="text-xs font-bold text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white dark:text-white flex items-center gap-1"
+                className="text-xs font-bold text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white dark:text-white flex items-center gap-1"
               >
                 ← Back to Schools
               </button>
@@ -316,7 +316,7 @@ export const AdminView: React.FC = () => {
           <h1 className="text-3xl font-bold tracking-tight">
             {selectedSchoolId ? schools.find(s => s.id === selectedSchoolId)?.name : (isSuperAdmin ? 'Global Administration' : 'School Administration')}
           </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">
+          <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">
             {selectedSchoolId ? 'Manage this school\'s resources and users.' : (isSuperAdmin ? 'Manage schools and platform-wide settings.' : 'Manage your school, classes, and users.')}
           </p>
         </div>
@@ -332,7 +332,7 @@ export const AdminView: React.FC = () => {
               </button>
               <button 
                 onClick={() => setAddStudentOptionsContext({})}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all shadow-md"
               >
                 <UserPlus className="w-4 h-4" />
                 Add Student
@@ -369,7 +369,7 @@ export const AdminView: React.FC = () => {
         {isSuperAdmin && !selectedSchoolId && (
           <button 
             onClick={() => setActiveSubTab('schools')}
-            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'schools' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'schools' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
           >
             Schools
           </button>
@@ -379,25 +379,25 @@ export const AdminView: React.FC = () => {
           <>
             <button 
               onClick={() => setActiveSubTab('classes')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               Classes
             </button>
             <button 
               onClick={() => setActiveSubTab('users')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               Users
             </button>
             <button 
               onClick={() => setActiveSubTab('courses')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               Courses
             </button>
             <button 
               onClick={() => setActiveSubTab('exams')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               Exams
             </button>
@@ -408,19 +408,19 @@ export const AdminView: React.FC = () => {
           <>
             <button 
               onClick={() => setActiveSubTab('classes')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               All Classes
             </button>
             <button 
               onClick={() => setActiveSubTab('users')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               All Users
             </button>
             <button 
               onClick={() => setActiveSubTab('courses')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               All Courses
             </button>
@@ -441,7 +441,7 @@ export const AdminView: React.FC = () => {
                 onClick={() => setRoleFilter(role)}
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all",
-                  roleFilter === role ? "bg-white dark:bg-zinc-900 dark:bg-zinc-900 text-zinc-900 dark:text-white dark:text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:text-zinc-300 dark:text-zinc-300"
+                  roleFilter === role ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white dark:text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:text-zinc-300 dark:text-zinc-300"
                 )}
               >
                 {role === 'super_admin' ? 'Platform Admins' : role === 'admin' ? 'School Admins' : `${role}s`}
@@ -453,7 +453,7 @@ export const AdminView: React.FC = () => {
 
       <div className="grid grid-cols-1 gap-6">
         {activeSubTab === 'schools' && isSuperAdmin && (
-          <div className="bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 rounded-3xl overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl overflow-hidden shadow-sm">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border-b border-black/5">
@@ -493,8 +493,8 @@ export const AdminView: React.FC = () => {
         {activeSubTab === 'classes' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {classes.map(cls => (
-              <div key={cls.id} className="p-6 bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
-                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4">
+              <div key={cls.id} className="p-6 bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
+                <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-4">
                   <BookOpen className="w-6 h-6" />
                 </div>
                 <h3 className="text-xl font-bold">{cls.name}</h3>
@@ -507,7 +507,7 @@ export const AdminView: React.FC = () => {
                 <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
                   <button 
                     onClick={() => setAddStudentOptionsContext({classId: cls.id, schoolId: cls.schoolId})}
-                    className="flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-700"
+                    className="flex items-center gap-1 text-xs font-bold text-purple-600 hover:text-purple-700"
                   >
                     <UserPlus className="w-3 h-3" />
                     Add Student
@@ -523,7 +523,7 @@ export const AdminView: React.FC = () => {
         )}
 
         {activeSubTab === 'users' && (
-          <div className="bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 rounded-3xl overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl overflow-hidden shadow-sm">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border-b border-black/5">
@@ -549,7 +549,7 @@ export const AdminView: React.FC = () => {
                           user.role === 'teacher' ? "bg-blue-100 text-blue-700" : 
                           user.role === 'admin' ? "bg-purple-100 text-purple-700" : 
                           user.role === 'provider' ? "bg-amber-100 text-amber-700" :
-                          "bg-emerald-100 text-emerald-700"
+                          "bg-purple-100 text-purple-700"
                         )}>
                           {user.role === 'super_admin' ? 'Platform Admin' : user.role === 'admin' ? 'School Admin' : user.role}
                         </span>
@@ -568,7 +568,7 @@ export const AdminView: React.FC = () => {
                           </div>
                         ) : user.role === 'student' ? (
                           <div className="flex items-center gap-2">
-                            <BookOpen className="w-3 h-3 text-emerald-500" />
+                            <BookOpen className="w-3 h-3 text-purple-500" />
                             <span className="font-medium text-zinc-700 dark:text-zinc-300 dark:text-zinc-300">
                               {classes.find(c => c.id === user.classId)?.name || 'Unassigned'}
                             </span>
@@ -593,7 +593,7 @@ export const AdminView: React.FC = () => {
         {activeSubTab === 'courses' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map(course => (
-              <div key={course.id} className="p-6 bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
+              <div key={course.id} className="p-6 bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
                 <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
                   <BookOpen className="w-6 h-6" />
                 </div>
@@ -619,7 +619,7 @@ export const AdminView: React.FC = () => {
         {activeSubTab === 'exams' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {exams.map(exam => (
-              <div key={exam.id} className="p-6 bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
+              <div key={exam.id} className="p-6 bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
                 <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-4">
                   <BookOpen className="w-6 h-6" />
                 </div>
@@ -659,7 +659,7 @@ export const AdminView: React.FC = () => {
                     openAddUserModal('student', addStudentOptionsContext.classId, addStudentOptionsContext.schoolId);
                     setAddStudentOptionsContext(null);
                   }}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-emerald-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all shadow-md"
                 >
                   <UserPlus className="w-5 h-5" />
                   Add Single Student
@@ -708,7 +708,7 @@ export const AdminView: React.FC = () => {
                       onClick={() => setBulkUploadRole('student')}
                       className={cn(
                         "flex-1 py-2 rounded-xl font-bold text-sm transition-all",
-                        bulkUploadRole === 'student' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-2 border-emerald-500" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-2 border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                        bulkUploadRole === 'student' ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-2 border-purple-500" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-2 border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-700"
                       )}
                     >
                       Students
@@ -761,7 +761,7 @@ export const AdminView: React.FC = () => {
                   <div className={cn(
                     "p-3 rounded-xl text-sm font-medium flex items-center gap-2",
                     bulkUploadStatus.includes('Error') ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400" : 
-                    bulkUploadStatus.includes('complete') ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400" : 
+                    bulkUploadStatus.includes('complete') ? "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400" : 
                     "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
                   )}>
                     {bulkUploadStatus.includes('Error') ? <AlertCircle className="w-4 h-4" /> : 
@@ -810,7 +810,7 @@ export const AdminView: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-zinc-900 dark:bg-zinc-900 rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-black/5 overflow-y-auto max-h-[90vh]"
+              className="bg-white dark:bg-zinc-900 rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-black/5 overflow-y-auto max-h-[90vh]"
             >
               <h2 className="text-2xl font-bold mb-6">
                 {editingItem ? 'Edit' : 'Add'} {activeSubTab === 'schools' ? 'School' : activeSubTab === 'classes' ? 'Class' : 'User'}
@@ -847,7 +847,7 @@ export const AdminView: React.FC = () => {
                   </div>
                   <div className="flex gap-3 pt-4">
                     <button type="button" onClick={() => { setShowAddModal(false); setEditingItem(null); }} className="flex-1 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 dark:text-zinc-300 rounded-xl font-bold">Cancel</button>
-                    <button type="submit" className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold">{editingItem ? 'Update' : 'Add'} School</button>
+                    <button type="submit" className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold">{editingItem ? 'Update' : 'Add'} School</button>
                   </div>
                 </form>
               )}
@@ -887,7 +887,7 @@ export const AdminView: React.FC = () => {
                   </div>
                   <div className="flex gap-3 pt-4">
                     <button type="button" onClick={() => { setShowAddModal(false); setEditingItem(null); }} className="flex-1 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 dark:text-zinc-300 rounded-xl font-bold">Cancel</button>
-                    <button type="submit" className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold">{editingItem ? 'Update' : 'Add'} Class</button>
+                    <button type="submit" className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold">{editingItem ? 'Update' : 'Add'} Class</button>
                   </div>
                 </form>
               )}
@@ -917,7 +917,7 @@ export const AdminView: React.FC = () => {
                       type="checkbox" 
                       checked={newUser.isIndependent} 
                       onChange={e => setNewUser({...newUser, isIndependent: e.target.checked})}
-                      className="w-4 h-4 text-emerald-600 rounded"
+                      className="w-4 h-4 text-purple-600 rounded"
                     />
                     <label className="text-sm font-medium text-zinc-600 dark:text-zinc-300 dark:text-zinc-300">Independent Account</label>
                   </div>
@@ -974,7 +974,7 @@ export const AdminView: React.FC = () => {
                   )}
                   <div className="flex gap-3 pt-4">
                     <button type="button" onClick={() => { setShowAddModal(false); setEditingItem(null); }} className="flex-1 px-6 py-3 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 dark:text-zinc-300 rounded-xl font-bold">Cancel</button>
-                    <button type="submit" className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold">{editingItem ? 'Update' : 'Add'} User</button>
+                    <button type="submit" className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold">{editingItem ? 'Update' : 'Add'} User</button>
                   </div>
                 </form>
               )}

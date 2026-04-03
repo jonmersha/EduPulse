@@ -87,7 +87,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
       <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="max-w-2xl">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white shadow-xl shadow-emerald-200">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white shadow-xl shadow-purple-200">
               <ShoppingBag className="w-6 h-6" />
             </div>
             <h1 className="text-5xl font-black tracking-tighter text-zinc-900 dark:text-white">Marketplace</h1>
@@ -105,14 +105,14 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
               placeholder="Search courses, exams..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-white dark:bg-zinc-900 border border-black/5 rounded-2xl shadow-sm focus:ring-4 focus:ring-emerald-50 focus:border-emerald-500 transition-all font-medium"
+              className="w-full pl-12 pr-4 py-4 bg-white dark:bg-zinc-900 border border-black/5 rounded-2xl shadow-sm focus:ring-4 focus:ring-purple-50 focus:border-purple-500 transition-all font-medium"
             />
           </div>
           <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-2xl shadow-inner">
             <button
               onClick={() => setActiveTab('courses')}
               className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === 'courses' ? 'bg-white dark:bg-zinc-900 shadow-xl text-emerald-600' : 'text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white'
+                activeTab === 'courses' ? 'bg-white dark:bg-zinc-900 shadow-xl text-purple-600' : 'text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white'
               }`}
             >
               Courses
@@ -120,7 +120,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
             <button
               onClick={() => setActiveTab('exams')}
               className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === 'exams' ? 'bg-white dark:bg-zinc-900 shadow-xl text-emerald-600' : 'text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white'
+                activeTab === 'exams' ? 'bg-white dark:bg-zinc-900 shadow-xl text-purple-600' : 'text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white'
               }`}
             >
               Exams
@@ -141,8 +141,8 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
             className={cn(
               "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all border-2",
               selectedCategory === cat 
-                ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-100" 
-                : "bg-white dark:bg-zinc-900 border-black/5 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:border-emerald-200 hover:text-emerald-600"
+                ? "bg-emerald-600 border-purple-600 text-white shadow-lg shadow-purple-100" 
+                : "bg-white dark:bg-zinc-900 border-black/5 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:border-purple-200 hover:text-purple-600"
             )}
           >
             {cat}
@@ -173,7 +173,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                 />
                 {(!isEnrolled || isDenied) && (
                   <div className="absolute top-6 left-6">
-                    <div className="px-3 py-1 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5">
+                    <div className="px-3 py-1 bg-purple-600 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5">
                       <Sparkles className="w-3 h-3" />
                       {isDenied ? "Re-enroll" : "New"}
                     </div>
@@ -183,7 +183,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                   <div className="absolute top-6 left-6">
                     <div className={cn(
                       "px-3 py-1 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5",
-                      isApproved ? "bg-emerald-600" : "bg-amber-500"
+                      isApproved ? "bg-purple-600" : "bg-amber-500"
                     )}>
                       {isApproved ? "Enrolled" : "Pending Approval"}
                     </div>
@@ -195,12 +195,12 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                 key={item.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="group bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer flex flex-col h-full"
+                className="group bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer flex flex-col h-full"
                 onClick={() => isApproved ? onSelectExam(item.id) : (!isEnrolled || isDenied) && handleEnroll(item, 'exam')}
               >
                 <div className="aspect-video bg-zinc-900 relative flex items-center justify-center overflow-hidden">
                   <Trophy className="w-20 h-20 text-zinc-700 dark:text-zinc-300 group-hover:scale-110 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors" />
+                  <div className="absolute inset-0 bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors" />
                   <div className="absolute top-6 right-6 px-4 py-2 bg-white dark:bg-zinc-900/90 dark:bg-zinc-800/90 backdrop-blur-md rounded-2xl text-xs font-black shadow-2xl dark:text-white">
                     {item.price > 0 ? `$${item.price}` : 'FREE'}
                   </div>
@@ -208,7 +208,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                     <div className="absolute top-6 left-6">
                       <div className={cn(
                         "px-3 py-1 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5",
-                        isApproved ? "bg-emerald-600" : "bg-amber-500"
+                        isApproved ? "bg-purple-600" : "bg-amber-500"
                       )}>
                         {isApproved ? "Enrolled" : "Pending"}
                       </div>
@@ -227,7 +227,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                     <span className="px-3 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase rounded-lg tracking-widest">Certification</span>
                     <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">By {item.teacherName}</span>
                   </div>
-                  <h3 className="font-black text-2xl leading-tight mb-4 group-hover:text-emerald-600 transition-colors line-clamp-2 dark:text-white">{item.title}</h3>
+                  <h3 className="font-black text-2xl leading-tight mb-4 group-hover:text-purple-600 transition-colors line-clamp-2 dark:text-white">{item.title}</h3>
                   <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 font-medium line-clamp-2 mb-8 flex-1">{item.description}</p>
                   
                   <button className={cn(
@@ -237,8 +237,8 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                       : isPending
                         ? "bg-amber-500 text-white cursor-not-allowed"
                         : isDenied
-                          ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100" // Allow re-enroll
-                          : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
+                          ? "bg-purple-600 text-white hover:bg-purple-700 shadow-purple-100" // Allow re-enroll
+                          : "bg-purple-600 text-white hover:bg-purple-700 shadow-purple-100"
                   )}>
                     {isApproved ? 'Open Exam' : isPending ? 'Pending Approval' : isDenied ? 'Re-enroll' : (item.price > 0 ? 'Purchase Exam' : 'Enroll Free')}
                   </button>

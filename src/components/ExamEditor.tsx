@@ -98,7 +98,7 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all shadow-lg shadow-purple-200 disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
             {saving ? 'Saving...' : 'Save Changes'}
@@ -107,7 +107,7 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center gap-2 text-emerald-600 font-bold text-sm"
+              className="flex items-center gap-2 text-purple-600 font-bold text-sm"
             >
               <CheckCircle2 className="w-4 h-4" />
               Saved!
@@ -152,7 +152,7 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
                       key={`${q.id}-opt-${oIndex}`}
                       className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${
                         q.correctAnswer === oIndex 
-                          ? "border-emerald-500 bg-emerald-50" 
+                          ? "border-purple-500 bg-purple-50" 
                           : "border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800"
                       }`}
                     >
@@ -160,7 +160,7 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
                         onClick={() => handleUpdateQuestion(qIndex, 'correctAnswer', oIndex)}
                         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                           q.correctAnswer === oIndex 
-                            ? "border-emerald-500 bg-emerald-500 text-white" 
+                            ? "border-purple-500 bg-purple-500 text-white" 
                             : "border-zinc-300 bg-white dark:bg-zinc-900"
                         }`}
                       >
@@ -182,7 +182,7 @@ export const ExamEditor: React.FC<ExamEditorProps> = ({ examId, onBack }) => {
                     placeholder="Explain why the correct answer is right..."
                     value={q.explanation || ''}
                     onChange={(e) => handleUpdateQuestion(qIndex, 'explanation', e.target.value)}
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm"
+                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-sm"
                   />
                 </div>
               </div>

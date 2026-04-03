@@ -411,7 +411,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
         <p className="text-xl text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mb-8">{course?.description}</p>
         <button 
           onClick={handleEnroll}
-          className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-black text-lg hover:bg-emerald-700 transition-all"
+          className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-black text-lg hover:bg-purple-700 transition-all"
         >
           Enroll Now
         </button>
@@ -426,14 +426,14 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-zinc-900 dark:text-white text-sm">Course Contents</h3>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md">{progress}% COMPLETE</span>
+            <span className="text-xs font-bold text-purple-700 bg-purple-100 px-2.5 py-1 rounded-md">{progress}% COMPLETE</span>
           </div>
         </div>
         <div className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
           <motion.div 
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
-            className="h-full bg-emerald-500"
+            className="h-full bg-purple-500"
           />
         </div>
       </div>
@@ -450,12 +450,12 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
             }}
             className={cn(
               "w-full flex items-center gap-4 px-6 py-4 text-left transition-all group",
-              isViewingCourseOverview ? "bg-emerald-50/50 border-l-[4px] border-emerald-600" : "hover:bg-zinc-50 dark:bg-zinc-800 border-l-[4px] border-transparent"
+              isViewingCourseOverview ? "bg-purple-50/50 border-l-[4px] border-purple-600" : "hover:bg-zinc-50 dark:bg-zinc-800 border-l-[4px] border-transparent"
             )}
           >
             <div className={cn(
               "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
-              isViewingCourseOverview ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 group-hover:bg-zinc-200 dark:bg-zinc-700"
+              isViewingCourseOverview ? "bg-purple-100 text-purple-700" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 group-hover:bg-zinc-200 dark:bg-zinc-700"
             )}>
               <BookOpen className="w-4 h-4" />
             </div>
@@ -475,7 +475,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                 onClick={() => toggleSection(section)}
                 className={cn(
                   "w-full flex items-center justify-between px-6 py-4 text-left transition-all group border-l-[4px]",
-                  isSectionActive ? "bg-emerald-50/50 border-emerald-600" : "hover:bg-zinc-50 dark:bg-zinc-800 border-transparent"
+                  isSectionActive ? "bg-purple-50/50 border-purple-600" : "hover:bg-zinc-50 dark:bg-zinc-800 border-transparent"
                 )}
               >
                 <div className="flex-1">
@@ -508,7 +508,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                         <div key={`${main.id}-${index}`}>
                           <div className={cn(
                             "flex items-stretch group border-l-[4px] transition-all",
-                            isActive ? "border-emerald-600 bg-emerald-50/30" : "border-transparent hover:bg-zinc-50 dark:bg-zinc-800"
+                            isActive ? "border-purple-600 bg-purple-50/30" : "border-transparent hover:bg-zinc-50 dark:bg-zinc-800"
                           )}>
                             <button
                               onClick={() => {
@@ -526,9 +526,9 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                               <div className={cn(
                                 "mt-0.5 w-5 h-5 rounded-md flex items-center justify-center shrink-0 border transition-all",
                                 isCompleted 
-                                  ? "bg-emerald-600 border-emerald-600 text-white" 
+                                  ? "bg-purple-600 border-purple-600 text-white" 
                                   : isActive 
-                                    ? "border-emerald-600 text-emerald-600 bg-emerald-50" 
+                                    ? "border-purple-600 text-purple-600 bg-purple-50" 
                                     : "border-zinc-300 text-zinc-400 dark:text-zinc-500 bg-white dark:bg-zinc-900 group-hover:border-zinc-400"
                               )}>
                                 {isCompleted ? <CheckCircle2 className="w-3 h-3" /> : <span className="text-[9px] font-bold">{main.order}</span>}
@@ -536,7 +536,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                               <div className="flex-1 min-w-0">
                                 <p className={cn(
                                   "text-sm font-medium leading-snug",
-                                  isActive ? "text-emerald-900 font-semibold" : "text-zinc-700 dark:text-zinc-300",
+                                  isActive ? "text-purple-900 font-semibold" : "text-zinc-700 dark:text-zinc-300",
                                   isCompleted && !isActive && "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500"
                                 )}>{main.title}</p>
                                 <div className="flex items-center gap-2 mt-1">
@@ -591,15 +591,15 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                         }}
                                         className={cn(
                                           "w-full flex items-start gap-5 px-14 py-4 text-left transition-all border-l-[6px]",
-                                          isSubActive ? "border-emerald-600 bg-emerald-50/60" : "border-transparent hover:bg-zinc-100 dark:bg-zinc-800"
+                                          isSubActive ? "border-purple-600 bg-purple-50/60" : "border-transparent hover:bg-zinc-100 dark:bg-zinc-800"
                                         )}
                                       >
                                         <div className={cn(
                                           "mt-0.5 w-5 h-5 rounded-md flex items-center justify-center shrink-0 border-2 transition-all",
                                           isSubCompleted 
-                                            ? "bg-emerald-600 border-emerald-600 text-white" 
+                                            ? "bg-purple-600 border-purple-600 text-white" 
                                             : isSubActive 
-                                              ? "border-emerald-600 text-emerald-600 bg-white dark:bg-zinc-900" 
+                                              ? "border-purple-600 text-purple-600 bg-white dark:bg-zinc-900" 
                                               : "border-zinc-200 dark:border-zinc-800 text-zinc-300 bg-white dark:bg-zinc-900"
                                         )}>
                                           {isSubCompleted ? <CheckCircle2 className="w-3 h-3" /> : <span className="text-[9px] font-black">{sub.order}</span>}
@@ -607,7 +607,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                         <div className="flex-1 min-w-0">
                                           <p className={cn(
                                             "text-xs font-bold leading-snug tracking-tight",
-                                            isSubActive ? "text-emerald-900" : "text-zinc-700 dark:text-zinc-300",
+                                            isSubActive ? "text-purple-900" : "text-zinc-700 dark:text-zinc-300",
                                             isSubCompleted && !isSubActive && "text-zinc-400 dark:text-zinc-500"
                                           )}>{sub.title}</p>
                                         </div>
@@ -650,10 +650,10 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
-                  className="bg-emerald-500 h-full" 
+                  className="bg-purple-500 h-full" 
                 />
               </div>
-              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{progress}% COMPLETE</span>
+              <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest">{progress}% COMPLETE</span>
             </div>
           </div>
         </div>
@@ -733,12 +733,12 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                             onClick={() => setActiveTab(tab.id as any)}
                             className={cn(
                               "px-6 py-4 text-sm font-semibold whitespace-nowrap transition-all relative",
-                              activeTab === tab.id ? "text-emerald-700" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-800 dark:text-zinc-200"
+                              activeTab === tab.id ? "text-purple-700" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-800 dark:text-zinc-200"
                             )}
                           >
                             {tab.label}
                             {activeTab === tab.id && (
-                              <motion.div layoutId="activeTabMobile" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600" />
+                              <motion.div layoutId="activeTabMobile" className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600" />
                             )}
                           </button>
                         ))}
@@ -771,14 +771,14 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                   )}
                                   {/* Section Quiz */}
                                   {exams.filter(e => e.sectionId === section.id).map(exam => (
-                                    <div key={exam.id} className="mt-4 p-4 bg-white dark:bg-zinc-900 border border-emerald-100 rounded-xl flex items-center justify-between">
+                                    <div key={exam.id} className="mt-4 p-4 bg-white dark:bg-zinc-900 border border-purple-100 rounded-xl flex items-center justify-between">
                                       <div>
-                                        <h5 className="font-bold text-emerald-900">{exam.title}</h5>
-                                        <p className="text-xs text-emerald-700 mt-1">{exam.questions?.length || 0} Questions</p>
+                                        <h5 className="font-bold text-purple-900">{exam.title}</h5>
+                                        <p className="text-xs text-purple-700 mt-1">{exam.questions?.length || 0} Questions</p>
                                       </div>
                                       <button 
                                         onClick={() => setSelectedExam(exam.id)}
-                                        className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg font-bold text-sm hover:bg-emerald-200 transition-all"
+                                        className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg font-bold text-sm hover:bg-purple-200 transition-all"
                                       >
                                         Take Quiz
                                       </button>
@@ -796,14 +796,14 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                             <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-6">Final Exam</h3>
                             <div className="space-y-4">
                               {exams.filter(e => e.type === 'final').map(exam => (
-                                <div key={exam.id} className="p-6 bg-emerald-600 rounded-2xl border border-emerald-700 flex items-center justify-between shadow-lg">
+                                <div key={exam.id} className="p-6 bg-purple-600 rounded-2xl border border-purple-700 flex items-center justify-between shadow-lg">
                                   <div>
                                     <h4 className="font-bold text-white text-xl">{exam.title}</h4>
-                                    <p className="text-emerald-100 mt-1">{exam.questions?.length || 0} Questions • {exam.duration || 0} Minutes</p>
+                                    <p className="text-purple-100 mt-1">{exam.questions?.length || 0} Questions • {exam.duration || 0} Minutes</p>
                                   </div>
                                   <button 
                                     onClick={() => setSelectedExam(exam.id)}
-                                    className="px-6 py-3 bg-white dark:bg-zinc-900 text-emerald-700 rounded-xl font-black shadow-sm hover:bg-emerald-50 transition-all"
+                                    className="px-6 py-3 bg-white dark:bg-zinc-900 text-purple-700 rounded-xl font-black shadow-sm hover:bg-purple-50 transition-all"
                                   >
                                     Start Exam
                                   </button>
@@ -835,12 +835,12 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                           onClick={() => setActiveTab(tab.id as any)}
                           className={cn(
                             "px-6 py-4 text-sm font-semibold whitespace-nowrap transition-all relative",
-                            activeTab === tab.id ? "text-emerald-700" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-800 dark:text-zinc-200"
+                            activeTab === tab.id ? "text-purple-700" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-800 dark:text-zinc-200"
                           )}
                         >
                           {tab.label}
                           {activeTab === tab.id && (
-                            <motion.div layoutId="activeTabMobile" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600" />
+                            <motion.div layoutId="activeTabMobile" className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600" />
                           )}
                         </button>
                       ))}
@@ -870,9 +870,9 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                             <button
                               key={`section-lesson-${lesson.id}`}
                               onClick={() => setCurrentLesson(lesson)}
-                              className="flex items-center gap-4 p-5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:shadow-md hover:border-emerald-300 transition-all text-left group"
+                              className="flex items-center gap-4 p-5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:shadow-md hover:border-purple-300 transition-all text-left group"
                             >
-                              <div className="w-10 h-10 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 flex items-center justify-center text-sm font-bold group-hover:bg-emerald-50 group-hover:text-emerald-700 group-hover:border-emerald-200 transition-all">
+                              <div className="w-10 h-10 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 flex items-center justify-center text-sm font-bold group-hover:bg-purple-50 group-hover:text-purple-700 group-hover:border-purple-200 transition-all">
                                 {idx + 1}
                               </div>
                               <div>
@@ -916,7 +916,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                           disabled={isSpeaking}
                           className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-200 dark:bg-zinc-700 transition-all disabled:opacity-50 font-semibold text-sm"
                         >
-                          {isSpeaking ? <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /> : <Volume2 className="w-4 h-4" />}
+                          {isSpeaking ? <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" /> : <Volume2 className="w-4 h-4" />}
                           Listen
                         </button>
                         <button 
@@ -924,7 +924,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                           className={cn(
                             "flex items-center gap-2 px-5 py-2 rounded-lg font-semibold text-sm transition-all",
                             completedLessons.includes(currentLesson.id)
-                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                              ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
                               : "bg-zinc-900 text-white hover:bg-zinc-800"
                           )}
                         >
@@ -949,12 +949,12 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                           onClick={() => setActiveTab(tab.id as any)}
                           className={cn(
                             "px-6 py-4 text-sm font-semibold whitespace-nowrap transition-all relative",
-                            activeTab === tab.id ? "text-emerald-700" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-800 dark:text-zinc-200"
+                            activeTab === tab.id ? "text-purple-700" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-800 dark:text-zinc-200"
                           )}
                         >
                           {tab.label}
                           {activeTab === tab.id && (
-                            <motion.div layoutId="activeTabLesson" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600" />
+                            <motion.div layoutId="activeTabLesson" className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600" />
                           )}
                         </button>
                       ))}
@@ -967,7 +967,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                       ) : activeTab === 'overview' ? (
                         <div className="space-y-8 animate-in fade-in duration-500">
                           {currentLesson.shortDescription && (
-                            <p className="text-lg text-zinc-600 dark:text-zinc-300 font-medium italic border-l-4 border-emerald-500 pl-6">
+                            <p className="text-lg text-zinc-600 dark:text-zinc-300 font-medium italic border-l-4 border-purple-500 pl-6">
                               "{currentLesson.shortDescription}"
                             </p>
                           )}
@@ -994,9 +994,9 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                   <button
                                     key={`sub-${sub.id}`}
                                     onClick={() => setCurrentLesson(sub)}
-                                    className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:shadow-md hover:border-emerald-300 transition-all text-left group"
+                                    className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:shadow-md hover:border-purple-300 transition-all text-left group"
                                   >
-                                    <div className="w-8 h-8 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 flex items-center justify-center text-xs font-bold group-hover:bg-emerald-50 group-hover:text-emerald-700 group-hover:border-emerald-200 transition-all">
+                                    <div className="w-8 h-8 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 flex items-center justify-center text-xs font-bold group-hover:bg-purple-50 group-hover:text-purple-700 group-hover:border-purple-200 transition-all">
                                       {idx + 1}
                                     </div>
                                     <div>
@@ -1010,15 +1010,15 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
 
                           {/* Lesson Quiz */}
                           {exams.filter(e => e.lessonId === currentLesson.id).map(exam => (
-                            <div key={exam.id} className="mt-8 p-6 bg-emerald-50 border border-emerald-200 rounded-2xl">
+                            <div key={exam.id} className="mt-8 p-6 bg-purple-50 border border-purple-200 rounded-2xl">
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <h3 className="text-lg font-bold text-emerald-900">{exam.title}</h3>
-                                  <p className="text-sm text-emerald-700 mt-1">{exam.questions?.length || 0} Questions</p>
+                                  <h3 className="text-lg font-bold text-purple-900">{exam.title}</h3>
+                                  <p className="text-sm text-purple-700 mt-1">{exam.questions?.length || 0} Questions</p>
                                 </div>
                                 <button 
                                   onClick={() => setSelectedExam(exam.id)}
-                                  className="px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all"
+                                  className="px-6 py-2 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all"
                                 >
                                   Take Quiz
                                 </button>
@@ -1041,7 +1041,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                             {enrolledStudents.map((student, index) => (
                               <div key={`${student.studentId}-${index}`} className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm">
                                 <div className="flex items-center gap-4">
-                                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
+                                  <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-sm">
                                     {student.studentName?.charAt(0)}
                                   </div>
                                   <div>
@@ -1051,7 +1051,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                 </div>
                                 <div className="flex items-center gap-4">
                                   <div className="w-32 h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                    <div className="h-full bg-emerald-500" style={{ width: `${student.progress || 0}%` }} />
+                                    <div className="h-full bg-purple-500" style={{ width: `${student.progress || 0}%` }} />
                                   </div>
                                   <span className="text-sm font-bold text-zinc-900 dark:text-white">{student.progress || 0}%</span>
                                   {isTeacherOrAdmin && (
@@ -1080,7 +1080,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                             {isTeacherOrAdmin && (
                               <button 
                                 onClick={() => setShowAddResource(!showAddResource)}
-                                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all text-sm font-semibold shadow-sm"
+                                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all text-sm font-semibold shadow-sm"
                               >
                                 {showAddResource ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                                 {showAddResource ? 'Cancel' : 'Add Resource'}
@@ -1097,7 +1097,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                             >
                               <div className="flex items-center justify-between mb-2">
                                 <h4 className="font-bold text-zinc-900 dark:text-white text-sm">Add New Resource</h4>
-                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md uppercase tracking-wider">
+                                <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-1 rounded-md uppercase tracking-wider">
                                   Contextual Resource
                                 </span>
                               </div>
@@ -1109,7 +1109,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                     placeholder="e.g. Course Syllabus"
                                     value={newResource.title}
                                     onChange={e => setNewResource({...newResource, title: e.target.value})}
-                                    className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm"
+                                    className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm"
                                     required
                                   />
                                 </div>
@@ -1120,7 +1120,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                     placeholder="https://example.com/file.pdf"
                                     value={newResource.url}
                                     onChange={e => setNewResource({...newResource, url: e.target.value})}
-                                    className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm"
+                                    className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm"
                                     required
                                   />
                                 </div>
@@ -1132,7 +1132,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                   <select 
                                     value={newResource.type}
                                     onChange={e => setNewResource({...newResource, type: e.target.value})}
-                                    className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm"
+                                    className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm"
                                   >
                                     <option value="link">Link</option>
                                     <option value="pdf">PDF</option>
@@ -1146,7 +1146,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                   <select 
                                     value={newResource.context}
                                     onChange={e => setNewResource({...newResource, context: e.target.value as any})}
-                                    className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm"
+                                    className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm"
                                   >
                                     <option value="lesson">For this Lesson ({currentLesson?.title})</option>
                                     <option value="section">For this Section ({currentLesson?.section})</option>
@@ -1167,13 +1167,13 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                               {resources.some(r => r.lessonId === currentLesson?.id) && (
                                 <div className="space-y-4">
                                   <div className="flex items-center gap-2">
-                                    <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                                    <div className="w-1 h-4 bg-purple-500 rounded-full" />
                                     <h4 className="font-bold text-zinc-900 dark:text-white text-sm">For this Lesson</h4>
                                   </div>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {resources.filter(r => r.lessonId === currentLesson?.id).map((resource, index) => (
                                       <div key={`lesson-${resource.id}-${index}`} className="group relative flex items-center gap-4 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:shadow-md transition-all">
-                                        <div className="w-10 h-10 rounded-lg bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-all">
+                                        <div className="w-10 h-10 rounded-lg bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 group-hover:bg-purple-50 group-hover:text-purple-700 transition-all">
                                           {resource.type === 'pdf' ? <FileText className="w-5 h-5" /> : 
                                            resource.type === 'video' ? <Video className="w-5 h-5" /> : 
                                            <ExternalLink className="w-5 h-5" />}
@@ -1187,7 +1187,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                             href={resource.url} 
                                             target="_blank" 
                                             rel="noopener noreferrer"
-                                            className="p-2 hover:bg-zinc-100 dark:bg-zinc-800 rounded-md text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-emerald-700 transition-all"
+                                            className="p-2 hover:bg-zinc-100 dark:bg-zinc-800 rounded-md text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-purple-700 transition-all"
                                           >
                                             <Download className="w-4 h-4" />
                                           </a>
@@ -1313,12 +1313,12 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                               placeholder="Ask a question about this course..."
                               value={newQuestion}
                               onChange={e => setNewQuestion(e.target.value)}
-                              className="w-full p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none min-h-[100px] resize-none pr-16 text-sm"
+                              className="w-full p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none min-h-[100px] resize-none pr-16 text-sm"
                               required
                             />
                             <button 
                               type="submit"
-                              className="absolute bottom-3 right-3 p-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-sm"
+                              className="absolute bottom-3 right-3 p-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-sm"
                             >
                               <Send className="w-4 h-4" />
                             </button>
@@ -1348,9 +1348,9 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                   <div className="ml-14 space-y-4">
                                     {answers[q.id]?.map((ans, aIndex) => (
                                       <div key={`${ans.id}-${aIndex}`} className="flex gap-4">
-                                        <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                                        <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center shrink-0">
                                           {ans.userRole === 'teacher' || ans.userRole === 'admin' ? (
-                                            <Trophy className="w-4 h-4 text-emerald-600" />
+                                            <Trophy className="w-4 h-4 text-purple-600" />
                                           ) : (
                                             <User className="w-4 h-4 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500" />
                                           )}
@@ -1360,7 +1360,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                             <div className="flex items-center gap-2">
                                               <h5 className="font-semibold text-zinc-900 dark:text-white text-sm">{ans.userName}</h5>
                                               {(ans.userRole === 'teacher' || ans.userRole === 'admin') && (
-                                                <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase rounded tracking-wider">Staff</span>
+                                                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold uppercase rounded tracking-wider">Staff</span>
                                               )}
                                             </div>
                                             <span className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">
@@ -1384,11 +1384,11 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                           value={newAnswer[q.id] || ''}
                                           onChange={e => setNewAnswer(prev => ({ ...prev, [q.id]: e.target.value }))}
                                           onKeyDown={e => e.key === 'Enter' && handleAddAnswer(q.id)}
-                                          className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm pr-10"
+                                          className="w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-sm pr-10"
                                         />
                                         <button 
                                           onClick={() => handleAddAnswer(q.id)}
-                                          className="absolute right-1.5 top-1.5 p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                          className="absolute right-1.5 top-1.5 p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
                                         >
                                           <Send className="w-4 h-4" />
                                         </button>
@@ -1417,7 +1417,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                   className="p-6 md:p-12 space-y-8"
                 >
                   <div className="space-y-4">
-                    <span className="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold uppercase rounded-full tracking-wider">
+                    <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold uppercase rounded-full tracking-wider">
                       Section Overview
                     </span>
                     <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-zinc-900 dark:text-white">{selectedSection.name}</h2>
@@ -1436,7 +1436,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                         }}
                         className="flex items-start gap-5 p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition-all text-left group"
                       >
-                        <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white flex items-center justify-center text-lg font-bold group-hover:bg-emerald-600 group-hover:text-white transition-all shrink-0">
+                        <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white flex items-center justify-center text-lg font-bold group-hover:bg-purple-600 group-hover:text-white transition-all shrink-0">
                           {idx + 1}
                         </div>
                         <div className="flex-1 min-w-0 pt-1">
@@ -1461,7 +1461,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                     className="flex flex-col items-center"
                   >
                     <div className="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-white dark:bg-zinc-900 shadow-sm border border-zinc-100 dark:border-zinc-800 flex items-center justify-center mb-6">
-                      <BookOpen className="w-10 h-10 text-emerald-500 opacity-50" />
+                      <BookOpen className="w-10 h-10 text-purple-500 opacity-50" />
                     </div>
                     <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Ready to learn?</h3>
                     <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm">Select a lesson from the contents to begin.</p>

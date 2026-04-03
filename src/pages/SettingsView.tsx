@@ -21,10 +21,10 @@ export const SettingsView: React.FC = () => {
     <div className="max-w-2xl mx-auto space-y-8">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">Manage your account and preferences.</p>
+        <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">Manage your account and preferences.</p>
       </header>
 
-      <div className="bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 rounded-3xl p-8 shadow-sm space-y-6">
+      <div className="bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl p-8 shadow-sm space-y-6">
         <section className="space-y-4">
           <h2 className="text-lg font-bold">Profile Information</h2>
           <div className="flex items-center gap-4 p-4 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 rounded-2xl">
@@ -33,14 +33,14 @@ export const SettingsView: React.FC = () => {
             </div>
             <div>
               <p className="font-bold">{profile?.displayName}</p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">{profile?.email}</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">{profile?.email}</p>
             </div>
           </div>
         </section>
 
         <section className="space-y-4">
           <h2 className="text-lg font-bold">Account Role</h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Choose your role to access different features of the platform.</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Choose your role to access different features of the platform.</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {(['student', 'teacher', 'admin', 'parent'] as UserRole[]).map((r) => (
               <button
@@ -49,8 +49,8 @@ export const SettingsView: React.FC = () => {
                 className={cn(
                   "px-4 py-3 rounded-xl text-xs font-bold capitalize transition-all border",
                   role === r 
-                    ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-200" 
-                    : "bg-white dark:bg-zinc-900 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 dark:text-zinc-300 hover:bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800"
+                    ? "bg-emerald-600 border-purple-600 text-white shadow-lg shadow-purple-200" 
+                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 dark:text-zinc-300 hover:bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800"
                 )}
               >
                 {r}

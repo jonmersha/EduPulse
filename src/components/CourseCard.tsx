@@ -41,14 +41,14 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, progres
     </div>
     <div className="p-6 flex flex-col flex-1">
       <div className="flex items-center justify-between mb-3">
-        <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase rounded-lg tracking-widest">
+        <span className="px-2.5 py-1 bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-black uppercase rounded-lg tracking-widest">
           {course.category || 'General'}
         </span>
         {progress !== undefined && (
-          <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">{progress}% DONE</span>
+          <span className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest">{progress}% DONE</span>
         )}
       </div>
-      <h3 className="font-black text-xl leading-tight mb-3 group-hover:text-emerald-600 transition-colors line-clamp-2 dark:text-white">{course.title}</h3>
+      <h3 className="font-black text-xl leading-tight mb-3 group-hover:text-purple-600 transition-colors line-clamp-2 dark:text-white">{course.title}</h3>
       <div className="flex items-center gap-3 mb-6">
         <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-black text-zinc-400">
           {course.teacherName?.charAt(0) || 'I'}

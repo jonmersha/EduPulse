@@ -287,9 +287,9 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
               ))}
               <button 
                 onClick={() => { setEditingItem(null); setShowCreate(true); }}
-                className="aspect-[4/5] border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-3 text-zinc-400 dark:text-zinc-500 hover:border-emerald-500 hover:text-emerald-500 hover:bg-emerald-50/30 transition-all group"
+                className="aspect-[4/5] border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl flex flex-col items-center justify-center gap-3 text-zinc-400 dark:text-zinc-500 hover:border-purple-500 hover:text-purple-500 hover:bg-purple-50/30 transition-all group"
               >
-                <div className="w-12 h-12 rounded-full bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-emerald-100">
+                <div className="w-12 h-12 rounded-full bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-purple-100">
                   <Plus className="w-6 h-6" />
                 </div>
                 <span className="font-bold text-sm">Create New Course</span>
@@ -300,7 +300,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
               {exams.map(exam => (
                 <div 
                   key={exam.id} 
-                  className="bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all group cursor-pointer relative flex flex-col"
+                  className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all group cursor-pointer relative flex flex-col"
                   onClick={() => onEditExam(exam.id)}
                 >
                   <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
@@ -348,7 +348,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
               </button>
             </div>
           ) : activeTab === 'results' ? (
-            <div className="bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -378,7 +378,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                           <div className="font-bold text-zinc-700 dark:text-zinc-300 dark:text-zinc-300">{result.examTitle || 'Unknown Exam'}</div>
                         </td>
                         <td className="px-8 py-5 text-center">
-                          <div className={`text-xl font-black ${result.score >= 70 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          <div className={`text-xl font-black ${result.score >= 70 ? 'text-purple-600' : 'text-red-600'}`}>
                             {result.score.toFixed(1)}%
                           </div>
                         </td>
@@ -387,7 +387,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                         </td>
                         <td className="px-8 py-5 text-right">
                           <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider ${
-                            result.score >= 70 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'
+                            result.score >= 70 ? 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'
                           }`}>
                             {result.score >= 70 ? 'Passed' : 'Failed'}
                           </span>
@@ -415,7 +415,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                 acc[key].push(req);
                 return acc;
               }, {} as Record<string, any[]>)).map(([id, reqs]: [string, any[]]) => (
-                <div key={`enrollment-${id}`} className="bg-white dark:bg-zinc-900 dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm">
+                <div key={`enrollment-${id}`} className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm">
                   <div className="px-8 py-5 border-b border-black/5 dark:border-white/5 bg-zinc-50 dark:bg-zinc-800/50 dark:bg-zinc-800/50">
                     <h3 className="font-black text-lg text-zinc-900 dark:text-white dark:text-white">{reqs[0].title}</h3>
                     <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">{reqs[0].type}</p>
@@ -447,7 +447,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                             <td className="px-8 py-4">
                               <span className={cn(
                                 "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider",
-                                req.status === 'approved' ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : 
+                                req.status === 'approved' ? "bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400" : 
                                 req.status === 'pending' ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400" :
                                 "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"
                               )}>
@@ -463,7 +463,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                                   <>
                                     <button 
                                       onClick={() => handleEnrollmentAction(req, 'approved')}
-                                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all"
+                                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-purple-700 transition-all"
                                     >
                                       Approve
                                     </button>
@@ -514,7 +514,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
               </div>
               <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl">
                 <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Completion Rate</p>
-                <p className="text-2xl font-black text-emerald-600">{getCourseAnalytics(selectedCourseAnalytics.id).completionRate}%</p>
+                <p className="text-2xl font-black text-purple-600">{getCourseAnalytics(selectedCourseAnalytics.id).completionRate}%</p>
               </div>
             </div>
             <button 
@@ -539,7 +539,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl">
                     <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Avg Score</p>
-                    <p className="text-2xl font-black text-emerald-600">{getExamSummary(selectedExamSummary.id)?.avgScore.toFixed(1)}%</p>
+                    <p className="text-2xl font-black text-purple-600">{getExamSummary(selectedExamSummary.id)?.avgScore.toFixed(1)}%</p>
                   </div>
                   <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl">
                     <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Pass Rate</p>
@@ -565,7 +565,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                       .map(result => (
                         <div key={result.id} className="flex items-center justify-between text-sm p-2 hover:bg-zinc-50 dark:bg-zinc-800 rounded-lg">
                           <span className="font-medium">{result.studentName}</span>
-                          <span className={`font-bold ${result.score >= (selectedExamSummary.passingScore || 70) ? 'text-emerald-600' : 'text-red-600'}`}>
+                          <span className={`font-bold ${result.score >= (selectedExamSummary.passingScore || 70) ? 'text-purple-600' : 'text-red-600'}`}>
                             {result.score.toFixed(1)}%
                           </span>
                         </div>
@@ -629,7 +629,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                     required
                     value={activeTab === 'courses' ? newCourse.title : newExam.title}
                     onChange={e => activeTab === 'courses' ? setNewCourse({...newCourse, title: e.target.value}) : setNewExam({...newExam, title: e.target.value})}
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                   />
                 </div>
                 <div>
@@ -637,7 +637,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                   <textarea 
                     value={activeTab === 'courses' ? newCourse.description : newExam.description}
                     onChange={e => activeTab === 'courses' ? setNewCourse({...newCourse, description: e.target.value}) : setNewExam({...newExam, description: e.target.value})}
-                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 h-24"
+                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 h-24"
                   />
                 </div>
                 
@@ -648,7 +648,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                       <select 
                         value={newCourse.category}
                         onChange={e => setNewCourse({...newCourse, category: e.target.value})}
-                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                       >
                         <option>General</option>
                         <option>Math</option>
@@ -662,7 +662,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                         type="number"
                         value={newCourse.price}
                         onChange={e => setNewCourse({...newCourse, price: parseFloat(e.target.value)})}
-                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                       />
                     </div>
                   </div>
@@ -674,7 +674,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                         type="number"
                         value={newExam.duration}
                         onChange={e => setNewExam({...newExam, duration: parseInt(e.target.value)})}
-                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                       />
                     </div>
                     <div>
@@ -683,7 +683,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                         type="number"
                         value={newExam.price}
                         onChange={e => setNewExam({...newExam, price: parseFloat(e.target.value)})}
-                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                       />
                     </div>
                     <div>
@@ -693,7 +693,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                         min="0"
                         value={newExam.maxAttempts}
                         onChange={e => setNewExam({...newExam, maxAttempts: parseInt(e.target.value)})}
-                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                       />
                     </div>
                   </div>
@@ -704,7 +704,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                     type="checkbox"
                     checked={activeTab === 'courses' ? newCourse.isPublic : newExam.isPublic}
                     onChange={e => activeTab === 'courses' ? setNewCourse({...newCourse, isPublic: e.target.checked}) : setNewExam({...newExam, isPublic: e.target.checked})}
-                    className="w-4 h-4 text-emerald-600 rounded"
+                    className="w-4 h-4 text-purple-600 rounded"
                   />
                   <label className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Publish to Marketplace</label>
                 </div>
@@ -719,7 +719,7 @@ export const CourseManagement: React.FC<CourseManagementProps> = ({ onEditCourse
                   </button>
                   <button 
                     type="submit"
-                    className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+                    className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all shadow-lg shadow-purple-200"
                   >
                     {editingItem ? 'Save Changes' : 'Create'}
                   </button>

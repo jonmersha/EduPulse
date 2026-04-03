@@ -374,7 +374,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
             <button 
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all shadow-lg shadow-purple-200 disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               {isSaving ? 'Saving...' : 'Save Changes'}
@@ -432,7 +432,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
               onClick={() => setIsEditingCourse(true)}
               className={cn(
                 "group flex items-center gap-2 p-2 rounded-xl cursor-pointer transition-all",
-                isEditingCourse ? "bg-emerald-50 text-emerald-700 shadow-sm ring-1 ring-emerald-200" : "hover:bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                isEditingCourse ? "bg-purple-50 text-purple-700 shadow-sm ring-1 ring-purple-200" : "hover:bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
               )}
             >
               <Settings className="w-3.5 h-3.5" />
@@ -447,7 +447,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                   onClick={() => setSelectedSectionName(section.name)}
                   className={cn(
                     "flex items-center gap-2 cursor-pointer group",
-                    selectedSectionName === section.name ? "text-emerald-600" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white"
+                    selectedSectionName === section.name ? "text-purple-600" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white"
                   )}
                 >
                   <span className="text-[10px] font-black uppercase tracking-widest">{section.name}</span>
@@ -480,7 +480,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                       onClick={() => setSelectedLessonId(main.id)}
                       className={cn(
                         "group flex items-center justify-between p-2 rounded-xl cursor-pointer transition-all",
-                        selectedLessonId === main.id ? "bg-emerald-50 text-emerald-700 shadow-sm ring-1 ring-emerald-200" : "hover:bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                        selectedLessonId === main.id ? "bg-purple-50 text-purple-700 shadow-sm ring-1 ring-purple-200" : "hover:bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
                       )}
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -488,13 +488,13 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                         {main.type === 'video' ? <Video className="w-3.5 h-3.5" /> : main.type === 'pdf' ? <FileText className="w-3.5 h-3.5" /> : main.type === 'container' ? <Layers className="w-3.5 h-3.5" /> : <Type className="w-3.5 h-3.5" />}
                         <span className="text-sm font-bold truncate">{main.title}</span>
                         {resources.some(r => r.lessonId === main.id) && (
-                          <FileText className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
+                          <FileText className="w-2.5 h-2.5 text-purple-500 shrink-0" />
                         )}
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={(e) => { e.stopPropagation(); addLesson(section.name, main.id); }}
-                          className="p-1 hover:bg-emerald-100 rounded text-emerald-600"
+                          className="p-1 hover:bg-purple-100 rounded text-purple-600"
                           title="Add Sub-lesson"
                         >
                           <Plus className="w-3 h-3" />
@@ -517,14 +517,14 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                             onClick={() => setSelectedLessonId(sub.id)}
                             className={cn(
                               "group flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition-all",
-                              selectedLessonId === sub.id ? "bg-emerald-50/50 text-emerald-700 ring-1 ring-emerald-100" : "hover:bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500"
+                              selectedLessonId === sub.id ? "bg-purple-50/50 text-purple-700 ring-1 ring-purple-100" : "hover:bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500"
                             )}
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="text-[10px] font-bold text-zinc-300">{sub.order}</span>
                               <span className="text-xs font-medium truncate">{sub.title}</span>
                               {resources.some(r => r.lessonId === sub.id) && (
-                                <FileText className="w-2 h-2 text-emerald-400 shrink-0" />
+                                <FileText className="w-2 h-2 text-purple-400 shrink-0" />
                               )}
                             </div>
                             <button 
@@ -548,7 +548,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
               <p className="text-xs text-zinc-400 dark:text-zinc-500 italic">No content yet.</p>
               <button 
                 onClick={() => setShowSectionInput(true)}
-                className="mt-2 text-xs font-bold text-emerald-600 hover:underline"
+                className="mt-2 text-xs font-bold text-purple-600 hover:underline"
               >
                 Create your first section
               </button>
@@ -582,7 +582,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                         setShowAddResource(true);
                       }
                     }}
-                    className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+                    className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-2xl font-bold hover:bg-purple-700 transition-all shadow-lg shadow-purple-200"
                   >
                     {showAddResource ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                     {showAddResource ? 'Cancel' : 'Add New Resource'}
@@ -605,7 +605,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                           placeholder="e.g. Course Syllabus"
                           value={newResource.title}
                           onChange={e => setNewResource({...newResource, title: e.target.value})}
-                          className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                          className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition-all"
                           required
                         />
                       </div>
@@ -616,7 +616,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                           placeholder="https://example.com/file.pdf"
                           value={newResource.url}
                           onChange={e => setNewResource({...newResource, url: e.target.value})}
-                          className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                          className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition-all"
                           required
                         />
                       </div>
@@ -628,7 +628,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                         <select 
                           value={newResource.type}
                           onChange={e => setNewResource({...newResource, type: e.target.value})}
-                          className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                          className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition-all"
                         >
                           <option value="link">Link</option>
                           <option value="pdf">PDF</option>
@@ -642,7 +642,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                         <select 
                           value={newResource.section}
                           onChange={e => setNewResource({...newResource, section: e.target.value})}
-                          className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                          className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition-all"
                         >
                           <option value="General">General (Course Wide)</option>
                           {sections.map((s) => (
@@ -655,7 +655,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                         <select 
                           value={newResource.lessonId}
                           onChange={e => setNewResource({...newResource, lessonId: e.target.value})}
-                          className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                          className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition-all"
                         >
                           <option value="">None (Section Wide)</option>
                           {lessons.map(l => (
@@ -674,7 +674,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                 <div className="grid grid-cols-1 gap-4">
                   {resources.length > 0 ? resources.map((resource, index) => (
                     <div key={`${resource.id}-${index}`} className="group flex items-center gap-6 p-6 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[2rem] hover:shadow-xl transition-all">
-                      <div className="w-16 h-16 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-all">
+                      <div className="w-16 h-16 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 group-hover:bg-purple-50 group-hover:text-purple-600 transition-all">
                         {resource.type === 'pdf' ? <FileText className="w-8 h-8" /> : 
                          resource.type === 'video' ? <Video className="w-8 h-8" /> : 
                          <LinkIcon className="w-8 h-8" />}
@@ -704,13 +704,13 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                           href={resource.url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="p-3 bg-zinc-50 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                          className="p-3 bg-zinc-50 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all"
                         >
                           <ExternalLink className="w-5 h-5" />
                         </a>
                         <button 
                           onClick={() => handleEditResource(resource)}
-                          className="p-3 bg-zinc-50 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                          className="p-3 bg-zinc-50 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all"
                         >
                           <Pencil className="w-5 h-5" />
                         </button>
@@ -748,7 +748,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                     </div>
                     <button 
                       onClick={() => { setQuizType('final'); setShowQuizEditor(true); }}
-                      className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-emerald-700"
+                      className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-purple-700"
                     >
                       Add Final Exam
                     </button>
@@ -769,7 +769,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                     <textarea 
                       value={editingCourseData.description || ''}
                       onChange={e => setEditingCourseData({...editingCourseData, description: e.target.value})}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm font-mono min-h-[400px]"
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-sm font-mono min-h-[400px]"
                       placeholder="Write a comprehensive overview of your course..."
                     />
                   </div>
@@ -792,7 +792,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                     </div>
                     <button 
                       onClick={() => { setQuizType('section'); setShowQuizEditor(true); }}
-                      className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-emerald-700"
+                      className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-purple-700"
                     >
                       Add Section Quiz
                     </button>
@@ -813,7 +813,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                     <textarea 
                       value={editingSection.overview || ''}
                       onChange={e => setEditingSection({...editingSection, overview: e.target.value})}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm font-mono min-h-[300px]"
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-sm font-mono min-h-[300px]"
                       placeholder="Write an overview for this section..."
                     />
                   </div>
@@ -832,7 +832,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                     <div className="flex items-center gap-2">
                       <button 
                         onClick={() => { setQuizType('lesson'); setShowQuizEditor(true); }}
-                        className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-emerald-700"
+                        className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-purple-700"
                       >
                         Add Quiz
                       </button>
@@ -880,7 +880,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                             onClick={() => setEditingLesson({...editingLesson, type: t.id})}
                             className={cn(
                               "flex-1 flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all",
-                              editingLesson.type === t.id ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-zinc-50 dark:bg-zinc-800 border-black/5 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800"
+                              editingLesson.type === t.id ? "bg-purple-50 border-purple-200 text-purple-700" : "bg-zinc-50 dark:bg-zinc-800 border-black/5 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800"
                             )}
                           >
                             <t.icon className="w-5 h-5" />
@@ -894,7 +894,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                       <select 
                         value={editingLesson.section}
                         onChange={e => setEditingLesson({...editingLesson, section: e.target.value})}
-                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm font-medium"
+                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-sm font-medium"
                       >
                         {sections.map((s, index) => (
                           <option key={s.id} value={s.name}>{s.name}</option>
@@ -908,7 +908,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                     <textarea 
                       value={editingLesson.shortDescription || ''}
                       onChange={e => setEditingLesson({...editingLesson, shortDescription: e.target.value})}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm min-h-[80px]"
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-sm min-h-[80px]"
                       placeholder="Brief summary for the sidebar or overview..."
                     />
                   </div>
@@ -920,7 +920,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                         type="url"
                         value={editingLesson.videoUrl || ''}
                         onChange={e => setEditingLesson({...editingLesson, videoUrl: e.target.value})}
-                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm"
+                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-sm"
                         placeholder="https://www.youtube.com/watch?v=..."
                       />
                     </div>
@@ -933,7 +933,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                         type="url"
                         value={editingLesson.pdfUrl || ''}
                         onChange={e => setEditingLesson({...editingLesson, pdfUrl: e.target.value})}
-                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm"
+                        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-sm"
                         placeholder="https://example.com/document.pdf"
                       />
                     </div>
@@ -944,7 +944,7 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                     <textarea 
                       value={editingLesson.content || ''}
                       onChange={e => setEditingLesson({...editingLesson, content: e.target.value})}
-                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm font-mono min-h-[300px]"
+                      className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-black/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-sm font-mono min-h-[300px]"
                       placeholder="Write your lesson content here using Markdown..."
                     />
                   </div>

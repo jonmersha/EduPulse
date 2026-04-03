@@ -185,7 +185,7 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
                       {q.text}
                     </h3>
                     {isCorrect ? (
-                      <CheckCircle className="w-6 h-6 text-emerald-500 shrink-0" />
+                      <CheckCircle className="w-6 h-6 text-purple-500 shrink-0" />
                     ) : (
                       <XCircle className="w-6 h-6 text-red-500 shrink-0" />
                     )}
@@ -195,7 +195,7 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
                     {q.options.map((option: any) => {
                       let style = "border-zinc-100 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500";
                       if (option.index === q.correctAnswer) {
-                        style = "border-emerald-500 bg-emerald-50 text-emerald-700";
+                        style = "border-purple-500 bg-purple-50 text-purple-700";
                       } else if (option.index === answers[q.tempId] && !isCorrect) {
                         style = "border-red-500 bg-red-50 text-red-700";
                       }
@@ -231,14 +231,14 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
 
     return (
       <div className="max-w-2xl mx-auto p-8 bg-white dark:bg-zinc-900 border border-black/5 rounded-[2rem] shadow-xl text-center space-y-6">
-        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+        <div className="w-20 h-20 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto">
           <Trophy className="w-10 h-10" />
         </div>
         <h2 className="text-3xl font-bold">Exam Completed!</h2>
         <div className="grid grid-cols-2 gap-4 py-6">
           <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl">
             <p className="text-sm text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Your Score</p>
-            <p className="text-4xl font-black text-emerald-600">{result.score.toFixed(1)}%</p>
+            <p className="text-4xl font-black text-purple-600">{result.score.toFixed(1)}%</p>
           </div>
           <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl">
             <p className="text-sm text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-wider">Correct</p>
@@ -249,7 +249,7 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
         <div className="flex flex-col gap-3">
           <button 
             onClick={() => setShowReview(true)}
-            className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+            className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-purple-700 transition-all shadow-lg shadow-purple-200"
           >
             Review Answers
           </button>
@@ -291,7 +291,7 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
           </div>
           <div className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
             <motion.div 
-              className="h-full bg-emerald-500"
+              className="h-full bg-purple-500"
               initial={{ width: 0 }}
               animate={{ width: `${((currentQuestionIndex + 1) / shuffledQuestions.length) * 100}%` }}
             />
@@ -307,12 +307,12 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
                 onClick={() => setAnswers({ ...answers, [currentQuestion.tempId]: option.index })}
                 className={`flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left font-bold ${
                   answers[currentQuestion.tempId] === option.index
-                    ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                    ? "border-purple-500 bg-purple-50 text-purple-700"
                     : "border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300"
                 }`}
               >
                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                  answers[currentQuestion.tempId] === option.index ? "border-emerald-500 bg-emerald-500 text-white" : "border-zinc-200 dark:border-zinc-800"
+                  answers[currentQuestion.tempId] === option.index ? "border-purple-500 bg-purple-500 text-white" : "border-zinc-200 dark:border-zinc-800"
                 }`}>
                   {answers[currentQuestion.tempId] === option.index && <CheckCircle2 className="w-4 h-4" />}
                 </div>
@@ -333,7 +333,7 @@ export const ExamViewer: React.FC<ExamViewerProps> = ({ examId, onBack }) => {
           {currentQuestionIndex === shuffledQuestions.length - 1 ? (
             <button
               onClick={handleSubmit}
-              className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+              className="px-8 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all shadow-lg shadow-purple-200"
             >
               Submit Exam
             </button>

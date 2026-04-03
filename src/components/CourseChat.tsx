@@ -92,12 +92,12 @@ export const CourseChat: React.FC<CourseChatProps> = ({ courseId }) => {
           value={newMessage}
           onChange={e => setNewMessage(e.target.value)}
           placeholder="Type a message..."
-          className="flex-1 px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm transition-all"
+          className="flex-1 px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-sm transition-all"
         />
         <button 
           type="submit" 
           disabled={!newMessage.trim()}
-          className="p-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center justify-center shrink-0"
+          className="p-2.5 bg-emerald-600 text-white rounded-xl hover:bg-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center justify-center shrink-0"
         >
           <Send className="w-4 h-4" />
         </button>

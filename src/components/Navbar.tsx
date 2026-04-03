@@ -60,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               <input 
                 type="text" 
                 placeholder="Search" 
-                className="block w-64 pl-10 pr-3 py-1.5 border-none rounded bg-[#EEF3F8] dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 dark:text-white transition-all focus:w-80"
+                className="block w-64 pl-10 pr-3 py-1.5 border-none rounded bg-[#EEF3F8] dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600 dark:text-white transition-all focus:w-80"
               />
             </div>
             <button className="md:hidden p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full">

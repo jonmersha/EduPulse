@@ -58,7 +58,7 @@ export const AISummary: React.FC<AISummaryProps> = ({ content, title }) => {
         <button 
           onClick={handleSummarize}
           disabled={loading}
-          className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 flex items-center justify-center gap-2"
+          className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-purple-700 transition-all shadow-xl shadow-purple-100 flex items-center justify-center gap-2"
         >
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Generate Summary'}
         </button>
