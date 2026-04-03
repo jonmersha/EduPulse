@@ -52,6 +52,8 @@ import { RelatedCourses } from './RelatedCourses';
 import { useEnrollment } from '../hooks/useEnrollment';
 import { OperationType, handleFirestoreError } from '../lib/firestore-errors';
 
+import { ExamViewer } from './ExamViewer';
+
 interface LessonViewerProps {
   courseId: string;
   onBack: () => void;
@@ -75,12 +77,14 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
   const [expandedLessons, setExpandedLessons] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'resources' | 'qa' | 'chat' | 'students' | 'contents'>('overview');
   const [isMobile, setIsMobile] = useState(false);
+  const [selectedExam, setSelectedExam] = useState<string | null>(null);
 
   // Resource & Q&A State
   const [resources, setResources] = useState<any[]>([]);
   const [questions, setQuestions] = useState<any[]>([]);
   const [answers, setAnswers] = useState<{ [key: string]: any[] }>({});
   const [enrolledStudents, setEnrolledStudents] = useState<any[]>([]);
+  const [exams, setExams] = useState<any[]>([]);
   const [newResource, setNewResource] = useState({ title: '', url: '', type: 'link', context: 'lesson' as 'lesson' | 'section' | 'course' });
   const [newQuestion, setNewQuestion] = useState('');
   const [newAnswer, setNewAnswer] = useState<{ [key: string]: string }>({});
@@ -149,6 +153,12 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
           }, (error) => handleFirestoreError(error, OperationType.LIST, 'answers'));
         });
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'questions'));
+
+      // Fetch Exams
+      const examsQ = query(collection(db, 'exams'), where('courseId', '==', courseId));
+      onSnapshot(examsQ, (snapshot) => {
+        setExams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'exams'));
     }
 
     return () => {
@@ -389,6 +399,10 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
   };
 
   if (loading || enrollmentLoading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /></div>;
+
+  if (selectedExam) {
+    return <ExamViewer examId={selectedExam} onBack={() => setSelectedExam(null)} />;
+  }
 
   if (!enrollment && !course?.isPublic) {
     return (
@@ -755,6 +769,44 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                                   {section.overview && (
                                     <p className="text-zinc-600 text-sm line-clamp-2">{section.overview}</p>
                                   )}
+                                  {/* Section Quiz */}
+                                  {exams.filter(e => e.sectionId === section.id).map(exam => (
+                                    <div key={exam.id} className="mt-4 p-4 bg-white border border-emerald-100 rounded-xl flex items-center justify-between">
+                                      <div>
+                                        <h5 className="font-bold text-emerald-900">{exam.title}</h5>
+                                        <p className="text-xs text-emerald-700 mt-1">{exam.questions?.length || 0} Questions</p>
+                                      </div>
+                                      <button 
+                                        onClick={() => setSelectedExam(exam.id)}
+                                        className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg font-bold text-sm hover:bg-emerald-200 transition-all"
+                                      >
+                                        Take Quiz
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Final Exam */}
+                        {exams.filter(e => e.type === 'final').length > 0 && (
+                          <div className="pt-12 border-t border-zinc-100">
+                            <h3 className="text-xl font-bold text-zinc-900 mb-6">Final Exam</h3>
+                            <div className="space-y-4">
+                              {exams.filter(e => e.type === 'final').map(exam => (
+                                <div key={exam.id} className="p-6 bg-emerald-600 rounded-2xl border border-emerald-700 flex items-center justify-between shadow-lg">
+                                  <div>
+                                    <h4 className="font-bold text-white text-xl">{exam.title}</h4>
+                                    <p className="text-emerald-100 mt-1">{exam.questions?.length || 0} Questions • {exam.duration || 0} Minutes</p>
+                                  </div>
+                                  <button 
+                                    onClick={() => setSelectedExam(exam.id)}
+                                    className="px-6 py-3 bg-white text-emerald-700 rounded-xl font-black shadow-sm hover:bg-emerald-50 transition-all"
+                                  >
+                                    Start Exam
+                                  </button>
                                 </div>
                               ))}
                             </div>
@@ -955,6 +1007,24 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                               </div>
                             </div>
                           )}
+
+                          {/* Lesson Quiz */}
+                          {exams.filter(e => e.lessonId === currentLesson.id).map(exam => (
+                            <div key={exam.id} className="mt-8 p-6 bg-emerald-50 border border-emerald-200 rounded-2xl">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h3 className="text-lg font-bold text-emerald-900">{exam.title}</h3>
+                                  <p className="text-sm text-emerald-700 mt-1">{exam.questions?.length || 0} Questions</p>
+                                </div>
+                                <button 
+                                  onClick={() => setSelectedExam(exam.id)}
+                                  className="px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all"
+                                >
+                                  Take Quiz
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       ) : null}
 

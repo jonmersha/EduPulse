@@ -11,7 +11,6 @@ import { CourseManagement } from '../pages/CourseManagement';
 import { AdminView } from '../pages/AdminView';
 import { ParentView } from '../pages/ParentView';
 import { SettingsView } from '../pages/SettingsView';
-import { SeedData } from './SeedData';
 
 import { CourseEditorPage } from '../pages/CourseEditorPage';
 import { ExamEditor } from './ExamEditor';
@@ -35,7 +34,6 @@ export const MainApp: React.FC = () => {
     <div className="h-screen flex flex-col bg-[#F9F9F8] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans overflow-hidden">
       <Navbar activeTab={activeTab} setActiveTab={handleTabChange} />
       <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-20 md:pb-8 relative">
-        <SeedData />
         <AnimatePresence mode="wait">
             <motion.div
               key={activeTab + (selectedCourse || '') + (selectedCourseForEdit || '') + (selectedExam || '') + (selectedExamForEdit || '')}
