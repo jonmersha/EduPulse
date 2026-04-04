@@ -42,6 +42,8 @@ export const SchoolManagerView: React.FC = () => {
   useEffect(() => {
     if (!profile) return;
     
+    setLoading(true);
+    
     // Fetch all schools managed by this user
     const managedSchoolsQuery = query(collection(db, 'schools'), where('managerId', '==', profile.uid));
     const unsubManaged = onSnapshot(managedSchoolsQuery, (snap) => {

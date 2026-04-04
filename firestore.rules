@@ -71,7 +71,12 @@ service cloud.firestore {
 
     function isTeacher() {
       let userData = getUserData();
-      return isAuthenticated() && (userData.get('role', '') == 'teacher' || userData.get('role', '') == 'provider' || isSuperAdmin());
+      return isAuthenticated() && (
+        userData.get('role', '') == 'teacher' || 
+        userData.get('role', '') == 'provider' || 
+        userData.get('role', '') == 'admin' || 
+        isSuperAdmin()
+      );
     }
 
     function isCourseTeacher(courseId) {
@@ -100,7 +105,11 @@ service cloud.firestore {
 
     function isTeacherInSchool(schoolId) {
       let userData = getUserData();
-      return userData.role == 'teacher' && (userData.schoolId == schoolId || (userData.schoolIds != null && schoolId in userData.schoolIds));
+      let role = userData.get('role', '');
+      return (role == 'teacher' || role == 'admin' || role == 'provider') && (
+        userData.get('schoolId', '') == schoolId || 
+        (userData.get('schoolIds', []) is list && schoolId in userData.get('schoolIds', []))
+      );
     }
 
     function hasOnlyAllowedFields(fields) {
@@ -230,7 +239,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         isOwner(uid) || 
         isSuperAdmin() || 
-        (getUserData().get('schoolId', '') != '' && getUserData().schoolId == resource.data.get('schoolId', ''))
+        isSchoolAdmin(resource.data.get('schoolId', ''))
       );
       allow create: if isAuthenticated() && (
         isOwner(uid) || 
@@ -253,17 +262,17 @@ service cloud.firestore {
     }
 
     match /classes/{classId} {
-      allow read: if isAuthenticated() && (getUserData().schoolId == resource.data.schoolId || isSuperAdmin());
+      allow read: if isAuthenticated() && (isSchoolAdmin(resource.data.get('schoolId', '')) || isSuperAdmin());
       allow create: if isAuthenticated() && (isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == request.resource.data.schoolId)) && isValidClass(request.resource.data);
       allow update: if (isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId)) && isValidClass(request.resource.data);
       allow delete: if isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId);
     }
 
     match /courses/{courseId} {
-      allow read: if resource.data.isPublic == true || isAuthenticated();
+      allow read: if isAuthenticated();
       allow create: if isSuperAdmin() || (isTeacher() && isValidCourse(request.resource.data));
-      allow update: if isSuperAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid && isValidCourse(request.resource.data));
-      allow delete: if isSuperAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
+      allow update: if isSuperAdmin() || (isTeacher() && (resource.data.teacherId == request.auth.uid || isSchoolAdmin(resource.data.schoolId)) && isValidCourse(request.resource.data));
+      allow delete: if isSuperAdmin() || (isTeacher() && (resource.data.teacherId == request.auth.uid || isSchoolAdmin(resource.data.schoolId)));
     }
 
     match /lessons/{lessonId} {
@@ -330,18 +339,19 @@ service cloud.firestore {
     match /exams/{examId} {
       allow read: if isAuthenticated();
       allow create: if isSuperAdmin() || (isTeacher() && isValidExam(request.resource.data));
-      allow update: if isSuperAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid && isValidExam(request.resource.data));
-      allow delete: if isSuperAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
+      allow update: if isSuperAdmin() || (isTeacher() && (resource.data.teacherId == request.auth.uid || isSchoolAdmin(resource.data.get('schoolId', ''))) && isValidExam(request.resource.data));
+      allow delete: if isSuperAdmin() || (isTeacher() && (resource.data.teacherId == request.auth.uid || isSchoolAdmin(resource.data.get('schoolId', ''))));
     }
 
     match /examResults/{resultId} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() || 
         isTeacher() || 
+        getUserData().get('role', '') == 'admin' ||
         (resource != null && resource.data.studentId == request.auth.uid)
       );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.studentId && isValidExamResult(request.resource.data);
-      allow update: if isSuperAdmin();
+      allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.studentId || isTeacher()) && isValidExamResult(request.resource.data);
+      allow update: if isSuperAdmin() || (isTeacher() && isSchoolAdmin(resource.data.get('schoolId', '')));
     }
 
     match /resources/{resourceId} {
