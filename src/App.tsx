@@ -6,7 +6,7 @@ import { auth, db, googleProvider, handleFirestoreError, OperationType } from '.
 import { LogIn, LogOut, School, Users, UserPlus, BookOpen, Settings, Plus, Trash2, Upload, Link as LinkIcon, ChevronRight, Search, LayoutDashboard, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import SuperAdminView from './pages/SuperAdminView';
-import { SchoolManagerView } from './pages/SchoolManagerView';
+import SchoolManagerView from './pages/SchoolManagerView';
 import ManagerDashboard from './pages/ManagerDashboard';
 import TeacherView from './pages/TeacherView';
 import { Dashboard as StudentView } from './pages/Dashboard';

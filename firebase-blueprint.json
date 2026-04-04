@@ -2,295 +2,72 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "A user of the LMS platform.",
+      "description": "Represents any user in the system (Admin, Manager, Teacher, Student, Parent).",
       "type": "object",
       "properties": {
         "uid": { "type": "string", "description": "Firebase Auth UID" },
-        "email": { "type": "string", "format": "email" },
-        "displayName": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "teacher", "student", "parent", "provider", "super_admin"] },
-        "schoolId": { "type": "string", "description": "Primary school ID" },
-        "schoolIds": { "type": "array", "items": { "type": "string" }, "description": "List of schools the teacher is linked to" },
+        "name": { "type": "string", "description": "Full name of the user" },
+        "email": { "type": "string", "format": "email", "description": "Email address" },
+        "role": { 
+          "type": "string", 
+          "enum": ["super_admin", "school_manager", "teacher", "student", "parent"],
+          "description": "User's role in the system"
+        },
+        "schoolId": { "type": "string", "description": "ID of the school the user belongs to (if applicable)" },
         "classId": { "type": "string", "description": "ID of the class the student belongs to" },
-        "specialization": { "type": "string", "description": "Teacher's subject specialization" },
-        "isIndependent": { "type": "boolean", "description": "True if user is an independent provider or learner" },
-        "status": { "type": "string", "enum": ["active", "inactive"] },
-        "photoURL": { "type": "string", "format": "uri" },
+        "studentIds": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "List of student UIDs (for parents)"
+        },
+        "parentIds": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "List of parent UIDs (for students)"
+        },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["uid", "email", "role"]
+      "required": ["uid", "name", "email", "role"]
     },
     "School": {
       "title": "School",
-      "description": "A school organization on the platform.",
+      "description": "Represents a school entity.",
       "type": "object",
       "properties": {
+        "id": { "type": "string" },
         "name": { "type": "string" },
         "address": { "type": "string" },
-        "contactEmail": { "type": "string", "format": "email" },
-        "contactPhone": { "type": "string" },
-        "academicStructure": { "type": "string", "description": "e.g. K-12, Higher Ed" },
-        "adminId": { "type": "string", "description": "UID of the school administrator" },
-        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "managerId": { "type": "string", "description": "UID of the school manager" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["name", "adminId"]
+      "required": ["name"]
     },
     "Class": {
       "title": "Class",
-      "description": "A specific class within a school.",
+      "description": "Represents a class within a school.",
       "type": "object",
       "properties": {
+        "id": { "type": "string" },
+        "schoolId": { "type": "string" },
         "name": { "type": "string" },
-        "schoolId": { "type": "string" },
-        "teacherId": { "type": "string", "description": "Primary teacher for the class" },
-        "grade": { "type": "string" },
-        "year": { "type": "string", "description": "Academic year" },
+        "teacherId": { "type": "string", "description": "UID of the teacher assigned to this class" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["name", "schoolId", "year"]
-    },
-    "Course": {
-      "title": "Course",
-      "description": "A course offered by a school or publicly.",
-      "type": "object",
-      "properties": {
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "schoolId": { "type": "string" },
-        "classId": { "type": "string", "description": "If assigned to a specific class" },
-        "teacherId": { "type": "string" },
-        "isPublic": { "type": "boolean" },
-        "price": { "type": "number" },
-        "category": { "type": "string" },
-        "thumbnail": { "type": "string", "format": "uri" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["title", "teacherId"]
-    },
-    "Section": {
-      "title": "Section",
-      "description": "A section within a course.",
-      "type": "object",
-      "properties": {
-        "courseId": { "type": "string" },
-        "name": { "type": "string" },
-        "overview": { "type": "string", "description": "Markdown content for section overview" },
-        "order": { "type": "integer" }
-      },
-      "required": ["courseId", "name"]
-    },
-    "Lesson": {
-      "title": "Lesson",
-      "description": "A specific lesson within a course.",
-      "type": "object",
-      "properties": {
-        "courseId": { "type": "string" },
-        "title": { "type": "string" },
-        "shortDescription": { "type": "string", "description": "Brief summary of the lesson" },
-        "content": { "type": "string", "description": "Markdown content" },
-        "videoUrl": { "type": "string", "description": "YouTube or direct video URL" },
-        "pdfUrl": { "type": "string", "description": "URL to PDF file" },
-        "section": { "type": "string", "description": "Group lessons into sections" },
-        "subSection": { "type": "string", "description": "Further group lessons into sub-sections" },
-        "parentId": { "type": "string", "description": "ID of the parent lesson if this is a sub-lesson" },
-        "type": { "type": "string", "enum": ["text", "video", "pdf", "quiz"] },
-        "order": { "type": "integer" }
-      },
-      "required": ["courseId", "title", "type"]
-    },
-    "Assignment": {
-      "title": "Assignment",
-      "description": "An assignment for students.",
-      "type": "object",
-      "properties": {
-        "courseId": { "type": "string" },
-        "lessonId": { "type": "string" },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "dueDate": { "type": "string", "format": "date-time" }
-      },
-      "required": ["courseId", "title"]
-    },
-    "Submission": {
-      "title": "Submission",
-      "description": "A student's submission for an assignment.",
-      "type": "object",
-      "properties": {
-        "assignmentId": { "type": "string" },
-        "studentId": { "type": "string" },
-        "content": { "type": "string" },
-        "grade": { "type": "number" },
-        "feedback": { "type": "string" },
-        "submittedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["assignmentId", "studentId"]
-    },
-    "Enrollment": {
-      "title": "Enrollment",
-      "description": "A student's enrollment in a course or exam.",
-      "type": "object",
-      "properties": {
-        "studentId": { "type": "string" },
-        "courseId": { "type": "string" },
-        "examId": { "type": "string", "description": "If enrolling in a standalone exam" },
-        "courseTitle": { "type": "string" },
-        "enrolledAt": { "type": "string", "format": "date-time" },
-        "progress": { "type": "number" },
-        "completedLessons": { "type": "array", "items": { "type": "string" } },
-        "paymentVerified": { "type": "boolean", "description": "For paid public content" },
-        "status": { "type": "string", "enum": ["pending", "approved", "denied"], "description": "Enrollment approval status" }
-      },
-      "required": ["studentId", "courseId", "status"]
-    },
-    "Exam": {
-      "title": "Exam",
-      "description": "An examination, quiz, or assignment test.",
-      "type": "object",
-      "properties": {
-        "courseId": { "type": "string" },
-        "lessonId": { "type": "string", "description": "If quiz is for a lesson" },
-        "sectionId": { "type": "string", "description": "If quiz is for a section" },
-        "type": { "type": "string", "enum": ["lesson", "section", "final"] },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "duration": { "type": "integer", "description": "Minutes" },
-        "passingScore": { "type": "number" },
-        "questions": { "type": "array", "items": { "type": "object" } },
-        "isPublic": { "type": "boolean" },
-        "price": { "type": "number" },
-        "teacherId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["title", "teacherId", "type"]
-    },
-    "ExamResult": {
-      "title": "ExamResult",
-      "description": "A student's result for an exam.",
-      "type": "object",
-      "properties": {
-        "examId": { "type": "string" },
-        "studentId": { "type": "string" },
-        "score": { "type": "number" },
-        "totalQuestions": { "type": "integer" },
-        "correctAnswers": { "type": "integer" },
-        "feedback": { "type": "string" },
-        "completedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["examId", "studentId", "score"]
-    },
-    "Resource": {
-      "title": "Resource",
-      "description": "A resource linked to a course or lesson.",
-      "type": "object",
-      "properties": {
-        "courseId": { "type": "string" },
-        "lessonId": { "type": "string", "description": "Optional: link to specific lesson" },
-        "title": { "type": "string" },
-        "url": { "type": "string", "format": "uri" },
-        "type": { "type": "string", "enum": ["pdf", "link", "video", "document", "other"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["courseId", "title", "url", "type"]
-    },
-    "Question": {
-      "title": "Question",
-      "description": "A question asked by a student in a course.",
-      "type": "object",
-      "properties": {
-        "courseId": { "type": "string" },
-        "lessonId": { "type": "string" },
-        "studentId": { "type": "string" },
-        "studentName": { "type": "string" },
-        "content": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["courseId", "studentId", "content"]
-    },
-    "Answer": {
-      "title": "Answer",
-      "description": "An answer to a question.",
-      "type": "object",
-      "properties": {
-        "questionId": { "type": "string" },
-        "userId": { "type": "string" },
-        "userName": { "type": "string" },
-        "userRole": { "type": "string" },
-        "content": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["questionId", "userId", "content"]
-    },
-    "ChatMessage": {
-      "title": "ChatMessage",
-      "description": "A message in a course-specific chat room.",
-      "type": "object",
-      "properties": {
-        "courseId": { "type": "string" },
-        "senderId": { "type": "string" },
-        "senderName": { "type": "string" },
-        "content": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["courseId", "senderId", "content", "createdAt"]
-    },
-    "Conversation": {
-      "title": "Conversation",
-      "description": "A private conversation between two students.",
-      "type": "object",
-      "properties": {
-        "courseId": { "type": "string" },
-        "participants": { "type": "array", "items": { "type": "string" } },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["courseId", "participants", "createdAt"]
-    },
-    "DirectMessage": {
-      "title": "DirectMessage",
-      "description": "A message in a private conversation.",
-      "type": "object",
-      "properties": {
-        "conversationId": { "type": "string" },
-        "senderId": { "type": "string" },
-        "senderName": { "type": "string" },
-        "content": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["conversationId", "senderId", "content", "createdAt"]
-    },
-    "JoinRequest": {
-      "title": "JoinRequest",
-      "description": "A request from a user to join a school.",
-      "type": "object",
-      "properties": {
-        "schoolId": { "type": "string" },
-        "userId": { "type": "string" },
-        "userEmail": { "type": "string" },
-        "userName": { "type": "string" },
-        "role": { "type": "string", "enum": ["student", "teacher", "parent"] },
-        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["schoolId", "userId", "role", "status"]
+      "required": ["schoolId", "name"]
     }
   },
   "firestore": {
-    "/users/{uid}": { "schema": "User", "description": "User profiles" },
-    "/schools/{schoolId}": { "schema": "School", "description": "School details" },
-    "/classes/{classId}": { "schema": "Class", "description": "Class details" },
-    "/courses/{courseId}": { "schema": "Course", "description": "Course details" },
-    "/lessons/{lessonId}": { "schema": "Lesson", "description": "Lesson content" },
-    "/assignments/{assignmentId}": { "schema": "Assignment", "description": "Assignments" },
-    "/submissions/{submissionId}": { "schema": "Submission", "description": "Student submissions" },
-    "/courses/{courseId}/enrollments/{enrollmentId}": { "schema": "Enrollment", "description": "Course enrollments" },
-    "/exams/{examId}": { "schema": "Exam", "description": "Exams" },
-    "/examResults/{resultId}": { "schema": "ExamResult", "description": "Exam results" },
-    "/resources/{resourceId}": { "schema": "Resource", "description": "Course resources" },
-    "/questions/{questionId}": { "schema": "Question", "description": "Course questions" },
-    "/answers/{answerId}": { "schema": "Answer", "description": "Question answers" },
-    "/chatMessages/{messageId}": { "schema": "ChatMessage", "description": "Course chat messages" },
-    "/conversations/{conversationId}": { "schema": "Conversation", "description": "Private conversations" },
-    "/directMessages/{messageId}": { "schema": "DirectMessage", "description": "Direct messages" },
-    "/joinRequests/{requestId}": { "schema": "JoinRequest", "description": "School join requests" }
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles and roles."
+    },
+    "/schools/{schoolId}": {
+      "schema": "School",
+      "description": "School details."
+    },
+    "/schools/{schoolId}/classes/{classId}": {
+      "schema": "Class",
+      "description": "Classes within a school."
+    }
   }
 }

@@ -15,8 +15,7 @@ export const SchoolManagerView: React.FC = () => {
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
-  const [joinRequests, setJoinRequests] = useState<any[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState<'schools' | 'classes' | 'users' | 'courses' | 'exams' | 'payments' | 'profile' | 'requests'>('classes');
+  const [activeSubTab, setActiveSubTab] = useState<'schools' | 'classes' | 'users' | 'courses' | 'exams' | 'payments' | 'profile'>('schools');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'teacher' | 'student' | 'parent'>('all');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'verified' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,10 +39,10 @@ export const SchoolManagerView: React.FC = () => {
   const [showEditSchoolModal, setShowEditSchoolModal] = useState(false);
 
   // Form states
-  const [newClass, setNewClass] = useState({ name: '', grade: '', year: new Date().getFullYear().toString(), teacherId: '', schoolId: '' });
+  const [newClass, setNewClass] = useState({ name: '', grade: '', year: '', teacherId: '', schoolId: '' });
   const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolId: '', isIndependent: false, studentIds: [] as string[] });
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [schoolForm, setSchoolForm] = useState({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12', website: '', description: '', principalName: '', logoUrl: '' });
+  const [schoolForm, setSchoolForm] = useState({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
 
   useEffect(() => {
     if (!profile) return;
@@ -101,19 +100,10 @@ export const SchoolManagerView: React.FC = () => {
           address: data.address || '',
           adminEmail: data.adminEmail || '',
           contactPhone: data.contactPhone || '',
-          academicStructure: data.academicStructure || 'K-12',
-          website: data.website || '',
-          description: data.description || '',
-          principalName: data.principalName || '',
-          logoUrl: data.logoUrl || ''
+          academicStructure: data.academicStructure || 'K-12'
         });
       }
     }, (error) => handleFirestoreError(error, OperationType.GET, `schools/${currentSchoolId}`));
-
-    const requestsQuery = query(collection(db, 'joinRequests'), where('schoolId', '==', currentSchoolId), where('status', '==', 'pending'));
-    const unsubRequests = onSnapshot(requestsQuery, (snap) => {
-      setJoinRequests(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'joinRequests'));
 
     return () => {
       unsubClasses();
@@ -123,7 +113,6 @@ export const SchoolManagerView: React.FC = () => {
       unsubEnrollments();
       unsubSchool();
       unsubManaged();
-      unsubRequests();
     };
   }, [profile, courses.length]);
 
@@ -199,45 +188,6 @@ export const SchoolManagerView: React.FC = () => {
       studentIds: []
     });
     setShowAddModal(true);
-  };
-
-  const handleApproveRequest = async (request: any) => {
-    try {
-      // Update request status
-      await setDoc(doc(db, 'joinRequests', request.id), {
-        status: 'approved',
-        updatedAt: Timestamp.now()
-      }, { merge: true });
-
-      // Update user profile
-      const userRef = doc(db, 'users', request.userId);
-      const userUpdate: any = {
-        schoolId: request.schoolId,
-        updatedAt: Timestamp.now()
-      };
-      
-      // If they are a teacher, we might want to add to schoolIds instead of just schoolId
-      // But for simplicity, we'll set schoolId and role if they don't have one
-      if (request.role) {
-        userUpdate.role = request.role;
-      }
-      
-      await setDoc(userRef, userUpdate, { merge: true });
-      alert('Request approved successfully!');
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `joinRequests/${request.id}`);
-    }
-  };
-
-  const handleRejectRequest = async (requestId: string) => {
-    try {
-      await setDoc(doc(db, 'joinRequests', requestId), {
-        status: 'rejected',
-        updatedAt: Timestamp.now()
-      }, { merge: true });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `joinRequests/${requestId}`);
-    }
   };
 
   const handleUpdateSchool = async (e: React.FormEvent) => {
@@ -409,7 +359,7 @@ export const SchoolManagerView: React.FC = () => {
       
       alert('School created successfully! It is now pending approval from a Super Admin.');
       setShowCreateSchool(false);
-      setSchoolForm({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12', website: '', description: '', principalName: '', logoUrl: '' });
+      setSchoolForm({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
       // The onSnapshot will update the managedSchools list
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'schools/new');
@@ -446,12 +396,6 @@ export const SchoolManagerView: React.FC = () => {
     }
   };
 
-  const openLinkModal = (parent: any) => {
-    setLinkingParent(parent);
-    setSelectedStudentIds(parent.studentIds || []);
-    setShowLinkModal(true);
-  };
-
   const startEditSchool = (school: any) => {
     setEditingSchool(school);
     setSchoolForm({
@@ -459,11 +403,7 @@ export const SchoolManagerView: React.FC = () => {
       address: school.address || '',
       adminEmail: school.adminEmail || '',
       contactPhone: school.contactPhone || '',
-      academicStructure: school.academicStructure || 'K-12',
-      website: school.website || '',
-      description: school.description || '',
-      principalName: school.principalName || '',
-      logoUrl: school.logoUrl || ''
+      academicStructure: school.academicStructure || 'K-12'
     });
     setShowEditSchoolModal(true);
   };
@@ -598,178 +538,110 @@ export const SchoolManagerView: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8">
-      {/* Sidebar: School Selection */}
-      <aside className="w-full lg:w-72 shrink-0 space-y-6">
-        <div className="bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl p-6 shadow-sm sticky top-24">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <SchoolIcon className="w-5 h-5 text-emerald-600" />
-              My Schools
-            </h2>
+    <div className="space-y-8">
+      <header className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          {activeSubTab !== 'schools' && (
             <button 
-              onClick={() => setShowCreateSchool(true)}
-              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-emerald-600 transition-all"
-              title="Register New School"
+              onClick={() => setActiveSubTab('schools')}
+              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-500 transition-all"
+              title="Back to Schools"
             >
-              <Plus className="w-5 h-5" />
+              <SchoolIcon className="w-6 h-6" />
             </button>
-          </div>
-          
-          <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto pr-2 custom-scrollbar">
-            {managedSchools.map(school => (
-              <div key={school.id} className="group relative">
-                <button
-                  onClick={() => handleSwitchSchool(school.id)}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all text-left",
-                    profile?.schoolId === school.id 
-                      ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100 dark:shadow-none" 
-                      : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                  )}
-                >
-                  <SchoolIcon className={cn("w-4 h-4 shrink-0", profile?.schoolId === school.id ? "text-white" : "text-zinc-400")} />
-                  <span className="truncate flex-1">{school.name}</span>
-                  {school.status !== 'active' && (
-                    <span className="w-2 h-2 rounded-full bg-amber-400" title="Pending Approval" />
-                  )}
-                </button>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); startEditSchool(school); }}
-                  className={cn(
-                    "absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100",
-                    profile?.schoolId === school.id ? "text-emerald-100 hover:text-white" : "text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                  )}
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-            {managedSchools.length === 0 && (
-              <p className="text-xs text-zinc-400 text-center py-4 italic">No schools registered yet.</p>
-            )}
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-black/5">
-            <button 
-              onClick={() => { setBulkUploadRole('school'); setShowBulkUploadModal(true); }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-2xl text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-all"
-            >
-              <Upload className="w-4 h-4" />
-              Bulk Upload Schools
-            </button>
+          )}
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
+              {activeSubTab === 'schools' ? 'School Management' : (schoolData?.name || 'School Management')}
+            </h1>
+            <p className="text-zinc-500 dark:text-zinc-400 mt-1">
+              {activeSubTab === 'schools' ? 'Manage your school network and infrastructure.' : `Managing ${activeSubTab} for ${schoolData?.name}`}
+            </p>
           </div>
         </div>
-      </aside>
-
-      {/* Main Content Area */}
-      <div className="flex-1 space-y-8 min-w-0">
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
-                {schoolData?.name || 'School Management'}
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <span className={cn(
-                  "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                  schoolData?.status === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                )}>
-                  {schoolData?.status || 'pending'}
-                </span>
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">• {schoolData?.academicStructure}</span>
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">• {activeSubTab}</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            {activeSubTab === 'users' ? (
-              <>
-                <button 
-                  onClick={() => openAddUserModal('teacher')}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Add Teacher
-                </button>
-                <button 
-                  onClick={() => setAddStudentOptionsContext({})}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Add Student
-                </button>
-                <button 
-                  onClick={() => { setBulkUploadRole('student'); setBulkUploadContext(null); setShowBulkUploadModal(true); }}
-                  className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-md"
-                >
-                  <Upload className="w-4 h-4" />
-                  Bulk Upload
-                </button>
-              </>
-            ) : activeSubTab === 'classes' ? (
+        <div className="flex gap-3">
+          {activeSubTab === 'users' ? (
+            <>
               <button 
-                onClick={() => { setEditingItem(null); setShowAddModal(true); }}
-                className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg"
+                onClick={() => openAddUserModal('teacher')}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md"
               >
-                <Plus className="w-5 h-5" />
-                Add Class
+                <UserPlus className="w-4 h-4" />
+                Add Teacher
               </button>
-            ) : null}
-          </div>
-        </header>
+              <button 
+                onClick={() => setAddStudentOptionsContext({})}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Student
+              </button>
+              <button 
+                onClick={() => { setBulkUploadRole('student'); setBulkUploadContext(null); setShowBulkUploadModal(true); }}
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-md"
+              >
+                <Upload className="w-4 h-4" />
+                Bulk Upload
+              </button>
+            </>
+          ) : activeSubTab === 'classes' ? (
+            <button 
+              onClick={() => { setEditingItem(null); setShowAddModal(true); }}
+              className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg"
+            >
+              <Plus className="w-5 h-5" />
+              Add Class
+            </button>
+          ) : null}
+        </div>
+      </header>
 
-        <div className="flex gap-4 border-b border-black/5 pb-4 overflow-x-auto">
-          <button 
-            onClick={() => setActiveSubTab('classes')}
-            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-          >
-            Classes
-          </button>
-          <button 
-            onClick={() => setActiveSubTab('users')}
-            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-          >
-            Users
-          </button>
-          <button 
-            onClick={() => setActiveSubTab('courses')}
-            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-          >
-            Courses
-          </button>
-          <button 
-            onClick={() => setActiveSubTab('exams')}
-            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-          >
-            Exams
-          </button>
-          <button 
-            onClick={() => setActiveSubTab('payments')}
-            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'payments' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-          >
-            Payments
-          </button>
-          <button 
-            onClick={() => setActiveSubTab('profile')}
-            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'profile' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-          >
-            School Profile
-          </button>
-          <button 
-            onClick={() => setActiveSubTab('requests')}
-            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap relative", activeSubTab === 'requests' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-          >
-            Requests
-            {joinRequests.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full">
-                {joinRequests.length}
-              </span>
-            )}
-          </button>
-          
-          {activeSubTab === 'users' && (
-            <div className="ml-auto flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
+      <div className="flex gap-4 border-b border-black/5 pb-4 overflow-x-auto">
+        <button 
+          onClick={() => setActiveSubTab('schools')}
+          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'schools' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+        >
+          My Schools
+        </button>
+        <button 
+          onClick={() => setActiveSubTab('classes')}
+          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+        >
+          Classes
+        </button>
+        <button 
+          onClick={() => setActiveSubTab('users')}
+          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+        >
+          Users
+        </button>
+        <button 
+          onClick={() => setActiveSubTab('courses')}
+          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+        >
+          Courses
+        </button>
+        <button 
+          onClick={() => setActiveSubTab('exams')}
+          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+        >
+          Exams
+        </button>
+        <button 
+          onClick={() => setActiveSubTab('payments')}
+          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'payments' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+        >
+          Payments
+        </button>
+        <button 
+          onClick={() => setActiveSubTab('profile')}
+          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'profile' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+        >
+          School Profile
+        </button>
+        
+        {activeSubTab === 'users' && (
+          <div className="ml-auto flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
             {(['all', 'admin', 'teacher', 'student', 'parent'] as const).map((role) => (
               <button
                 key={role}
@@ -787,6 +659,74 @@ export const SchoolManagerView: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
+        {activeSubTab === 'schools' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold">My Managed Schools</h3>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => { setBulkUploadRole('school'); setBulkUploadContext(null); setShowBulkUploadModal(true); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl text-sm font-bold hover:bg-zinc-200 transition-all"
+                >
+                  <Upload className="w-4 h-4" />
+                  Bulk Upload Schools
+                </button>
+                <button 
+                  onClick={() => setShowCreateSchool(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add New School
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {managedSchools.map(school => (
+                <div key={school.id} className={cn(
+                  "p-6 bg-white dark:bg-zinc-900 border rounded-3xl shadow-sm hover:shadow-md transition-all group relative",
+                  profile?.schoolId === school.id ? "border-emerald-500 ring-1 ring-emerald-500" : "border-black/5"
+                )}>
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+                      <SchoolIcon className="w-6 h-6" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleToggleVisibility(school); }}
+                        className={cn(
+                          "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors",
+                          school.status === 'active' ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                        )}
+                        title={school.status === 'active' ? "Make Invisible" : "Make Visible"}
+                      >
+                        {school.status === 'active' ? 'Visible' : 'Invisible'}
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); startEditSchool(school); }}
+                        className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Settings className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div onClick={() => handleSwitchSchool(school.id)} className="cursor-pointer">
+                    <h3 className="text-xl font-bold">{school.name}</h3>
+                    <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">{school.address}</p>
+                    <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
+                      <span className="text-xs font-bold text-zinc-400">{school.academicStructure}</span>
+                      <button 
+                        className="text-xs font-bold text-emerald-600 hover:underline"
+                      >
+                        Manage School →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {activeSubTab === 'classes' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {classes.map(cls => (
@@ -1119,50 +1059,6 @@ export const SchoolManagerView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-bold mb-2">Principal Name</label>
-                  <input 
-                    type="text" 
-                    value={schoolForm.principalName}
-                    onChange={(e) => setSchoolForm({...schoolForm, principalName: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-                    placeholder="e.g. Jane Doe"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2">Website</label>
-                  <input 
-                    type="url" 
-                    value={schoolForm.website}
-                    onChange={(e) => setSchoolForm({...schoolForm, website: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-                    placeholder="https://www.example.com"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold mb-2">Logo URL</label>
-                <input 
-                  type="url" 
-                  value={schoolForm.logoUrl}
-                  onChange={(e) => setSchoolForm({...schoolForm, logoUrl: e.target.value})}
-                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-                  placeholder="https://www.example.com/logo.png"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold mb-2">School Description</label>
-                <textarea 
-                  value={schoolForm.description}
-                  onChange={(e) => setSchoolForm({...schoolForm, description: e.target.value})}
-                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent min-h-[100px] resize-y"
-                  placeholder="Tell us about your school..."
-                />
-              </div>
-
               <div className="pt-4">
                 <button 
                   type="submit"
@@ -1172,49 +1068,6 @@ export const SchoolManagerView: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        )}
-
-        {activeSubTab === 'requests' && (
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <h2 className="text-2xl font-bold mb-6">Join Requests</h2>
-            
-            {joinRequests.length === 0 ? (
-              <div className="text-center py-12 text-zinc-500">
-                <Users className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                <p>No pending join requests.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {joinRequests.map(request => (
-                  <div key={request.id} className="flex items-center justify-between p-4 border border-zinc-200 dark:border-zinc-800 rounded-2xl">
-                    <div>
-                      <h3 className="font-bold text-zinc-900 dark:text-white">{request.userName || 'Unknown User'}</h3>
-                      <p className="text-sm text-zinc-500">{request.userEmail}</p>
-                      <div className="mt-1">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 capitalize">
-                          Requested Role: {request.role}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleRejectRequest(request.id)}
-                        className="px-4 py-2 text-sm font-bold text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                      >
-                        Reject
-                      </button>
-                      <button
-                        onClick={() => handleApproveRequest(request)}
-                        className="px-4 py-2 text-sm font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
-                      >
-                        Approve
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -1249,18 +1102,13 @@ export const SchoolManagerView: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-bold mb-1">Year</label>
-              <select 
+              <input 
+                type="text" 
                 required 
                 value={newClass.year}
                 onChange={(e) => setNewClass({...newClass, year: e.target.value})}
                 className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              >
-                <option value="">Select Year</option>
-                {[...Array(10)].map((_, i) => {
-                  const year = new Date().getFullYear() + i - 2;
-                  return <option key={year} value={year.toString()}>{year}</option>;
-                })}
-              </select>
+              />
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
@@ -1473,6 +1321,5 @@ export const SchoolManagerView: React.FC = () => {
         </div>
       </Modal>
     </div>
-  </div>
-);
+  );
 };
