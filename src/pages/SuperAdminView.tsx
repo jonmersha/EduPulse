@@ -1,603 +1,271 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Users, Settings, Plus, School as SchoolIcon, BookOpen, UserPlus, Trash2, Upload, CheckCircle2, AlertCircle, DollarSign, Search, MessageSquare } from 'lucide-react';
-import { collection, onSnapshot, doc, setDoc, Timestamp, collectionGroup } from 'firebase/firestore';
-import { db } from '../firebase';
-import { useAuth } from '../context/AuthContext';
-import { cn } from '../lib/utils';
-import { Modal } from '../components/Modal';
-import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, setDoc, query, where, getDocs } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../firebase';
+import { Plus, School, Users, Trash2, Edit2, ChevronRight, Search, LayoutGrid, List, Settings } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
-export const SuperAdminView: React.FC = () => {
-  const { profile } = useAuth();
-  const [schools, setSchools] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [enrollments, setEnrollments] = useState<any[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState<'schools' | 'users' | 'courses' | 'payments'>('schools');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'super_admin' | 'admin' | 'teacher' | 'student' | 'provider'>('all');
-  const [paymentFilter, setPaymentFilter] = useState<'all' | 'verified' | 'pending'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showCommentModal, setShowCommentModal] = useState(false);
+interface SchoolData {
+  id: string;
+  name: string;
+  address: string;
+  managerId?: string;
+  managerName?: string;
+  managerEmail?: string;
+}
+
+const SuperAdminView: React.FC = () => {
+  const navigate = useNavigate();
+  const [schools, setSchools] = useState<SchoolData[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Form states
-  const [newSchool, setNewSchool] = useState({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
-  const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'super_admin' as any, schoolId: '', schoolIds: [] as string[], isIndependent: false });
-  const [editingItem, setEditingItem] = useState<any>(null);
-  const [courseComment, setCourseComment] = useState('');
-  const [selectedCourse, setSelectedCourse] = useState<any>(null);
-
-  const isSuperAdmin = profile?.email === 'jonmersha@gmail.com' || profile?.role === 'super_admin';
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newSchool, setNewSchool] = useState({ name: '', address: '', managerEmail: '', managerName: '' });
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    if (!profile || !isSuperAdmin) return;
-
-    const unsubSchools = onSnapshot(collection(db, 'schools'), (snap) => {
-      setSchools(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    const unsubscribe = onSnapshot(collection(db, 'schools'), (snapshot) => {
+      const schoolList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SchoolData));
+      setSchools(schoolList);
       setLoading(false);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'schools'));
 
-    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
-      setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
+    return () => unsubscribe();
+  }, []);
 
-    const unsubCourses = onSnapshot(collection(db, 'courses'), (snap) => {
-      setCourses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'courses'));
-
-    const unsubEnrollments = onSnapshot(collectionGroup(db, 'enrollments'), (snap) => {
-      setEnrollments(snap.docs.map(doc => ({ id: doc.id, courseId: doc.ref.parent.parent?.id, ...doc.data() })));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
-
-    return () => {
-      unsubSchools();
-      unsubUsers();
-      unsubCourses();
-      unsubEnrollments();
-    };
-  }, [profile, isSuperAdmin]);
-
-  const handleUpdateSchoolStatus = async (schoolId: string, status: 'active' | 'pending' | 'suspended') => {
-    try {
-      await setDoc(doc(db, 'schools', schoolId), {
-        status: status,
-        updatedAt: Timestamp.now()
-      }, { merge: true });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `schools/${schoolId}`);
-    }
-  };
-
-  const handleAddCourseComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCourse) return;
-    try {
-      await setDoc(doc(db, 'courses', selectedCourse.id), {
-        adminComments: courseComment,
-        commentedAt: Timestamp.now()
-      }, { merge: true });
-      setShowCommentModal(false);
-      setCourseComment('');
-      setSelectedCourse(null);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `courses/${selectedCourse.id}`);
-    }
-  };
-
-  const handleAddUser = async (e: React.FormEvent) => {
+  const handleAddSchool = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const userId = editingItem?.id || doc(collection(db, 'users')).id; 
-      await setDoc(doc(db, 'users', userId), {
-        ...newUser,
-        status: 'active',
-        uid: editingItem?.uid || userId,
-        createdAt: editingItem?.createdAt || Timestamp.now()
-      }, { merge: true });
+      // 1. Create school
+      const schoolRef = await addDoc(collection(db, 'schools'), {
+        name: newSchool.name,
+        address: newSchool.address,
+        createdAt: new Date().toISOString()
+      });
+
+      // 2. If manager email provided, we'd normally send an invite
+      // For this demo, we'll just store the intended manager info
+      if (newSchool.managerEmail) {
+        await updateDoc(schoolRef, {
+          managerEmail: newSchool.managerEmail,
+          managerName: newSchool.managerName
+        });
+      }
+
+      setNewSchool({ name: '', address: '', managerEmail: '', managerName: '' });
       setShowAddModal(false);
-      setEditingItem(null);
-      setNewUser({ email: '', displayName: '', role: 'super_admin', schoolId: '', schoolIds: [], isIndependent: false });
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `users/${editingItem?.id || 'new'}`);
+      handleFirestoreError(error, OperationType.CREATE, 'schools');
     }
   };
 
-  const [deleteConfirm, setDeleteConfirm] = useState<{ collection: string, id: string } | null>(null);
-
-  const handleDelete = async (collectionName: string, id: string) => {
+  const handleDeleteSchool = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this school?')) return;
     try {
-      const { deleteDoc } = await import('firebase/firestore');
-      await deleteDoc(doc(db, collectionName, id));
-      setDeleteConfirm(null);
+      await deleteDoc(doc(db, 'schools', id));
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `${collectionName}/${id}`);
+      handleFirestoreError(error, OperationType.DELETE, `schools/${id}`);
     }
   };
 
-  const startEdit = (item: any) => {
-    setEditingItem(item);
-    if (activeSubTab === 'schools') setNewSchool({ name: item.name, address: item.address, adminEmail: item.adminEmail, contactPhone: item.contactPhone || '', academicStructure: item.academicStructure || 'K-12' });
-    if (activeSubTab === 'users') setNewUser({ email: item.email, displayName: item.displayName, role: item.role, schoolId: item.schoolId || '', schoolIds: item.schoolIds || [], isIndependent: item.isIndependent || false });
-    setShowAddModal(true);
-  };
-
-  const openAddUserModal = (role: 'super_admin' | 'admin') => {
-    setEditingItem(null);
-    setNewUser({ 
-      email: '', 
-      displayName: '', 
-      role: role, 
-      schoolId: '', 
-      schoolIds: [],
-      isIndependent: false
-    });
-    setShowAddModal(true);
-  };
-
-  if (!isSuperAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 text-zinc-400">
-        <AlertCircle className="w-12 h-12 mb-4 opacity-20" />
-        <p className="font-medium">Access Denied. Super Admin only.</p>
-      </div>
-    );
-  }
+  const filteredSchools = schools.filter(s => 
+    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.address.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-8">
-      <header className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-purple-900 dark:text-purple-400">
-            Global Administration
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1">
-            Platform-wide oversight and infrastructure management.
-          </p>
+          <h2 className="text-4xl font-black tracking-tight">Schools</h2>
+          <p className="text-zinc-500 font-medium mt-2">Manage all educational institutions in the system.</p>
         </div>
-        <div className="flex gap-3">
-          {activeSubTab === 'users' && (
-            <button 
-              onClick={() => openAddUserModal('super_admin')}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all shadow-md"
-            >
-              <UserPlus className="w-4 h-4" />
-              Add Global Admin
-            </button>
-          )}
-        </div>
-      </header>
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center justify-center gap-2 px-6 py-3.5 bg-purple-600 text-white rounded-2xl font-bold shadow-xl shadow-purple-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+        >
+          <Plus size={20} />
+          Add New School
+        </button>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-2xl text-purple-600">
-              <SchoolIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-sm text-zinc-500">Total Schools</p>
-              <p className="text-2xl font-bold">{schools.length}</p>
-            </div>
-          </div>
+      <div className="flex flex-col md:flex-row items-center gap-4 bg-white dark:bg-zinc-900 p-4 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+          <input 
+            type="text" 
+            placeholder="Search schools by name or address..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 transition-all font-medium"
+          />
         </div>
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl text-blue-600">
-              <Users className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-sm text-zinc-500">Total Users</p>
-              <p className="text-2xl font-bold">{users.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl text-emerald-600">
-              <BookOpen className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-sm text-zinc-500">Total Courses</p>
-              <p className="text-2xl font-bold">{courses.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl text-amber-600">
-              <DollarSign className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-sm text-zinc-500">Verified Revenue</p>
-              <p className="text-2xl font-bold">
-                ${enrollments.filter(e => e.paymentVerified).reduce((acc, curr) => acc + (curr.price || 0), 0).toLocaleString()}
-              </p>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+          <button 
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-zinc-700 shadow-sm text-purple-600' : 'text-zinc-500'}`}
+          >
+            <LayoutGrid size={20} />
+          </button>
+          <button 
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-zinc-700 shadow-sm text-purple-600' : 'text-zinc-500'}`}
+          >
+            <List size={20} />
+          </button>
         </div>
       </div>
 
-      <div className="flex gap-4 border-b border-black/5 pb-4 overflow-x-auto">
-        <button 
-          onClick={() => setActiveSubTab('schools')}
-          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'schools' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-        >
-          Schools
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('users')}
-          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-        >
-          All Users
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('courses')}
-          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-        >
-          All Courses
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('payments')}
-          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'payments' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-        >
-          All Payments
-        </button>
-        
-        {activeSubTab === 'users' && (
-          <div className="ml-auto flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
-            {(['all', 'super_admin', 'admin', 'teacher', 'student', 'provider'] as const).map((role) => (
-              <button
-                key={role}
-                onClick={() => setRoleFilter(role)}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all",
-                  roleFilter === role ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
-                )}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-64 bg-zinc-100 dark:bg-zinc-900 animate-pulse rounded-[2rem]" />
+          ))}
+        </div>
+      ) : (
+        <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
+          <AnimatePresence mode="popLayout">
+            {filteredSchools.map((school) => (
+              <motion.div 
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                key={school.id}
+                className={`group relative bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:shadow-zinc-200/50 dark:hover:shadow-none transition-all overflow-hidden ${viewMode === 'grid' ? 'rounded-[2rem] p-8' : 'rounded-2xl p-4 flex items-center justify-between'}`}
               >
-                {role === 'super_admin' ? 'Super Admins' : role === 'admin' ? 'School Managers' : `${role}s`}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 gap-6">
-        {activeSubTab === 'schools' && (
-          <div className="bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl overflow-hidden shadow-sm">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-zinc-50 dark:bg-zinc-800 border-b border-black/5">
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">School Name</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Admin Email</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Status</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {schools.map(school => (
-                  <tr key={school.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold">{school.name}</span>
-                        <span className="text-[10px] text-zinc-500">{school.address}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400">{school.adminEmail}</td>
-                    <td className="px-6 py-4">
-                      <span className={cn(
-                        "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
-                        school.status === 'active' ? "bg-emerald-100 text-emerald-700" : 
-                        school.status === 'suspended' ? "bg-red-100 text-red-700" : 
-                        "bg-amber-100 text-amber-700"
-                      )}>
-                        {school.status || 'pending'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        {school.status !== 'active' && (
-                          <button 
-                            onClick={() => handleUpdateSchoolStatus(school.id, 'active')}
-                            className="px-3 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700"
-                          >
-                            Approve
-                          </button>
-                        )}
-                        {school.status === 'active' && (
-                          <button 
-                            onClick={() => handleUpdateSchoolStatus(school.id, 'suspended')}
-                            className="px-3 py-1 bg-red-600 text-white text-[10px] font-bold rounded-lg hover:bg-red-700"
-                          >
-                            Suspend
-                          </button>
-                        )}
-                        <button onClick={() => setDeleteConfirm({ collection: 'schools', id: school.id })} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeSubTab === 'users' && (
-          <div className="bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl overflow-hidden shadow-sm">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-zinc-50 dark:bg-zinc-800 border-b border-black/5">
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Name</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Email</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Role</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">School</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users
-                  .filter(u => roleFilter === 'all' || u.role === roleFilter)
-                  .map(user => (
-                    <tr key={user.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-                      <td className="px-6 py-4 font-bold">{user.displayName}</td>
-                      <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400">{user.email}</td>
-                      <td className="px-6 py-4">
-                        <span className={cn(
-                          "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
-                          user.role === 'super_admin' ? "bg-zinc-900 text-white" :
-                          user.role === 'teacher' ? "bg-blue-100 text-blue-700" : 
-                          user.role === 'admin' ? "bg-purple-100 text-purple-700" : 
-                          user.role === 'provider' ? "bg-amber-100 text-amber-700" :
-                          "bg-purple-100 text-purple-700"
-                        )}>
-                          {user.role === 'super_admin' ? 'Super Admin' : user.role === 'admin' ? 'School Manager' : user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 text-sm">
-                        {schools.find(s => s.id === user.schoolId)?.name || '-'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
-                          <button onClick={() => startEdit(user)} className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"><Settings className="w-4 h-4" /></button>
-                          <button onClick={() => setDeleteConfirm({ collection: 'users', id: user.id })} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeSubTab === 'courses' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses.map(course => (
-              <div key={course.id} className="p-6 bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
-                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
-                  <BookOpen className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-bold">{course.title}</h3>
-                <p className="text-zinc-500 dark:text-zinc-400 text-sm line-clamp-2">{course.description}</p>
-                <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">
-                  School: {schools.find(s => s.id === course.schoolId)?.name || 'Independent / Unknown'}
-                </p>
-                {course.adminComments && (
-                  <div className="mt-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-                    <p className="text-[10px] font-bold text-purple-600 uppercase mb-1">Admin Comment</p>
-                    <p className="text-xs text-zinc-600 dark:text-zinc-300 italic">"{course.adminComments}"</p>
+                <div className={viewMode === 'grid' ? "space-y-4" : "flex items-center gap-4"}>
+                  <div className={`bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-2xl flex items-center justify-center ${viewMode === 'grid' ? 'w-16 h-16' : 'w-12 h-12'}`}>
+                    <School size={viewMode === 'grid' ? 32 : 24} />
                   </div>
-                )}
-                <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
-                  <button 
-                    onClick={() => { setSelectedCourse(course); setCourseComment(course.adminComments || ''); setShowCommentModal(true); }}
-                    className="flex items-center gap-1 text-xs font-bold text-purple-600 hover:text-purple-700"
-                  >
-                    <MessageSquare className="w-3 h-3" />
-                    Comment
-                  </button>
-                  <button onClick={() => setDeleteConfirm({ collection: 'courses', id: course.id })} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
+                  <div>
+                    <h3 className="text-xl font-black tracking-tight group-hover:text-purple-600 transition-colors">{school.name}</h3>
+                    <p className="text-sm text-zinc-500 font-medium mt-1">{school.address}</p>
+                  </div>
                 </div>
-              </div>
+
+                <div className={viewMode === 'grid' ? "mt-8 pt-6 border-t border-zinc-50 dark:border-zinc-800 flex items-center justify-between" : "flex items-center gap-3"}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center text-zinc-500">
+                      <Users size={14} />
+                    </div>
+                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                      {school.managerName || 'No Manager'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => navigate(`/school/${school.id}`)}
+                      className="p-2 text-zinc-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all"
+                      title="Manage School"
+                    >
+                      <Settings size={18} />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteSchool(school.id)}
+                      className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                    <button className="p-2 text-zinc-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all">
+                      <Edit2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
             ))}
-          </div>
-        )}
-
-        {activeSubTab === 'payments' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-2xl border border-black/5">
-              <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-black/5 rounded-xl px-3 py-2 w-full sm:w-96">
-                <Search className="w-4 h-4 text-zinc-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search by student name or email..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-transparent border-none focus:ring-0 text-sm w-full"
-                />
-              </div>
-              <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-black/5 rounded-xl p-1">
-                {(['all', 'verified', 'pending'] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setPaymentFilter(filter)}
-                    className={cn(
-                      "px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all",
-                      paymentFilter === filter ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-                    )}
-                  >
-                    {filter}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl overflow-hidden shadow-sm">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-zinc-50 dark:bg-zinc-800 border-b border-black/5">
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Student</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Course</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Enrolled Date</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Status</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Payment</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {enrollments
-                    .filter(e => {
-                      const matchesSearch = !searchQuery || 
-                        e.studentName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                        e.studentEmail?.toLowerCase().includes(searchQuery.toLowerCase());
-                      const matchesFilter = paymentFilter === 'all' || 
-                        (paymentFilter === 'verified' && e.paymentVerified) || 
-                        (paymentFilter === 'pending' && !e.paymentVerified);
-                      return matchesSearch && matchesFilter;
-                    })
-                    .map(enrollment => (
-                      <tr key={enrollment.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <span className="font-bold">{enrollment.studentName || 'Unknown Student'}</span>
-                            <span className="text-[10px] text-zinc-500">{enrollment.studentEmail}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <span className="font-medium">{enrollment.courseTitle || 'Unknown Course'}</span>
-                            {enrollment.price > 0 && <span className="text-[10px] text-emerald-600 font-bold">${enrollment.price}</span>}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-zinc-500 text-sm">
-                          {enrollment.enrolledAt?.toDate().toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={cn(
-                            "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
-                            enrollment.status === 'approved' ? "bg-emerald-100 text-emerald-700" : 
-                            enrollment.status === 'denied' ? "bg-red-100 text-red-700" : 
-                            "bg-amber-100 text-amber-700"
-                          )}>
-                            {enrollment.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            {enrollment.paymentVerified ? (
-                              <div className="flex items-center gap-1 text-emerald-600">
-                                <CheckCircle2 className="w-4 h-4" />
-                                <span className="text-xs font-bold">Verified</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1 text-amber-600">
-                                <AlertCircle className="w-4 h-4" />
-                                <span className="text-xs font-bold">Pending</span>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                           <button onClick={() => setDeleteConfirm({ collection: 'enrollments', id: enrollment.id })} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Modals */}
-      <Modal 
-        isOpen={showAddModal} 
-        onClose={() => { setShowAddModal(false); setEditingItem(null); }}
-        title={editingItem ? `Edit User` : `Add New User`}
-      >
-        <form onSubmit={handleAddUser} className="space-y-4">
-          <div>
-            <label className="block text-sm font-bold mb-1">Display Name</label>
-            <input 
-              type="text" 
-              required 
-              value={newUser.displayName}
-              onChange={(e) => setNewUser({...newUser, displayName: e.target.value})}
-              className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold mb-1">Email Address</label>
-            <input 
-              type="email" 
-              required 
-              value={newUser.email}
-              onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-              className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold mb-1">Role</label>
-            <select 
-              value={newUser.role}
-              onChange={(e) => setNewUser({...newUser, role: e.target.value as any})}
-              className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-            >
-              <option value="super_admin">Super Admin</option>
-              <option value="admin">School Manager</option>
-            </select>
-          </div>
-          <div className="flex justify-end gap-3 mt-6">
-            <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
-            <button type="submit" className="px-6 py-2 bg-purple-600 text-white rounded-xl font-bold shadow-lg">
-              {editingItem ? 'Save Changes' : 'Create User'}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal
-        isOpen={showCommentModal}
-        onClose={() => setShowCommentModal(false)}
-        title="Course Feedback"
-      >
-        <form onSubmit={handleAddCourseComment} className="space-y-4">
-          <div>
-            <label className="block text-sm font-bold mb-1">Admin Comments</label>
-            <textarea 
-              required 
-              value={courseComment}
-              onChange={(e) => setCourseComment(e.target.value)}
-              placeholder="Provide feedback or comments on this course..."
-              className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent h-32 resize-none"
-            />
-          </div>
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setShowCommentModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
-            <button type="submit" className="px-6 py-2 bg-purple-600 text-white rounded-xl font-bold shadow-lg">
-              Save Comment
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal 
-        isOpen={!!deleteConfirm} 
-        onClose={() => setDeleteConfirm(null)}
-        title="Confirm Deletion"
-      >
-        <div className="space-y-4">
-          <p className="text-zinc-600 dark:text-zinc-400">Are you sure you want to delete this {deleteConfirm?.collection.slice(0, -1)}? This action cannot be undone.</p>
-          <div className="flex justify-end gap-3">
-            <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
-            <button 
-              onClick={() => deleteConfirm && handleDelete(deleteConfirm.collection, deleteConfirm.id)}
-              className="px-6 py-2 bg-red-600 text-white rounded-xl font-bold shadow-lg"
-            >
-              Delete
-            </button>
-          </div>
+          </AnimatePresence>
         </div>
-      </Modal>
+      )}
+
+      {/* Add School Modal */}
+      <AnimatePresence>
+        {showAddModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAddModal(false)}
+              className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-zinc-100 dark:border-zinc-800"
+            >
+              <div className="p-8 border-b border-zinc-100 dark:border-zinc-800">
+                <h3 className="text-2xl font-black tracking-tight">Add New School</h3>
+                <p className="text-zinc-500 font-medium mt-1">Create a new school profile and assign a manager.</p>
+              </div>
+              <form onSubmit={handleAddSchool} className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-zinc-500 uppercase tracking-wider ml-1">School Name</label>
+                  <input 
+                    required
+                    type="text" 
+                    placeholder="e.g. St. Mary's Academy"
+                    value={newSchool.name}
+                    onChange={(e) => setNewSchool({ ...newSchool, name: e.target.value })}
+                    className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 transition-all font-medium"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-zinc-500 uppercase tracking-wider ml-1">Address</label>
+                  <input 
+                    required
+                    type="text" 
+                    placeholder="e.g. 123 Education St, NY"
+                    value={newSchool.address}
+                    onChange={(e) => setNewSchool({ ...newSchool, address: e.target.value })}
+                    className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 transition-all font-medium"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-zinc-500 uppercase tracking-wider ml-1">Manager Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="Full Name"
+                      value={newSchool.managerName}
+                      onChange={(e) => setNewSchool({ ...newSchool, managerName: e.target.value })}
+                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 transition-all font-medium"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-zinc-500 uppercase tracking-wider ml-1">Manager Email</label>
+                    <input 
+                      type="email" 
+                      placeholder="Email Address"
+                      value={newSchool.managerEmail}
+                      onChange={(e) => setNewSchool({ ...newSchool, managerEmail: e.target.value })}
+                      className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 transition-all font-medium"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-4 pt-4">
+                  <button 
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-[2] py-4 bg-purple-600 text-white rounded-2xl font-bold shadow-xl shadow-purple-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                    Create School
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
+
+export default SuperAdminView;

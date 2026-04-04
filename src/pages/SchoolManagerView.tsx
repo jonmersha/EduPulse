@@ -1,1066 +1,659 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Settings, Plus, BookOpen, UserPlus, Trash2, Upload, CheckCircle2, AlertCircle, DollarSign, Search, School as SchoolIcon } from 'lucide-react';
-import { collection, query, onSnapshot, doc, setDoc, Timestamp, where, collectionGroup } from 'firebase/firestore';
-import { db } from '../firebase';
-import { useAuth } from '../context/AuthContext';
-import { cn } from '../lib/utils';
-import { Modal } from '../components/Modal';
-import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { useParams, useNavigate } from 'react-router-dom';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, query, where, getDocs, setDoc, writeBatch } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../firebase';
+import { Plus, Users, UserPlus, BookOpen, Trash2, Edit2, Upload, Link as LinkIcon, Search, ChevronRight, X, Check, MoreVertical, LayoutDashboard, GraduationCap, Users2, UserCircle, School } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
 
-export const SchoolManagerView: React.FC = () => {
-  const { profile } = useAuth();
-  const [classes, setClasses] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [enrollments, setEnrollments] = useState<any[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
-  const [exams, setExams] = useState<any[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState<'classes' | 'users' | 'courses' | 'exams' | 'payments' | 'profile'>('classes');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'teacher' | 'student'>('all');
-  const [paymentFilter, setPaymentFilter] = useState<'all' | 'verified' | 'pending'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
-  const [addStudentOptionsContext, setAddStudentOptionsContext] = useState<{classId?: string} | null>(null);
-  const [bulkUploadContext, setBulkUploadContext] = useState<{classId?: string} | null>(null);
-  const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null);
-  const [bulkUploadStatus, setBulkUploadStatus] = useState('');
-  const [bulkUploadProgress, setBulkUploadProgress] = useState(0);
-  const [bulkUploadRole, setBulkUploadRole] = useState<'student' | 'teacher'>('student');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [loading, setLoading] = useState(true);
-  const [schoolData, setSchoolData] = useState<any>(null);
-  const [managedSchools, setManagedSchools] = useState<any[]>([]);
-  const [showCreateSchool, setShowCreateSchool] = useState(false);
+interface UserData {
+  uid: string;
+  name: string;
+  email: string;
+  role: 'teacher' | 'student' | 'parent';
+  schoolId: string;
+  studentIds?: string[];
+  parentIds?: string[];
+}
 
-  // Form states
-  const [newClass, setNewClass] = useState({ name: '', grade: '', year: '', teacherId: '', schoolId: '' });
-  const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolId: '', isIndependent: false });
-  const [editingItem, setEditingItem] = useState<any>(null);
-  const [schoolForm, setSchoolForm] = useState({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
+interface ClassData {
+  id: string;
+  name: string;
+  teacherId?: string;
+  teacherName?: string;
+}
+
+const SchoolManagerView: React.FC = () => {
+  const { schoolId } = useParams<{ schoolId: string }>();
+  const navigate = useNavigate();
+  const [schoolName, setSchoolName] = useState('');
+  const [teachers, setTeachers] = useState<UserData[]>([]);
+  const [students, setStudents] = useState<UserData[]>([]);
+  const [parents, setParents] = useState<UserData[]>([]);
+  const [classes, setClasses] = useState<ClassData[]>([]);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'teachers' | 'students' | 'parents' | 'classes'>('dashboard');
+  const [loading, setLoading] = useState(true);
+  
+  // Modals
+  const [showAddUserModal, setShowAddUserModal] = useState<{role: 'teacher' | 'student' | 'parent', classId?: string} | null>(null);
+  const [showAddClassModal, setShowAddClassModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState<{studentId: string} | null>(null);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [bulkUploadRole, setBulkUploadRole] = useState<'teacher' | 'student' | 'parent'>('student');
+  const [showEnrollStudentModal, setShowEnrollStudentModal] = useState<{classId: string} | null>(null);
+  
+  // Form States
+  const [newUser, setNewUser] = useState({ name: '', email: '' });
+  const [newClass, setNewClass] = useState({ name: '', teacherId: '' });
+  const [linkParentEmail, setLinkParentEmail] = useState('');
+  
+  // Bulk Upload
+  const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null);
+  const [bulkUploadProgress, setBulkUploadProgress] = useState(0);
+  const [bulkUploadStatus, setBulkUploadStatus] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!profile) return;
-    
-    // Fetch all schools managed by this user
-    const managedSchoolsQuery = query(collection(db, 'schools'), where('managerId', '==', profile.uid));
-    const unsubManaged = onSnapshot(managedSchoolsQuery, (snap) => {
-      setManagedSchools(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'schools'));
+    if (!schoolId) return;
 
-    if (!profile.schoolId) {
+    // Fetch School Info
+    const schoolUnsub = onSnapshot(doc(db, 'schools', schoolId), (doc) => {
+      if (doc.exists()) setSchoolName(doc.data().name);
+    });
+
+    // Fetch Teachers
+    const teachersQuery = query(collection(db, 'users'), where('schoolId', '==', schoolId), where('role', '==', 'teacher'));
+    const teachersUnsub = onSnapshot(teachersQuery, (snapshot) => {
+      setTeachers(snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as UserData)));
+    });
+
+    // Fetch Students
+    const studentsQuery = query(collection(db, 'users'), where('schoolId', '==', schoolId), where('role', '==', 'student'));
+    const studentsUnsub = onSnapshot(studentsQuery, (snapshot) => {
+      setStudents(snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as UserData)));
+    });
+
+    // Fetch Parents
+    const parentsQuery = query(collection(db, 'users'), where('schoolId', '==', schoolId), where('role', '==', 'parent'));
+    const parentsUnsub = onSnapshot(parentsQuery, (snapshot) => {
+      setParents(snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as UserData)));
+    });
+
+    // Fetch Classes
+    const classesUnsub = onSnapshot(collection(db, 'schools', schoolId, 'classes'), (snapshot) => {
+      setClasses(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ClassData)));
       setLoading(false);
-      return () => unsubManaged();
-    }
-
-    const currentSchoolId = profile.schoolId;
-    
-    const classesQuery = query(collection(db, 'classes'), where('schoolId', '==', currentSchoolId));
-    const unsubClasses = onSnapshot(classesQuery, (snap) => {
-      setClasses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'classes'));
-
-    const usersQuery = query(collection(db, 'users'), where('schoolId', '==', currentSchoolId));
-    const unsubUsers = onSnapshot(usersQuery, (snap) => {
-      setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
-
-    const coursesQuery = query(collection(db, 'courses'), where('schoolId', '==', currentSchoolId));
-    const unsubCourses = onSnapshot(coursesQuery, (snap) => {
-      setCourses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'courses'));
-
-    const examsQuery = query(collection(db, 'exams'), where('schoolId', '==', currentSchoolId));
-    const unsubExams = onSnapshot(examsQuery, (snap) => {
-      setExams(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'exams'));
-
-    const unsubEnrollments = onSnapshot(collectionGroup(db, 'enrollments'), (snap) => {
-      const schoolCourseIds = courses.map(c => c.id);
-      setEnrollments(snap.docs
-        .map(doc => ({ id: doc.id, courseId: doc.ref.parent.parent?.id, ...doc.data() }))
-        .filter(e => schoolCourseIds.includes(e.courseId))
-      );
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
-
-    const unsubSchool = onSnapshot(doc(db, 'schools', currentSchoolId), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setSchoolData({ id: snap.id, ...data });
-        setSchoolForm({
-          name: data.name || '',
-          address: data.address || '',
-          adminEmail: data.adminEmail || '',
-          contactPhone: data.contactPhone || '',
-          academicStructure: data.academicStructure || 'K-12'
-        });
-      }
-    }, (error) => handleFirestoreError(error, OperationType.GET, `schools/${currentSchoolId}`));
+    });
 
     return () => {
-      unsubClasses();
-      unsubUsers();
-      unsubCourses();
-      unsubExams();
-      unsubEnrollments();
-      unsubSchool();
-      unsubManaged();
+      schoolUnsub();
+      teachersUnsub();
+      studentsUnsub();
+      parentsUnsub();
+      classesUnsub();
     };
-  }, [profile, courses.length]);
-
-  const handleAddClass = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const schoolId = profile?.schoolId;
-      if (!schoolId) return;
-      
-      const classId = editingItem?.id || doc(collection(db, 'classes')).id;
-      await setDoc(doc(db, 'classes', classId), {
-        ...newClass,
-        schoolId: schoolId,
-        createdAt: editingItem?.createdAt || Timestamp.now()
-      }, { merge: true });
-      setShowAddModal(false);
-      setEditingItem(null);
-      setNewClass({ name: '', grade: '', year: '', teacherId: '', schoolId: '' });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `classes/${editingItem?.id || 'new'}`);
-    }
-  };
+  }, [schoolId]);
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!showAddUserModal || !schoolId) return;
+
     try {
-      const schoolId = profile?.schoolId;
-      const userId = editingItem?.id || doc(collection(db, 'users')).id; 
-      await setDoc(doc(db, 'users', userId), {
-        ...newUser,
+      // In a real app, we'd use a Cloud Function to create the Auth user
+      // For this demo, we'll just create a placeholder document in 'users'
+      // The user would then sign in with Google and it would link up
+      const userRef = doc(collection(db, 'users'));
+      await setDoc(userRef, {
+        uid: userRef.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: showAddUserModal.role,
         schoolId: schoolId,
-        status: 'active',
-        uid: editingItem?.uid || userId,
-        createdAt: editingItem?.createdAt || Timestamp.now()
-      }, { merge: true });
-      setShowAddModal(false);
-      setEditingItem(null);
-      setNewUser({ email: '', displayName: '', role: 'student', classId: '', specialization: '', schoolId: '', isIndependent: false });
+        classId: showAddUserModal.classId || null,
+        createdAt: new Date().toISOString()
+      });
+
+      setNewUser({ name: '', email: '' });
+      setShowAddUserModal(null);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `users/${editingItem?.id || 'new'}`);
+      handleFirestoreError(error, OperationType.CREATE, 'users');
     }
   };
 
-  const [deleteConfirm, setDeleteConfirm] = useState<{ collection: string, id: string } | null>(null);
-
-  const handleDelete = async (collectionName: string, id: string) => {
-    try {
-      const { deleteDoc } = await import('firebase/firestore');
-      await deleteDoc(doc(db, collectionName, id));
-      setDeleteConfirm(null);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `${collectionName}/${id}`);
-    }
-  };
-
-  const startEdit = (item: any) => {
-    setEditingItem(item);
-    if (activeSubTab === 'classes') setNewClass({ name: item.name, grade: item.grade, year: item.year || '', teacherId: item.teacherId || '', schoolId: item.schoolId || '' });
-    if (activeSubTab === 'users') setNewUser({ email: item.email, displayName: item.displayName, role: item.role, classId: item.classId || '', specialization: item.specialization || '', schoolId: item.schoolId || '', isIndependent: item.isIndependent || false });
-    setShowAddModal(true);
-  };
-
-  const openAddUserModal = (role?: 'student' | 'teacher' | 'admin', classId?: string) => {
-    setEditingItem(null);
-    setNewUser({ 
-      email: '', 
-      displayName: '', 
-      role: role || 'student', 
-      classId: classId || '', 
-      specialization: '', 
-      schoolId: profile?.schoolId || '', 
-      isIndependent: false
-    });
-    setShowAddModal(true);
-  };
-
-  const handleUpdateSchool = async (e: React.FormEvent) => {
+  const handleAddClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.schoolId) return;
+    if (!schoolId) return;
+
     try {
-      await setDoc(doc(db, 'schools', profile.schoolId), {
-        ...schoolForm,
-        updatedAt: Timestamp.now()
-      }, { merge: true });
-      alert('School profile updated successfully!');
+      const teacher = teachers.find(t => t.uid === newClass.teacherId);
+      await addDoc(collection(db, 'schools', schoolId, 'classes'), {
+        name: newClass.name,
+        teacherId: newClass.teacherId || null,
+        teacherName: teacher?.name || null,
+        createdAt: new Date().toISOString()
+      });
+
+      setNewClass({ name: '', teacherId: '' });
+      setShowAddClassModal(false);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `schools/${profile.schoolId}`);
+      handleFirestoreError(error, OperationType.CREATE, `schools/${schoolId}/classes`);
     }
   };
 
-  const handleBulkUpload = async () => {
-    if (!bulkUploadFile || !profile?.schoolId) return;
-    
-    setBulkUploadStatus('Parsing file...');
+  const handleLinkParent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showLinkModal || !schoolId) return;
+
+    try {
+      // Find parent by email
+      const parentQuery = query(collection(db, 'users'), where('email', '==', linkParentEmail), where('role', '==', 'parent'));
+      const parentSnap = await getDocs(parentQuery);
+
+      if (parentSnap.empty) {
+        alert('Parent not found with that email.');
+        return;
+      }
+
+      const parentDoc = parentSnap.docs[0];
+      const parentId = parentDoc.id;
+      const studentId = showLinkModal.studentId;
+
+      // Update Parent's studentIds
+      const parentData = parentDoc.data() as UserData;
+      const currentStudentIds = parentData.studentIds || [];
+      if (!currentStudentIds.includes(studentId)) {
+        await updateDoc(doc(db, 'users', parentId), {
+          studentIds: [...currentStudentIds, studentId]
+        });
+      }
+
+      // Update Student's parentIds
+      const studentDoc = students.find(s => s.uid === studentId);
+      const currentParentIds = studentDoc?.parentIds || [];
+      if (!currentParentIds.includes(parentId)) {
+        await updateDoc(doc(db, 'users', studentId), {
+          parentIds: [...currentParentIds, parentId]
+        });
+      }
+
+      setLinkParentEmail('');
+      setShowLinkModal(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'users');
+    }
+  };
+
+  const handleBulkUpload = () => {
+    if (!bulkUploadFile || !schoolId) return;
+
     setBulkUploadProgress(0);
-    
+    setBulkUploadStatus('Parsing CSV...');
+
     Papa.parse(bulkUploadFile, {
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
         const data = results.data as any[];
-        if (data.length === 0) {
-          setBulkUploadStatus('Error: File is empty or invalid.');
-          return;
-        }
+        setBulkUploadStatus(`Uploading ${data.length} ${bulkUploadRole}s...`);
         
-        const headers = Object.keys(data[0]).map(h => h.toLowerCase());
-        if (!headers.includes('email') || !headers.includes('name')) {
-          setBulkUploadStatus('Error: CSV must contain "email" and "name" columns.');
-          return;
-        }
-        
-        setBulkUploadStatus(`Found ${data.length} users. Uploading...`);
-        let successCount = 0;
-        let errorCount = 0;
-        
-        for (let i = 0; i < data.length; i++) {
-          const row = data[i];
-          const emailKey = Object.keys(row).find(k => k.toLowerCase() === 'email');
-          const nameKey = Object.keys(row).find(k => k.toLowerCase() === 'name');
-          const classKey = Object.keys(row).find(k => k.toLowerCase() === 'class');
-          const yearKey = Object.keys(row).find(k => k.toLowerCase() === 'year');
-          
-          if (!emailKey || !nameKey || !row[emailKey] || !row[nameKey]) {
-            errorCount++;
-            continue;
-          }
-          
-          try {
-            let classId = '';
-            if (bulkUploadRole === 'student') {
-               if (bulkUploadContext?.classId) {
-                 classId = bulkUploadContext.classId;
-               } else if (classKey && row[classKey] && yearKey && row[yearKey]) {
-                 const matchedClass = classes.find(c => c.name.toLowerCase() === row[classKey].toLowerCase() && c.year === row[yearKey]);
-                 if (matchedClass) classId = matchedClass.id;
-               }
-            }
-            
-            const userId = doc(collection(db, 'users')).id;
-            await setDoc(doc(db, 'users', userId), {
-              email: row[emailKey].trim(),
-              displayName: row[nameKey].trim(),
+        const batch = writeBatch(db);
+        let count = 0;
+
+        for (const row of data) {
+          if (row.email && row.name) {
+            const userRef = doc(collection(db, 'users'));
+            batch.set(userRef, {
+              uid: userRef.id,
+              name: row.name,
+              email: row.email,
               role: bulkUploadRole,
-              classId: classId,
-              schoolId: profile.schoolId,
-              status: 'active',
-              uid: userId,
-              createdAt: Timestamp.now()
+              schoolId: schoolId,
+              createdAt: new Date().toISOString()
             });
-            successCount++;
-          } catch (err) {
-            errorCount++;
+            count++;
           }
-          setBulkUploadProgress(Math.round(((i + 1) / data.length) * 100));
         }
-        
-        setBulkUploadStatus(`Upload complete! ${successCount} successful, ${errorCount} failed.`);
-        setTimeout(() => {
-          setShowBulkUploadModal(false);
-          setBulkUploadFile(null);
-          setBulkUploadStatus('');
-          setBulkUploadProgress(0);
-          setBulkUploadContext(null);
-          if (fileInputRef.current) fileInputRef.current.value = '';
-        }, 4000);
+
+        try {
+          await batch.commit();
+          setBulkUploadProgress(100);
+          setBulkUploadStatus(`Successfully uploaded ${count} users.`);
+          setTimeout(() => {
+            setShowBulkUploadModal(false);
+            setBulkUploadFile(null);
+            setBulkUploadProgress(0);
+            setBulkUploadStatus('');
+          }, 2000);
+        } catch (error) {
+          setBulkUploadStatus('Error uploading batch.');
+          console.error(error);
+        }
       }
     });
   };
 
-  const handleCreateSchool = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!profile) return;
-    
-    setLoading(true);
+  const handleEnrollStudent = async (studentId: string) => {
+    if (!showEnrollStudentModal) return;
     try {
-      const schoolId = doc(collection(db, 'schools')).id;
-      const now = Timestamp.now();
-      
-      // 1. Create the school
-      await setDoc(doc(db, 'schools', schoolId), {
-        ...schoolForm,
-        adminEmail: profile.email,
-        managerId: profile.uid,
-        status: 'pending',
-        createdAt: now,
-        updatedAt: now
+      await updateDoc(doc(db, 'users', studentId), {
+        classId: showEnrollStudentModal.classId
       });
-      
-      // 2. Update the user's profile with the new schoolId and add to schoolIds
-      const updatedSchoolIds = Array.from(new Set([...(profile.schoolIds || []), schoolId]));
-      await setDoc(doc(db, 'users', profile.uid), {
-        schoolId: schoolId, // Set as active school
-        schoolIds: updatedSchoolIds,
-        updatedAt: now
-      }, { merge: true });
-      
-      alert('School created successfully! It is now pending approval from a Super Admin.');
-      setShowCreateSchool(false);
-      setSchoolForm({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
-      // The onSnapshot will update the managedSchools list
+      setShowEnrollStudentModal(null);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'schools/new');
-    } finally {
-      setLoading(false);
+      handleFirestoreError(error, OperationType.UPDATE, `users/${studentId}`);
     }
   };
 
-  const handleSwitchSchool = async (schoolId: string) => {
-    if (!profile) return;
-    try {
-      await setDoc(doc(db, 'users', profile.uid), {
-        schoolId: schoolId,
-        updatedAt: Timestamp.now()
-      }, { merge: true });
-      // The AuthContext will pick up the change and reload the profile
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `users/${profile.uid}`);
-    }
-  };
-
-  if (!profile?.schoolId || showCreateSchool) {
-    return (
-      <div className="max-w-2xl mx-auto space-y-8 py-12">
-        <div className="text-center space-y-4">
-          <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto">
-            <SchoolIcon className="w-10 h-10 text-emerald-600" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            {profile?.schoolId ? 'Register Another School' : 'Create Your School'}
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-400">
-            {profile?.schoolId ? 'Expand your educational network by adding a new school.' : "You don't have a school associated with your profile yet. Fill out the form below to register your school."}
-          </p>
-        </div>
-
-        <form onSubmit={handleCreateSchool} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-sm space-y-6">
-          <div className="grid grid-cols-1 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">School Name</label>
-              <input
-                type="text"
-                required
-                value={schoolForm.name}
-                onChange={(e) => setSchoolForm({ ...schoolForm, name: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-emerald-600"
-                placeholder="Enter school name"
-              />
+  const Modal: React.FC<{ isOpen: boolean, onClose: () => void, title: string, children: React.ReactNode }> = ({ isOpen, onClose, title, children }) => (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm" />
+          <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-zinc-100 dark:border-zinc-800">
+            <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+              <h3 className="text-2xl font-black tracking-tight">{title}</h3>
+              <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-all"><X size={20} /></button>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Address</label>
-              <input
-                type="text"
-                required
-                value={schoolForm.address}
-                onChange={(e) => setSchoolForm({ ...schoolForm, address: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-emerald-600"
-                placeholder="Enter school address"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Contact Phone</label>
-                <input
-                  type="tel"
-                  required
-                  value={schoolForm.contactPhone}
-                  onChange={(e) => setSchoolForm({ ...schoolForm, contactPhone: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-emerald-600"
-                  placeholder="Enter phone number"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Academic Structure</label>
-                <select
-                  value={schoolForm.academicStructure}
-                  onChange={(e) => setSchoolForm({ ...schoolForm, academicStructure: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-emerald-600"
-                >
-                  <option value="K-12">K-12</option>
-                  <option value="Primary Only">Primary Only</option>
-                  <option value="Secondary Only">Secondary Only</option>
-                  <option value="Higher Education">Higher Education</option>
-                  <option value="Vocational">Vocational</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            {profile?.schoolId && (
-              <button
-                type="button"
-                onClick={() => setShowCreateSchool(false)}
-                className="flex-1 py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-2xl font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
-              >
-                Cancel
-              </button>
-            )}
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-[2] py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 dark:shadow-none disabled:opacity-50"
-            >
-              {loading ? 'Creating School...' : 'Register School'}
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
-
-  if (schoolData?.status === 'pending') {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 text-center space-y-6 max-w-md mx-auto">
-        <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center animate-pulse">
-          <AlertCircle className="w-10 h-10 text-amber-600" />
+            <div className="p-8">{children}</div>
+          </motion.div>
         </div>
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Approval Pending</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">
-            Your school <strong>{schoolData.name}</strong> has been registered and is currently awaiting approval from a Super Admin.
-          </p>
-        </div>
-        <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl w-full text-sm text-zinc-600 dark:text-zinc-300">
-          Once approved, you will have full access to the school management dashboard.
-        </div>
-      </div>
-    );
-  }
-
-  if (schoolData?.status === 'suspended') {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 text-center space-y-6 max-w-md mx-auto">
-        <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-          <AlertCircle className="w-10 h-10 text-red-600" />
-        </div>
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Account Suspended</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">
-            Your school <strong>{schoolData.name}</strong> has been suspended. Please contact a Super Admin for more information.
-          </p>
-        </div>
-      </div>
-    );
-  }
+      )}
+    </AnimatePresence>
+  );
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center shrink-0">
-            <SchoolIcon className="w-6 h-6 text-emerald-600" />
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-2 text-zinc-500 font-bold uppercase tracking-widest text-xs mb-2">
+            <School size={14} />
+            School Management
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-zinc-900 dark:text-white leading-tight">
-              {schoolData?.name || 'Loading School...'}
-            </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={cn(
-                "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                schoolData?.status === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-              )}>
-                {schoolData?.status || 'pending'}
-              </span>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">• {schoolData?.academicStructure}</span>
-            </div>
-          </div>
+          <h2 className="text-4xl font-black tracking-tight">{schoolName || 'Loading...'}</h2>
         </div>
-
         <div className="flex items-center gap-3">
-          {managedSchools.length > 1 && (
-            <select 
-              value={profile?.schoolId}
-              onChange={(e) => handleSwitchSchool(e.target.value)}
-              className="px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-600 transition-all"
-            >
-              {managedSchools.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          )}
           <button 
-            onClick={() => setShowCreateSchool(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-xl text-sm font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+            onClick={() => { setBulkUploadRole('student'); setShowBulkUploadModal(true); }}
+            className="flex items-center gap-2 px-5 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
           >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Register Another</span>
+            <Upload size={18} />
+            Bulk Upload
+          </button>
+          <button 
+            onClick={() => setShowAddClassModal(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-2xl font-bold shadow-xl shadow-purple-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
+            <Plus size={20} />
+            New Class
           </button>
         </div>
       </div>
 
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            School Management
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1">
-            Manage your school, classes, and users.
-          </p>
-        </div>
-        <div className="flex gap-3">
-          {activeSubTab === 'users' ? (
-            <>
-              <button 
-                onClick={() => openAddUserModal('teacher')}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add Teacher
-              </button>
-              <button 
-                onClick={() => setAddStudentOptionsContext({})}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add Student
-              </button>
-              <button 
-                onClick={() => { setBulkUploadRole('student'); setBulkUploadContext(null); setShowBulkUploadModal(true); }}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-md"
-              >
-                <Upload className="w-4 h-4" />
-                Bulk Upload
-              </button>
-            </>
-          ) : activeSubTab === 'classes' ? (
-            <button 
-              onClick={() => { setEditingItem(null); setShowAddModal(true); }}
-              className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg"
-            >
-              <Plus className="w-5 h-5" />
-              Add Class
-            </button>
-          ) : null}
-        </div>
-      </header>
-
-      <div className="flex gap-4 border-b border-black/5 pb-4 overflow-x-auto">
-        <button 
-          onClick={() => setActiveSubTab('classes')}
-          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-        >
-          Classes
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('users')}
-          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-        >
-          Users
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('courses')}
-          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-        >
-          Courses
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('exams')}
-          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-        >
-          Exams
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('payments')}
-          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'payments' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-        >
-          Payments
-        </button>
-        <button 
-          onClick={() => setActiveSubTab('profile')}
-          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'profile' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-        >
-          School Profile
-        </button>
-        
-        {activeSubTab === 'users' && (
-          <div className="ml-auto flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
-            {(['all', 'admin', 'teacher', 'student'] as const).map((role) => (
-              <button
-                key={role}
-                onClick={() => setRoleFilter(role)}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all",
-                  roleFilter === role ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
-                )}
-              >
-                {role === 'admin' ? 'Managers' : `${role}s`}
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Tabs */}
+      <div className="flex items-center gap-2 p-1.5 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-x-auto no-scrollbar">
+        {[
+          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { id: 'teachers', label: 'Teachers', icon: UserCircle },
+          { id: 'students', label: 'Students', icon: GraduationCap },
+          { id: 'parents', label: 'Parents', icon: Users2 },
+          { id: 'classes', label: 'Classes', icon: BookOpen },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
+          >
+            <tab.icon size={18} />
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        {activeSubTab === 'classes' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {classes.map(cls => (
-              <div key={cls.id} className="p-6 bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
-                <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-4">
-                  <BookOpen className="w-6 h-6" />
+      {/* Content */}
+      <div className="min-h-[60vh]">
+        {activeTab === 'dashboard' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { label: 'Total Teachers', value: teachers.length, icon: UserCircle, color: 'bg-blue-500' },
+              { label: 'Total Students', value: students.length, icon: GraduationCap, color: 'bg-purple-500' },
+              { label: 'Total Parents', value: parents.length, icon: Users2, color: 'bg-pink-500' },
+              { label: 'Total Classes', value: classes.length, icon: BookOpen, color: 'bg-orange-500' },
+            ].map((stat, i) => (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
+                key={stat.label} 
+                className="bg-white dark:bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-sm"
+              >
+                <div className={`${stat.color} w-12 h-12 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-zinc-200/50 dark:shadow-none`}>
+                  <stat.icon size={24} />
                 </div>
-                <h3 className="text-xl font-bold">{cls.name}</h3>
-                <p className="text-zinc-500 dark:text-zinc-400 text-sm">Grade: {cls.grade} • Year: {cls.year}</p>
-                <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
-                  <button 
-                    onClick={() => setAddStudentOptionsContext({classId: cls.id})}
-                    className="flex items-center gap-1 text-xs font-bold text-purple-600 hover:text-purple-700"
-                  >
-                    <UserPlus className="w-3 h-3" />
-                    Add Student
-                  </button>
-                  <div className="flex gap-2">
-                    <button onClick={() => startEdit(cls)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400"><Settings className="w-4 h-4" /></button>
-                    <button onClick={() => setDeleteConfirm({ collection: 'classes', id: cls.id })} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </div>
-              </div>
+                <p className="text-sm font-bold text-zinc-500 uppercase tracking-wider">{stat.label}</p>
+                <h3 className="text-4xl font-black mt-2">{stat.value}</h3>
+              </motion.div>
             ))}
           </div>
         )}
 
-        {activeSubTab === 'users' && (
-          <div className="bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl overflow-hidden shadow-sm">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-zinc-50 dark:bg-zinc-800 border-b border-black/5">
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Name</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Email</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Role</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Class / Specialization</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users
-                  .filter(u => roleFilter === 'all' || u.role === roleFilter)
-                  .map(user => (
-                    <tr key={user.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-                      <td className="px-6 py-4 font-bold">{user.displayName}</td>
-                      <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400">{user.email}</td>
-                      <td className="px-6 py-4">
-                        <span className={cn(
-                          "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
-                          user.role === 'teacher' ? "bg-blue-100 text-blue-700" : 
-                          user.role === 'admin' ? "bg-purple-100 text-purple-700" : 
-                          "bg-purple-100 text-purple-700"
-                        )}>
-                          {user.role === 'admin' ? 'School Manager' : user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 text-sm">
-                        {user.role === 'teacher' ? user.specialization : classes.find(c => c.id === user.classId)?.name || '-'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
-                          <button onClick={() => startEdit(user)} className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"><Settings className="w-4 h-4" /></button>
-                          <button onClick={() => setDeleteConfirm({ collection: 'users', id: user.id })} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+        {(activeTab === 'teachers' || activeTab === 'students' || activeTab === 'parents') && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-black tracking-tight capitalize">{activeTab}</h3>
+              <button 
+                onClick={() => setShowAddUserModal({ role: activeTab.slice(0, -1) as any })}
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-bold text-sm"
+              >
+                <UserPlus size={16} />
+                Add {activeTab.slice(0, -1)}
+              </button>
+            </div>
+            <div className="bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-zinc-50 dark:bg-zinc-800/50">
+                    <th className="px-8 py-5 text-xs font-bold text-zinc-500 uppercase tracking-widest">Name</th>
+                    <th className="px-8 py-5 text-xs font-bold text-zinc-500 uppercase tracking-widest">Email</th>
+                    {activeTab === 'students' && <th className="px-8 py-5 text-xs font-bold text-zinc-500 uppercase tracking-widest">Class</th>}
+                    {activeTab === 'students' && <th className="px-8 py-5 text-xs font-bold text-zinc-500 uppercase tracking-widest">Parents</th>}
+                    {activeTab === 'parents' && <th className="px-8 py-5 text-xs font-bold text-zinc-500 uppercase tracking-widest">Students</th>}
+                    <th className="px-8 py-5 text-xs font-bold text-zinc-500 uppercase tracking-widest text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
+                  {(activeTab === 'teachers' ? teachers : activeTab === 'students' ? students : parents).map(user => (
+                    <tr key={user.uid} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
+                      <td className="px-8 py-5 font-bold">{user.name}</td>
+                      <td className="px-8 py-5 text-zinc-500 font-medium">{user.email}</td>
+                      {activeTab === 'students' && (
+                        <td className="px-8 py-5">
+                          <span className="text-xs font-bold bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg">
+                            {classes.find(c => c.id === (user as any).classId)?.name || 'Unassigned'}
+                          </span>
+                        </td>
+                      )}
+                      {activeTab === 'students' && (
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg">
+                              {user.parentIds?.length || 0} Linked
+                            </span>
+                            <button 
+                              onClick={() => setShowLinkModal({ studentId: user.uid })}
+                              className="p-1.5 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-all"
+                            >
+                              <LinkIcon size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                      {activeTab === 'parents' && (
+                        <td className="px-8 py-5">
+                          <span className="text-xs font-bold bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg">
+                            {user.studentIds?.length || 0} Children
+                          </span>
+                        </td>
+                      )}
+                      <td className="px-8 py-5 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button className="p-2 text-zinc-400 hover:text-purple-600 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20"><Edit2 size={16} /></button>
+                          <button className="p-2 text-zinc-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 size={16} /></button>
                         </div>
                       </td>
                     </tr>
                   ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeSubTab === 'courses' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses.map(course => (
-              <div key={course.id} className="p-6 bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
-                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
-                  <BookOpen className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-bold">{course.title}</h3>
-                <p className="text-zinc-500 dark:text-zinc-400 text-sm line-clamp-2">{course.description}</p>
-                <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-400">By {course.teacherName || 'Unknown'}</span>
-                  <button onClick={() => setDeleteConfirm({ collection: 'courses', id: course.id })} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeSubTab === 'exams' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {exams.map(exam => (
-              <div key={exam.id} className="p-6 bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl shadow-sm hover:shadow-md transition-all">
-                <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-4">
-                  <BookOpen className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-bold">{exam.title}</h3>
-                <p className="text-zinc-500 dark:text-zinc-400 text-sm line-clamp-2">{exam.description}</p>
-                <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-400">{exam.questions?.length || 0} Questions</span>
-                  <button onClick={() => setDeleteConfirm({ collection: 'exams', id: exam.id })} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeSubTab === 'payments' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-2xl border border-black/5">
-              <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-black/5 rounded-xl px-3 py-2 w-full sm:w-96">
-                <Search className="w-4 h-4 text-zinc-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search by student name or email..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-transparent border-none focus:ring-0 text-sm w-full"
-                />
-              </div>
-              <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-black/5 rounded-xl p-1">
-                {(['all', 'verified', 'pending'] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setPaymentFilter(filter)}
-                    className={cn(
-                      "px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all",
-                      paymentFilter === filter ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-                    )}
-                  >
-                    {filter}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl overflow-hidden shadow-sm">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-zinc-50 dark:bg-zinc-800 border-b border-black/5">
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Student</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Course</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Enrolled Date</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Status</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Payment</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {enrollments
-                    .filter(e => {
-                      const student = users.find(u => u.id === e.studentId);
-                      const matchesSearch = !searchQuery || 
-                        student?.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                        student?.email?.toLowerCase().includes(searchQuery.toLowerCase());
-                      const matchesFilter = paymentFilter === 'all' || 
-                        (paymentFilter === 'verified' && e.paymentVerified) || 
-                        (paymentFilter === 'pending' && !e.paymentVerified);
-                      return matchesSearch && matchesFilter;
-                    })
-                    .map(enrollment => {
-                      const student = users.find(u => u.id === enrollment.studentId);
-                      const course = courses.find(c => c.id === enrollment.courseId);
-                      return (
-                        <tr key={enrollment.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="font-bold">{student?.displayName || 'Unknown Student'}</span>
-                              <span className="text-[10px] text-zinc-500">{student?.email}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="font-medium">{course?.title || enrollment.courseTitle || 'Unknown Course'}</span>
-                              {course?.price > 0 && <span className="text-[10px] text-emerald-600 font-bold">${course.price}</span>}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-zinc-500 text-sm">
-                            {enrollment.enrolledAt?.toDate().toLocaleDateString()}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={cn(
-                              "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
-                              enrollment.status === 'approved' ? "bg-emerald-100 text-emerald-700" : 
-                              enrollment.status === 'denied' ? "bg-red-100 text-red-700" : 
-                              "bg-amber-100 text-amber-700"
-                            )}>
-                              {enrollment.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              {enrollment.paymentVerified ? (
-                                <div className="flex items-center gap-1 text-emerald-600">
-                                  <CheckCircle2 className="w-4 h-4" />
-                                  <span className="text-xs font-bold">Verified</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1 text-amber-600">
-                                  <AlertCircle className="w-4 h-4" />
-                                  <span className="text-xs font-bold">Pending</span>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                             <button onClick={() => setDeleteConfirm({ collection: 'enrollments', id: enrollment.id })} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
-                          </td>
-                        </tr>
-                      );
-                    })}
                 </tbody>
               </table>
             </div>
           </div>
         )}
 
-        {activeSubTab === 'profile' && (
-          <div className="max-w-2xl bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl p-8 shadow-sm">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-2xl flex items-center justify-center">
-                <SchoolIcon className="w-8 h-8" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold">School Profile</h2>
-                <p className="text-zinc-500 text-sm">Update your school's public information.</p>
-              </div>
-              <div className="ml-auto">
-                <span className={cn(
-                  "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                  schoolData?.status === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                )}>
-                  Status: {schoolData?.status || 'pending'}
-                </span>
-              </div>
-            </div>
-
-            <form onSubmit={handleUpdateSchool} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-bold mb-2">School Name</label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={schoolForm.name}
-                    onChange={(e) => setSchoolForm({...schoolForm, name: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-                  />
+        {activeTab === 'classes' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {classes.map(cls => (
+              <div key={cls.id} className="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm group">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="w-12 h-12 bg-orange-50 dark:bg-orange-900/20 text-orange-600 rounded-2xl flex items-center justify-center">
+                    <BookOpen size={24} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setShowEnrollStudentModal({ classId: cls.id })}
+                      className="p-2 text-zinc-400 hover:text-purple-600 rounded-xl transition-all"
+                      title="Enroll Student"
+                    >
+                      <UserPlus size={18} />
+                    </button>
+                    <button className="p-2 text-zinc-400 hover:text-red-500 rounded-xl transition-all opacity-0 group-hover:opacity-100">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2">Academic Structure</label>
-                  <select 
-                    value={schoolForm.academicStructure}
-                    onChange={(e) => setSchoolForm({...schoolForm, academicStructure: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-                  >
-                    <option value="K-12">K-12</option>
-                    <option value="Primary">Primary Only</option>
-                    <option value="Secondary">Secondary Only</option>
-                    <option value="Higher Education">Higher Education</option>
-                  </select>
+                <h3 className="text-2xl font-black tracking-tight">{cls.name}</h3>
+                <div className="mt-6 flex items-center gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl">
+                  <div className="w-10 h-10 bg-white dark:bg-zinc-700 rounded-full flex items-center justify-center text-zinc-400">
+                    <UserCircle size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Teacher</p>
+                    <p className="text-sm font-bold">{cls.teacherName || 'Not Assigned'}</p>
+                  </div>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-bold mb-2">Address</label>
-                <input 
-                  type="text" 
-                  required 
-                  value={schoolForm.address}
-                  onChange={(e) => setSchoolForm({...schoolForm, address: e.target.value})}
-                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-bold mb-2">Admin Email</label>
-                  <input 
-                    type="email" 
-                    required 
-                    value={schoolForm.adminEmail}
-                    onChange={(e) => setSchoolForm({...schoolForm, adminEmail: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2">Contact Phone</label>
-                  <input 
-                    type="text" 
-                    value={schoolForm.contactPhone}
-                    onChange={(e) => setSchoolForm({...schoolForm, contactPhone: e.target.value})}
-                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <button 
-                  type="submit"
-                  className="w-full md:w-auto px-8 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
+            ))}
           </div>
         )}
       </div>
 
       {/* Modals */}
       <Modal 
-        isOpen={showAddModal} 
-        onClose={() => { setShowAddModal(false); setEditingItem(null); }}
-        title={editingItem ? `Edit ${activeSubTab === 'classes' ? 'Class' : 'User'}` : `Add New ${activeSubTab === 'classes' ? 'Class' : 'User'}`}
+        isOpen={!!showAddUserModal} 
+        onClose={() => setShowAddUserModal(null)}
+        title={`Add New ${showAddUserModal?.role}`}
       >
-        {activeSubTab === 'classes' ? (
-          <form onSubmit={handleAddClass} className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold mb-1">Class Name</label>
-              <input 
-                type="text" 
-                required 
-                value={newClass.name}
-                onChange={(e) => setNewClass({...newClass, name: e.target.value})}
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">Grade</label>
-              <input 
-                type="text" 
-                required 
-                value={newClass.grade}
-                onChange={(e) => setNewClass({...newClass, grade: e.target.value})}
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">Year</label>
-              <input 
-                type="text" 
-                required 
-                value={newClass.year}
-                onChange={(e) => setNewClass({...newClass, year: e.target.value})}
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              />
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
-              <button type="submit" className="px-6 py-2 bg-zinc-900 text-white rounded-xl font-bold shadow-lg">
-                {editingItem ? 'Save Changes' : 'Create Class'}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <form onSubmit={handleAddUser} className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold mb-1">Display Name</label>
-              <input 
-                type="text" 
-                required 
-                value={newUser.displayName}
-                onChange={(e) => setNewUser({...newUser, displayName: e.target.value})}
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">Email Address</label>
-              <input 
-                type="email" 
-                required 
-                value={newUser.email}
-                onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">Role</label>
-              <select 
-                value={newUser.role}
-                onChange={(e) => setNewUser({...newUser, role: e.target.value as any})}
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              >
-                <option value="student">Student</option>
-                <option value="teacher">Teacher</option>
-                <option value="admin">School Manager</option>
-              </select>
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
-              <button type="submit" className="px-6 py-2 bg-zinc-900 text-white rounded-xl font-bold shadow-lg">
-                {editingItem ? 'Save Changes' : 'Create User'}
-              </button>
-            </div>
-          </form>
-        )}
+        <form onSubmit={handleAddUser} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-zinc-500 uppercase tracking-wider ml-1">Full Name</label>
+            <input required type="text" placeholder="e.g. John Doe" value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 transition-all font-medium" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-zinc-500 uppercase tracking-wider ml-1">Email Address</label>
+            <input required type="email" placeholder="e.g. john@example.com" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 transition-all font-medium" />
+          </div>
+          <button type="submit" className="w-full py-4 bg-purple-600 text-white rounded-2xl font-bold shadow-xl shadow-purple-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">Create {showAddUserModal?.role}</button>
+        </form>
       </Modal>
 
-      {/* Bulk Upload Modal */}
-      <Modal 
-        isOpen={showBulkUploadModal} 
-        onClose={() => setShowBulkUploadModal(false)}
-        title={`Bulk Upload ${bulkUploadRole}s`}
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-zinc-500">Upload a CSV file with "email" and "name" columns.</p>
-          <input 
-            type="file" 
-            accept=".csv"
-            ref={fileInputRef}
-            onChange={(e) => setBulkUploadFile(e.target.files?.[0] || null)}
-            className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-          />
-          {bulkUploadStatus && (
-            <div className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-xs font-medium">
-              {bulkUploadStatus}
-              {bulkUploadProgress > 0 && bulkUploadProgress < 100 && (
-                <div className="w-full bg-zinc-200 dark:bg-zinc-700 h-1 rounded-full mt-2 overflow-hidden">
-                  <div className="bg-purple-600 h-full transition-all" style={{ width: `${bulkUploadProgress}%` }} />
+      <Modal isOpen={!!showEnrollStudentModal} onClose={() => setShowEnrollStudentModal(null)} title="Enroll Student in Class">
+        <div className="space-y-6">
+          <p className="text-sm text-zinc-500 font-medium">Select a student to enroll in {classes.find(c => c.id === showEnrollStudentModal?.classId)?.name}.</p>
+          <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
+            {students.filter(s => (s as any).classId !== showEnrollStudentModal?.classId).map(student => (
+              <button
+                key={student.uid}
+                onClick={() => handleEnrollStudent(student.uid)}
+                className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-all text-left"
+              >
+                <div>
+                  <p className="font-bold">{student.name}</p>
+                  <p className="text-xs text-zinc-500">{student.email}</p>
                 </div>
-              )}
-            </div>
-          )}
-          <div className="flex justify-end gap-3 pt-4">
-            <button onClick={() => setShowBulkUploadModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
+                <ChevronRight size={18} className="text-zinc-400" />
+              </button>
+            ))}
+            {students.filter(s => (s as any).classId !== showEnrollStudentModal?.classId).length === 0 && (
+              <p className="text-center py-4 text-zinc-500 text-sm">No students available to enroll.</p>
+            )}
+          </div>
+          <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
             <button 
-              onClick={handleBulkUpload}
-              disabled={!bulkUploadFile || bulkUploadProgress > 0}
-              className="px-6 py-2 bg-zinc-900 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
+              onClick={() => {
+                const classId = showEnrollStudentModal?.classId;
+                setShowEnrollStudentModal(null);
+                setShowAddUserModal({ role: 'student', classId });
+              }}
+              className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-bold flex items-center justify-center gap-2"
             >
-              Start Upload
+              <Plus size={18} />
+              Create New Student
             </button>
           </div>
         </div>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
-      <Modal 
-        isOpen={!!deleteConfirm} 
-        onClose={() => setDeleteConfirm(null)}
-        title="Confirm Deletion"
-      >
-        <div className="space-y-4">
-          <p className="text-zinc-600 dark:text-zinc-400">Are you sure you want to delete this {deleteConfirm?.collection.slice(0, -1)}? This action cannot be undone.</p>
-          <div className="flex justify-end gap-3">
-            <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
+      <Modal isOpen={showAddClassModal} onClose={() => setShowAddClassModal(false)} title="Create New Class">
+        <form onSubmit={handleAddClass} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-zinc-500 uppercase tracking-wider ml-1">Class Name</label>
+            <input required type="text" placeholder="e.g. Grade 10 - Science" value={newClass.name} onChange={(e) => setNewClass({ ...newClass, name: e.target.value })} className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 transition-all font-medium" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-zinc-500 uppercase tracking-wider ml-1">Assign Teacher</label>
+            <select value={newClass.teacherId} onChange={(e) => setNewClass({ ...newClass, teacherId: e.target.value })} className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-800 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 transition-all font-medium appearance-none">
+              <option value="">Select a Teacher</option>
+              {teachers.map(t => <option key={t.uid} value={t.uid}>{t.name}</option>)}
+            </select>
+          </div>
+          <button type="submit" className="w-full py-4 bg-purple-600 text-white rounded-2xl font-bold shadow-xl shadow-purple-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">Create Class</button>
+        </form>
+      </Modal>
+
+      <Modal isOpen={!!showLinkModal} onClose={() => setShowLinkModal(null)} title="Link Parent to Student">
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <p className="text-sm text-zinc-500 font-medium">Select a parent from the school list or search by email.</p>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+              <input 
+                type="email" 
+                placeholder="Search parent by email..." 
+                value={linkParentEmail} 
+                onChange={(e) => setLinkParentEmail(e.target.value)} 
+                className="w-full pl-10 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 transition-all font-medium text-sm" 
+              />
+            </div>
+          </div>
+
+          <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
+            {parents
+              .filter(p => !linkParentEmail || p.email.toLowerCase().includes(linkParentEmail.toLowerCase()))
+              .map(parent => (
+                <button
+                  key={parent.uid}
+                  onClick={async () => {
+                    if (!showLinkModal) return;
+                    try {
+                      const studentId = showLinkModal.studentId;
+                      const parentId = parent.uid;
+
+                      // Update Parent
+                      const currentStudentIds = parent.studentIds || [];
+                      if (!currentStudentIds.includes(studentId)) {
+                        await updateDoc(doc(db, 'users', parentId), {
+                          studentIds: [...currentStudentIds, studentId]
+                        });
+                      }
+
+                      // Update Student
+                      const studentDoc = students.find(s => s.uid === studentId);
+                      const currentParentIds = studentDoc?.parentIds || [];
+                      if (!currentParentIds.includes(parentId)) {
+                        await updateDoc(doc(db, 'users', studentId), {
+                          parentIds: [...currentParentIds, parentId]
+                        });
+                      }
+
+                      setShowLinkModal(null);
+                      setLinkParentEmail('');
+                    } catch (error) {
+                      handleFirestoreError(error, OperationType.UPDATE, 'users');
+                    }
+                  }}
+                  className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-all text-left"
+                >
+                  <div>
+                    <p className="font-bold">{parent.name}</p>
+                    <p className="text-xs text-zinc-500">{parent.email}</p>
+                  </div>
+                  <Plus size={18} className="text-purple-600" />
+                </button>
+              ))}
+            {parents.length === 0 && (
+              <p className="text-center py-4 text-zinc-500 text-sm">No parents found in this school.</p>
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
             <button 
-              onClick={() => deleteConfirm && handleDelete(deleteConfirm.collection, deleteConfirm.id)}
-              className="px-6 py-2 bg-red-600 text-white rounded-xl font-bold shadow-lg"
+              onClick={() => {
+                setShowLinkModal(null);
+                setShowAddUserModal({ role: 'parent' });
+              }}
+              className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-bold flex items-center justify-center gap-2"
             >
-              Delete
+              <Plus size={18} />
+              Create New Parent
             </button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showBulkUploadModal} onClose={() => setShowBulkUploadModal(false)} title={`Bulk Upload ${bulkUploadRole}s`}>
+        <div className="space-y-6">
+          <div className="flex items-center gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+            {['teacher', 'student', 'parent'].map(role => (
+              <button 
+                key={role} 
+                onClick={() => setBulkUploadRole(role as any)}
+                className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${bulkUploadRole === role ? 'bg-white dark:bg-zinc-700 shadow-sm text-purple-600' : 'text-zinc-500'}`}
+              >
+                {role.charAt(0).toUpperCase() + role.slice(1)}s
+              </button>
+            ))}
+          </div>
+          <div className="p-8 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-[2rem] text-center space-y-4">
+            <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 mx-auto">
+              <Upload size={32} />
+            </div>
+            <div>
+              <p className="font-bold">Select CSV File</p>
+              <p className="text-xs text-zinc-500 mt-1">File must have "name" and "email" columns.</p>
+            </div>
+            <input 
+              type="file" 
+              accept=".csv" 
+              ref={fileInputRef}
+              onChange={(e) => setBulkUploadFile(e.target.files?.[0] || null)}
+              className="hidden" 
+            />
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="px-6 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-bold text-sm"
+            >
+              {bulkUploadFile ? bulkUploadFile.name : 'Choose File'}
+            </button>
+          </div>
+          {bulkUploadStatus && (
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl">
+              <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">Status</p>
+              <p className="text-sm font-medium">{bulkUploadStatus}</p>
+              {bulkUploadProgress > 0 && (
+                <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full mt-3 overflow-hidden">
+                  <div className="h-full bg-purple-600 transition-all duration-500" style={{ width: `${bulkUploadProgress}%` }} />
+                </div>
+              )}
+            </div>
+          )}
+          <button 
+            disabled={!bulkUploadFile || bulkUploadProgress > 0}
+            onClick={handleBulkUpload}
+            className="w-full py-4 bg-purple-600 text-white rounded-2xl font-bold shadow-xl shadow-purple-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100"
+          >
+            Start Upload
+          </button>
         </div>
       </Modal>
     </div>
   );
 };
+
+export default SchoolManagerView;

@@ -6,37 +6,28 @@ service cloud.firestore {
     // ===============================================================
     //
     // Collection: users
-    // Fields: uid, email, displayName, role, schoolId, photoURL, createdAt
+    // Fields:
+    //   - uid: string (required)
+    //   - name: string (required)
+    //   - email: string (required, email format)
+    //   - role: string (required, enum: super_admin, school_manager, teacher, student, parent)
+    //   - schoolId: string (optional)
+    //   - studentIds: list (optional, for parents)
+    //   - parentIds: list (optional, for students)
     //
     // Collection: schools
-    // Fields: name, address, adminId, createdAt
+    // Fields:
+    //   - name: string (required)
+    //   - address: string (optional)
+    //   - managerId: string (optional)
     //
-    // Collection: courses
-    // Fields: title, description, schoolId, teacherId, isPublic, price, category, thumbnail, createdAt
-    //
-    // Collection: lessons
-    // Fields: courseId, title, content, type, order
-    //
-    // Collection: exams
-    // Fields: courseId, lessonId, sectionId, type, title, description, duration, passingScore, questions, isPublic, price, teacherId, createdAt
-    //
-    // Collection: examResults
-    // Fields: examId, studentId, score, totalQuestions, correctAnswers, feedback, completedAt
-    //
-    // Collection: resources
-    // Fields: courseId, lessonId, title, url, type, createdAt
-    //
-    // Collection: questions
-    // Fields: courseId, lessonId, studentId, studentName, content, createdAt
-    //
-    // Collection: answers
-    // Fields: questionId, userId, userName, userRole, content, createdAt
+    // Collection: schools/{schoolId}/classes
+    // Fields:
+    //   - name: string (required)
+    //   - teacherId: string (optional)
     //
     // ===============================================================
 
-    // Collection: sections
-    // Fields: courseId, name, overview, order
-    //
     // ===============================================================
     // Helper Functions
     // ===============================================================
@@ -48,340 +39,58 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function isSuperAdmin() {
       return isAuthenticated() && (
-        (request.auth.token.email_verified == true && (request.auth.token.email == "jonmersha@gmail.com")) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'super_admin')
+        getUserData().role == 'super_admin' || 
+        (request.auth.token.email == "beshegercom@gmail.com" && request.auth.token.email_verified == true)
       );
     }
 
-    function getUserData() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data : {};
-    }
-
-    function isSchoolAdmin(schoolId) {
+    function isSchoolManager(schoolId) {
       let userData = getUserData();
-      return isSuperAdmin() || (
-        userData.get('role', '') == 'admin' && (
-          userData.get('schoolId', '') == schoolId || 
-          (userData.get('schoolIds', []) is list && schoolId in userData.get('schoolIds', []))
-        )
-      );
-    }
-
-    function isTeacher() {
-      let userData = getUserData();
-      return isAuthenticated() && (userData.get('role', '') == 'teacher' || userData.get('role', '') == 'provider' || isSuperAdmin());
-    }
-
-    function isCourseTeacher(courseId) {
-      return courseId != null && exists(/databases/$(database)/documents/courses/$(courseId)) && get(/databases/$(database)/documents/courses/$(courseId)).data.teacherId == request.auth.uid;
-    }
-
-    function isExamTeacher(examId) {
-      return examId != null && exists(/databases/$(database)/documents/exams/$(examId)) && get(/databases/$(database)/documents/exams/$(examId)).data.teacherId == request.auth.uid;
-    }
-
-    function isQuestionOwner(questionId) {
-      return isAuthenticated() && exists(/databases/$(database)/documents/questions/$(questionId)) && get(/databases/$(database)/documents/questions/$(questionId)).data.studentId == request.auth.uid;
-    }
-
-    function isAnswerOwner(answerId) {
-      return isAuthenticated() && exists(/databases/$(database)/documents/answers/$(answerId)) && get(/databases/$(database)/documents/answers/$(answerId)).data.userId == request.auth.uid;
-    }
-
-    function isEnrolledInCourse(courseId) {
-      return isAuthenticated() && exists(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + courseId)) && get(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + courseId)).data.status == 'approved';
-    }
-
-    function isParticipant(conversationId) {
-      return isAuthenticated() && exists(/databases/$(database)/documents/conversations/$(conversationId)) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
-    }
-
-    function isTeacherInSchool(schoolId) {
-      let userData = getUserData();
-      return userData.role == 'teacher' && (userData.schoolId == schoolId || (userData.schoolIds != null && schoolId in userData.schoolIds));
-    }
-
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
+      return isAuthenticated() && userData.role == 'school_manager' && userData.schoolId == schoolId;
     }
 
     function isValidEmail(email) {
       return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     }
 
-    // ===============================================================
-    // Domain Validators
-    // ===============================================================
     function isValidUser(data) {
-      return data.uid is string && 
-             data.email is string && isValidEmail(data.email) &&
-             data.role in ['admin', 'teacher', 'student', 'parent', 'provider', 'super_admin'] &&
-             data.displayName is string && data.displayName.size() < 100;
-    }
-
-    function isValidSchool(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
-             (!('adminEmail' in data) || (data.adminEmail is string && isValidEmail(data.adminEmail))) &&
-             (!('status' in data) || data.status in ['active', 'pending', 'suspended']) &&
-             (!('academicStructure' in data) || data.academicStructure is string) &&
-             (!('address' in data) || data.address is string) &&
-             (!('contactPhone' in data) || data.contactPhone is string) &&
-             (!('managerId' in data) || data.managerId is string);
-    }
-
-    function isValidClass(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.schoolId is string;
-    }
-
-    function isValidCourse(data) {
-      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             (!('description' in data) || data.description == null || data.description == "" || (data.description is string && data.description.size() < 2000)) &&
-             (!('category' in data) || data.category == null || data.category == "" || (data.category is string && data.category.size() < 50)) &&
-             (!('price' in data) || data.price == null || data.price is number) &&
-             (!('teacherId' in data) || data.teacherId == request.auth.uid || isSuperAdmin()) &&
-             (!('adminComments' in data) || data.adminComments is string);
-    }
-
-    function isValidLesson(data) {
-      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             (!('content' in data) || data.content == null || data.content == "" || (data.content is string && data.content.size() < 100000)) &&
-             (!('videoUrl' in data) || data.videoUrl == null || data.videoUrl == "" || (data.videoUrl is string && data.videoUrl.size() < 1000)) &&
-             (!('pdfUrl' in data) || data.pdfUrl == null || data.pdfUrl == "" || (data.pdfUrl is string && data.pdfUrl.size() < 1000)) &&
-             data.type in ['text', 'video', 'pdf', 'quiz', 'container'] &&
-             data.courseId is string &&
-             (!('isPublic' in data) || data.isPublic is bool);
-    }
-
-    function isValidExam(data) {
-      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             (!('description' in data) || data.description == null || (data.description is string && data.description.size() < 2000)) &&
-             (!('duration' in data) || data.duration == null || data.duration is number) &&
-             (!('passingScore' in data) || data.passingScore == null || data.passingScore is number) &&
-             (!('maxAttempts' in data) || data.maxAttempts == null || data.maxAttempts is number) &&
-             data.questions is list &&
-             data.type in ['lesson', 'section', 'final'] &&
-             (!('lessonId' in data) || data.lessonId is string) &&
-             (!('sectionId' in data) || data.sectionId is string) &&
-             (!('teacherId' in data) || data.teacherId == request.auth.uid || isSuperAdmin());
-    }
-
-    function isValidExamResult(data) {
-      return data.examId is string && data.studentId is string &&
-             data.score is number && data.completedAt is timestamp &&
-             (!('studentName' in data) || data.studentName is string) &&
-             (!('totalQuestions' in data) || data.totalQuestions is number) &&
-             (!('correctAnswers' in data) || data.correctAnswers is number) &&
-             (!('feedback' in data) || data.feedback is string);
-    }
-
-    function isValidEnrollment(data) {
-      return data.studentId is string &&
-             (('courseId' in data && data.courseId is string) || ('examId' in data && data.examId is string)) &&
-             (!('status' in data) || (data.status is string && data.status.size() < 50)) &&
-             (!('progress' in data) || data.progress is number) &&
-             (!('paymentVerified' in data) || data.paymentVerified is bool) &&
-             (!('courseTitle' in data) || (data.courseTitle is string && data.courseTitle.size() < 200)) &&
-             (!('title' in data) || (data.title is string && data.title.size() < 200)) &&
-             (!('type' in data) || data.type in ['course', 'exam']) &&
-             (!('studentName' in data) || (data.studentName is string && data.studentName.size() < 100)) &&
-             (!('teacherId' in data) || (data.teacherId is string && data.teacherId.size() < 100)) &&
-             (!('enrolledAt' in data) || data.enrolledAt is timestamp);
-    }
-
-    function isValidResource(data) {
-      return data.courseId is string && data.title is string && data.title.size() > 0 &&
-             data.url is string && data.type in ['pdf', 'link', 'video', 'document', 'other'] &&
-             (!('lessonId' in data) || data.lessonId == null || data.lessonId is string) &&
-             (!('section' in data) || data.section == null || data.section is string);
-    }
-
-    function isValidQuestion(data) {
-      return data.courseId is string && data.studentId == request.auth.uid &&
-             data.content is string && data.content.size() > 0 && data.content.size() < 5000;
-    }
-
-    function isValidAnswer(data) {
-      return data.questionId is string && data.userId == request.auth.uid &&
-             data.content is string && data.content.size() > 0 && data.content.size() < 5000;
-    }
-
-    function isValidSection(data) {
-      return data.courseId is string && data.name is string && data.name.size() > 0 &&
-             (!('overview' in data) || data.overview == null || data.overview == "" || (data.overview is string && data.overview.size() < 10000)) &&
-             (!('order' in data) || data.order is number) &&
-             (!('isPublic' in data) || data.isPublic is bool);
+      return data.keys().hasAll(['uid', 'name', 'email', 'role']) &&
+             data.uid is string && data.name is string && data.name.size() > 0 &&
+             isValidEmail(data.email) &&
+             data.role in ['super_admin', 'school_manager', 'teacher', 'student', 'parent'];
     }
 
     // ===============================================================
     // Rules
     // ===============================================================
 
-    match /sections/{sectionId} {
-      allow read: if resource.data.isPublic == true || isAuthenticated();
-      allow create: if isSuperAdmin() || (isTeacher() && isCourseTeacher(request.resource.data.courseId) && isValidSection(request.resource.data));
-      allow update: if isSuperAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId) && isValidSection(request.resource.data));
-      allow delete: if isSuperAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId));
-    }
-
-    match /users/{uid} {
-      allow read: if isAuthenticated() && (
-        isOwner(uid) || 
-        isSuperAdmin() || 
-        (getUserData().get('schoolId', '') != '' && getUserData().schoolId == resource.data.get('schoolId', ''))
-      );
-      allow create: if isAuthenticated() && (
-        isOwner(uid) || 
-        isSuperAdmin() || 
-        (getUserData().get('role', '') == 'admin' && getUserData().get('schoolId', '') == request.resource.data.get('schoolId', '') && request.resource.data.role != 'super_admin' && request.resource.data.role != 'admin')
-      ) && isValidUser(request.resource.data);
-      allow update: if isAuthenticated() && (
-        isOwner(uid) || 
-        isSuperAdmin() || 
-        (getUserData().get('role', '') == 'admin' && getUserData().get('schoolId', '') == resource.data.get('schoolId', '') && request.resource.data.role != 'super_admin' && request.resource.data.role != 'admin')
-      ) && isValidUser(request.resource.data);
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isSuperAdmin() || (getUserData().schoolId == resource.data.schoolId));
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isSuperAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isSuperAdmin());
       allow delete: if isSuperAdmin();
     }
 
     match /schools/{schoolId} {
       allow read: if isAuthenticated();
-      allow create: if (isSuperAdmin() || getUserData().get('role', '') == 'admin') && isValidSchool(request.resource.data);
-      allow update: if (isSuperAdmin() || isSchoolAdmin(schoolId)) && isValidSchool(request.resource.data);
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin() || isSchoolManager(schoolId);
       allow delete: if isSuperAdmin();
+
+      match /classes/{classId} {
+        allow read: if isAuthenticated() && (isSuperAdmin() || isSchoolManager(schoolId) || getUserData().schoolId == schoolId);
+        allow write: if isSuperAdmin() || isSchoolManager(schoolId);
+      }
     }
 
-    match /classes/{classId} {
-      allow read: if isAuthenticated() && (getUserData().schoolId == resource.data.schoolId || isSuperAdmin());
-      allow create: if isAuthenticated() && (isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == request.resource.data.schoolId)) && isValidClass(request.resource.data);
-      allow update: if (isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId)) && isValidClass(request.resource.data);
-      allow delete: if isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId);
-    }
-
-    match /courses/{courseId} {
-      allow read: if resource.data.isPublic == true || isAuthenticated();
-      allow create: if isSuperAdmin() || (isTeacher() && isValidCourse(request.resource.data));
-      allow update: if isSuperAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid && isValidCourse(request.resource.data));
-      allow delete: if isSuperAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
-    }
-
-    match /lessons/{lessonId} {
-      allow read: if resource.data.isPublic == true || isAuthenticated();
-      allow create: if isSuperAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data));
-      allow update: if isSuperAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data));
-      allow delete: if isSuperAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid);
-    }
-
-    match /assignments/{assignmentId} {
+    match /{path=**}/classes/{classId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isTeacher() || isSuperAdmin();
-    }
-
-    match /submissions/{submissionId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isSuperAdmin());
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.studentId;
-      allow update: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isSuperAdmin());
-    }
-
-    match /{path=**}/enrollments/{enrollmentId} {
-      allow get: if isAuthenticated() && (
-        (resource != null && request.auth.uid == resource.data.studentId) ||
-        isSuperAdmin() ||
-        (resource != null && resource.data.courseId != null && exists(/databases/$(database)/documents/courses/$(resource.data.courseId)) && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid) ||
-        (resource != null && resource.data.examId != null && exists(/databases/$(database)/documents/exams/$(resource.data.examId)) && get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid)
-      );
-      allow list: if isAuthenticated() && (
-        isSuperAdmin() || 
-        isTeacher() || 
-        getUserData().get('role', '') == 'admin' ||
-        (resource != null && resource.data.studentId == request.auth.uid)
-      );
-      allow create: if isAuthenticated() && (isSuperAdmin() || (request.auth.uid == request.resource.data.studentId && isValidEnrollment(request.resource.data)));
-      allow update: if isAuthenticated() && isValidEnrollment(request.resource.data) && (
-        isSuperAdmin() ||
-        (request.auth.uid == resource.data.studentId && 
-         request.resource.data.studentId == resource.data.studentId &&
-         ((request.resource.data.courseId == resource.data.courseId) || (request.resource.data.examId == resource.data.examId))) ||
-        (resource.data.courseId != null && exists(/databases/$(database)/documents/courses/$(resource.data.courseId)) && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid) ||
-        (resource.data.examId != null && exists(/databases/$(database)/documents/exams/$(resource.data.examId)) && get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid)
-      );
-    }
-
-    match /courses/{courseId}/enrollments/{enrollmentId} {
-      allow get: if isAuthenticated() && (
-        (resource != null && request.auth.uid == resource.data.studentId) ||
-        isSuperAdmin() ||
-        isCourseTeacher(courseId)
-      );
-      allow list: if isAuthenticated() && (
-        isSuperAdmin() ||
-        isCourseTeacher(courseId) ||
-        (request.auth.uid != null)
-      );
-      allow create: if isAuthenticated() && (isSuperAdmin() || (request.auth.uid == request.resource.data.studentId && isValidEnrollment(request.resource.data) && request.resource.data.courseId == courseId));
-      allow update: if isAuthenticated() && (
-        isSuperAdmin() ||
-        (request.auth.uid == resource.data.studentId && isValidEnrollment(request.resource.data)) ||
-        isCourseTeacher(courseId)
-      );
-    }
-
-    match /exams/{examId} {
-      allow read: if isAuthenticated();
-      allow create: if isSuperAdmin() || (isTeacher() && isValidExam(request.resource.data));
-      allow update: if isSuperAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid && isValidExam(request.resource.data));
-      allow delete: if isSuperAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
-    }
-
-    match /examResults/{resultId} {
-      allow read: if isAuthenticated() && (
-        isSuperAdmin() || 
-        isTeacher() || 
-        (resource != null && resource.data.studentId == request.auth.uid)
-      );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.studentId && isValidExamResult(request.resource.data);
-      allow update: if isSuperAdmin();
-    }
-
-    match /resources/{resourceId} {
-      allow read: if isAuthenticated();
-      allow create: if isSuperAdmin() || (isTeacher() && isCourseTeacher(request.resource.data.courseId) && isValidResource(request.resource.data));
-      allow update: if isSuperAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId) && isValidResource(request.resource.data));
-      allow delete: if isSuperAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId));
-    }
-
-    match /questions/{questionId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidQuestion(request.resource.data);
-      allow update: if isSuperAdmin() || (isQuestionOwner(questionId) && isValidQuestion(request.resource.data));
-      allow delete: if isSuperAdmin() || isQuestionOwner(questionId);
-    }
-
-    match /answers/{answerId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidAnswer(request.resource.data);
-      allow update: if isSuperAdmin() || (isAnswerOwner(answerId) && isValidAnswer(request.resource.data));
-      allow delete: if isSuperAdmin() || isAnswerOwner(answerId);
-    }
-
-    match /chatMessages/{messageId} {
-      allow read: if isAuthenticated() && isEnrolledInCourse(resource.data.courseId);
-      allow create: if isAuthenticated() && isEnrolledInCourse(request.resource.data.courseId) && request.resource.data.senderId == request.auth.uid;
-    }
-
-    match /conversations/{conversationId} {
-      allow read: if isParticipant(conversationId);
-      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participants;
-    }
-
-    match /directMessages/{messageId} {
-      allow read: if isParticipant(resource.data.conversationId);
-      allow create: if isAuthenticated() && isParticipant(request.resource.data.conversationId) && request.resource.data.senderId == request.auth.uid;
-    }
-
-    match /_connection_test_/{docId} {
-      allow read: if true;
     }
   }
 }
