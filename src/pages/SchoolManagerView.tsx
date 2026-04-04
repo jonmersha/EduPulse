@@ -38,7 +38,12 @@ export const SchoolManagerView: React.FC = () => {
   const [schoolForm, setSchoolForm] = useState({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
 
   useEffect(() => {
-    if (!profile?.schoolId) return;
+    if (!profile) return;
+    
+    if (!profile.schoolId) {
+      setLoading(false);
+      return;
+    }
 
     const currentSchoolId = profile.schoolId;
     
