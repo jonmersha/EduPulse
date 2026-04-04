@@ -65,7 +65,8 @@ service cloud.firestore {
     }
 
     function isTeacher() {
-      return isAuthenticated() && (getUserData().role == 'teacher' || getUserData().role == 'provider' || isSuperAdmin());
+      let userData = getUserData();
+      return isAuthenticated() && (userData.get('role', '') == 'teacher' || userData.get('role', '') == 'provider' || isSuperAdmin());
     }
 
     function isCourseTeacher(courseId) {
@@ -284,7 +285,12 @@ service cloud.firestore {
         (resource != null && resource.data.courseId != null && exists(/databases/$(database)/documents/courses/$(resource.data.courseId)) && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid) ||
         (resource != null && resource.data.examId != null && exists(/databases/$(database)/documents/exams/$(resource.data.examId)) && get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid)
       );
-      allow list: if isAuthenticated() && (isSuperAdmin() || isTeacher());
+      allow list: if isAuthenticated() && (
+        isSuperAdmin() || 
+        isTeacher() || 
+        getUserData().get('role', '') == 'admin' ||
+        (resource != null && resource.data.studentId == request.auth.uid)
+      );
       allow create: if isAuthenticated() && (isSuperAdmin() || (request.auth.uid == request.resource.data.studentId && isValidEnrollment(request.resource.data)));
       allow update: if isAuthenticated() && isValidEnrollment(request.resource.data) && (
         isSuperAdmin() ||
@@ -323,7 +329,11 @@ service cloud.firestore {
     }
 
     match /examResults/{resultId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isSuperAdmin());
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || 
+        isTeacher() || 
+        (resource != null && resource.data.studentId == request.auth.uid)
+      );
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.studentId && isValidExamResult(request.resource.data);
       allow update: if isSuperAdmin();
     }
