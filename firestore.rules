@@ -51,15 +51,12 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && (
         ((request.auth.token.email == "beshegercom@gmail.com" || request.auth.token.email == "jonmersha@gmail.com") && request.auth.token.email_verified == true) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin'))
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')
       );
     }
 
     function isSuperAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.email == "beshegercom@gmail.com" || request.auth.token.email == "jonmersha@gmail.com" ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')
-      );
+      return isAdmin();
     }
 
     function getUserData() {
