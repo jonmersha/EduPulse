@@ -227,11 +227,12 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read: if isAuthenticated() && (
+      allow get: if isAuthenticated() && (
         isOwner(uid) || 
         isSuperAdmin() || 
         (getUserData().get('schoolId', '') != '' && getUserData().schoolId == resource.data.get('schoolId', ''))
       );
+      allow list: if isAuthenticated() && (isSuperAdmin() || getUserData().get('schoolId', '') != '');
       allow create: if isAuthenticated() && (
         isOwner(uid) || 
         isSuperAdmin() || 
@@ -253,7 +254,8 @@ service cloud.firestore {
     }
 
     match /classes/{classId} {
-      allow read: if isAuthenticated() && (getUserData().schoolId == resource.data.schoolId || isSuperAdmin());
+      allow get: if isAuthenticated() && (getUserData().schoolId == resource.data.schoolId || isSuperAdmin());
+      allow list: if isAuthenticated() && (isSuperAdmin() || getUserData().schoolId != null);
       allow create: if isAuthenticated() && (isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == request.resource.data.schoolId)) && isValidClass(request.resource.data);
       allow update: if (isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId)) && isValidClass(request.resource.data);
       allow delete: if isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId);

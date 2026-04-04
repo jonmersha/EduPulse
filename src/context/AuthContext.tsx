@@ -6,7 +6,7 @@ import {
   signOut,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, Timestamp, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, Timestamp, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
 export type UserRole = 'admin' | 'teacher' | 'student' | 'parent' | 'provider' | 'super_admin';
@@ -39,47 +39,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let unsubscribeProfile: (() => void) | null = null;
+    let unsubscribeProfile: () => void = () => {};
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       setUser(user);
+      unsubscribeProfile(); // Unsubscribe from previous profile listener
+
       if (user) {
         const docRef = doc(db, 'users', user.uid);
         
-        // Initial check and creation if needed
-        const docSnap = await getDoc(docRef);
-        if (!docSnap.exists()) {
-          const newProfile: UserProfile = {
-            uid: user.uid,
-            email: user.email || '',
-            displayName: user.displayName || 'Anonymous',
-            role: 'student',
-            photoURL: user.photoURL || undefined,
-            createdAt: Timestamp.now(),
-          };
-          await setDoc(docRef, newProfile);
-        }
-
-        // Listen for real-time updates
-        unsubscribeProfile = onSnapshot(docRef, (snap) => {
-          if (snap.exists()) {
-            setProfile(snap.data() as UserProfile);
+        // Use onSnapshot to listen for changes
+        unsubscribeProfile = onSnapshot(docRef, (docSnap) => {
+          if (docSnap.exists()) {
+            setProfile(docSnap.data() as UserProfile);
+          } else {
+            const newProfile: UserProfile = {
+              uid: user.uid,
+              email: user.email || '',
+              displayName: user.displayName || 'Anonymous',
+              role: 'student',
+              photoURL: user.photoURL || undefined,
+              createdAt: Timestamp.now(),
+            };
+            setDoc(docRef, newProfile);
+            setProfile(newProfile);
           }
           setLoading(false);
         });
       } else {
         setProfile(null);
-        if (unsubscribeProfile) {
-          unsubscribeProfile();
-          unsubscribeProfile = null;
-        }
         setLoading(false);
       }
     });
 
     return () => {
       unsubscribeAuth();
-      if (unsubscribeProfile) unsubscribeProfile();
+      unsubscribeProfile();
     };
   }, []);
 

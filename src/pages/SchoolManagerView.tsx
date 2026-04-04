@@ -21,7 +21,6 @@ export const SchoolManagerView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
-  const [addStudentOptionsContext, setAddStudentOptionsContext] = useState<{classId?: string} | null>(null);
   const [bulkUploadContext, setBulkUploadContext] = useState<{classId?: string} | null>(null);
   const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null);
   const [bulkUploadStatus, setBulkUploadStatus] = useState('');
@@ -516,7 +515,7 @@ export const SchoolManagerView: React.FC = () => {
                   Add Teacher
                 </button>
                 <button 
-                  onClick={() => setAddStudentOptionsContext({})}
+                  onClick={() => openAddUserModal('student')}
                   className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
                 >
                   <UserPlus className="w-4 h-4" />
@@ -610,7 +609,7 @@ export const SchoolManagerView: React.FC = () => {
                 <p className="text-zinc-500 dark:text-zinc-400 text-sm">Grade: {cls.grade} • Year: {cls.year}</p>
                 <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
                   <button 
-                    onClick={() => setAddStudentOptionsContext({classId: cls.id})}
+                    onClick={() => openAddUserModal('student', cls.id)}
                     className="flex items-center gap-1 text-xs font-bold text-purple-600 hover:text-purple-700"
                   >
                     <UserPlus className="w-3 h-3" />
@@ -940,13 +939,17 @@ export const SchoolManagerView: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-bold mb-1">Year</label>
-              <input 
-                type="text" 
+              <select 
                 required 
                 value={newClass.year}
                 onChange={(e) => setNewClass({...newClass, year: e.target.value})}
                 className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              />
+              >
+                <option value="">Select Year</option>
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map(year => (
+                  <option key={year} value={year.toString()}>{year}</option>
+                ))}
+              </select>
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
