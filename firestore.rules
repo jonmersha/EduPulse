@@ -245,7 +245,8 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (
         isOwner(uid) || 
         isSuperAdmin() || 
-        (isSchoolAdmin(resource.data.get('schoolId', '')) && request.resource.data.role != 'super_admin' && request.resource.data.role != 'admin')
+        (isSchoolAdmin(resource.data.get('schoolId', '')) && request.resource.data.role != 'super_admin' && request.resource.data.role != 'admin') ||
+        (isSchoolAdmin(request.resource.data.get('schoolId', '')) && request.resource.data.role != 'super_admin' && request.resource.data.role != 'admin')
       ) && isValidUser(request.resource.data);
       allow delete: if isSuperAdmin();
     }
@@ -383,6 +384,13 @@ service cloud.firestore {
     match /directMessages/{messageId} {
       allow read: if isParticipant(resource.data.conversationId);
       allow create: if isAuthenticated() && isParticipant(request.resource.data.conversationId) && request.resource.data.senderId == request.auth.uid;
+    }
+
+    match /joinRequests/{requestId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isSchoolAdmin(resource.data.schoolId) || isSuperAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAuthenticated() && (isSchoolAdmin(resource.data.schoolId) || isSuperAdmin());
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isSchoolAdmin(resource.data.schoolId) || isSuperAdmin());
     }
 
     match /_connection_test_/{docId} {

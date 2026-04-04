@@ -15,7 +15,8 @@ export const SchoolManagerView: React.FC = () => {
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState<'schools' | 'classes' | 'users' | 'courses' | 'exams' | 'payments' | 'profile'>('classes');
+  const [joinRequests, setJoinRequests] = useState<any[]>([]);
+  const [activeSubTab, setActiveSubTab] = useState<'schools' | 'classes' | 'users' | 'courses' | 'exams' | 'payments' | 'profile' | 'requests'>('classes');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'teacher' | 'student' | 'parent'>('all');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'verified' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,6 +110,11 @@ export const SchoolManagerView: React.FC = () => {
       }
     }, (error) => handleFirestoreError(error, OperationType.GET, `schools/${currentSchoolId}`));
 
+    const requestsQuery = query(collection(db, 'joinRequests'), where('schoolId', '==', currentSchoolId), where('status', '==', 'pending'));
+    const unsubRequests = onSnapshot(requestsQuery, (snap) => {
+      setJoinRequests(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'joinRequests'));
+
     return () => {
       unsubClasses();
       unsubUsers();
@@ -117,6 +123,7 @@ export const SchoolManagerView: React.FC = () => {
       unsubEnrollments();
       unsubSchool();
       unsubManaged();
+      unsubRequests();
     };
   }, [profile, courses.length]);
 
@@ -192,6 +199,45 @@ export const SchoolManagerView: React.FC = () => {
       studentIds: []
     });
     setShowAddModal(true);
+  };
+
+  const handleApproveRequest = async (request: any) => {
+    try {
+      // Update request status
+      await setDoc(doc(db, 'joinRequests', request.id), {
+        status: 'approved',
+        updatedAt: Timestamp.now()
+      }, { merge: true });
+
+      // Update user profile
+      const userRef = doc(db, 'users', request.userId);
+      const userUpdate: any = {
+        schoolId: request.schoolId,
+        updatedAt: Timestamp.now()
+      };
+      
+      // If they are a teacher, we might want to add to schoolIds instead of just schoolId
+      // But for simplicity, we'll set schoolId and role if they don't have one
+      if (request.role) {
+        userUpdate.role = request.role;
+      }
+      
+      await setDoc(userRef, userUpdate, { merge: true });
+      alert('Request approved successfully!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `joinRequests/${request.id}`);
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await setDoc(doc(db, 'joinRequests', requestId), {
+        status: 'rejected',
+        updatedAt: Timestamp.now()
+      }, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `joinRequests/${requestId}`);
+    }
   };
 
   const handleUpdateSchool = async (e: React.FormEvent) => {
@@ -710,6 +756,17 @@ export const SchoolManagerView: React.FC = () => {
           >
             School Profile
           </button>
+          <button 
+            onClick={() => setActiveSubTab('requests')}
+            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap relative", activeSubTab === 'requests' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+          >
+            Requests
+            {joinRequests.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full">
+                {joinRequests.length}
+              </span>
+            )}
+          </button>
           
           {activeSubTab === 'users' && (
             <div className="ml-auto flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
@@ -1115,6 +1172,49 @@ export const SchoolManagerView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {activeSubTab === 'requests' && (
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+            <h2 className="text-2xl font-bold mb-6">Join Requests</h2>
+            
+            {joinRequests.length === 0 ? (
+              <div className="text-center py-12 text-zinc-500">
+                <Users className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                <p>No pending join requests.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {joinRequests.map(request => (
+                  <div key={request.id} className="flex items-center justify-between p-4 border border-zinc-200 dark:border-zinc-800 rounded-2xl">
+                    <div>
+                      <h3 className="font-bold text-zinc-900 dark:text-white">{request.userName || 'Unknown User'}</h3>
+                      <p className="text-sm text-zinc-500">{request.userEmail}</p>
+                      <div className="mt-1">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 capitalize">
+                          Requested Role: {request.role}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleRejectRequest(request.id)}
+                        className="px-4 py-2 text-sm font-bold text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => handleApproveRequest(request)}
+                        className="px-4 py-2 text-sm font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                      >
+                        Approve
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
