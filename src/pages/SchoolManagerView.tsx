@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Settings, Plus, BookOpen, UserPlus, Trash2, Upload, CheckCircle2, AlertCircle, DollarSign, Search } from 'lucide-react';
+import { Users, Settings, Plus, BookOpen, UserPlus, Trash2, Upload, CheckCircle2, AlertCircle, DollarSign, Search, School as SchoolIcon } from 'lucide-react';
 import { collection, query, onSnapshot, doc, setDoc, Timestamp, where, collectionGroup } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +15,7 @@ export const SchoolManagerView: React.FC = () => {
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState<'classes' | 'users' | 'courses' | 'exams' | 'payments'>('classes');
+  const [activeSubTab, setActiveSubTab] = useState<'classes' | 'users' | 'courses' | 'exams' | 'payments' | 'profile'>('classes');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'teacher' | 'student'>('all');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'verified' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,11 +29,13 @@ export const SchoolManagerView: React.FC = () => {
   const [bulkUploadRole, setBulkUploadRole] = useState<'student' | 'teacher'>('student');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
+  const [schoolData, setSchoolData] = useState<any>(null);
 
   // Form states
   const [newClass, setNewClass] = useState({ name: '', grade: '', year: '', teacherId: '', schoolId: '' });
   const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolId: '', isIndependent: false });
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [schoolForm, setSchoolForm] = useState({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
 
   useEffect(() => {
     if (!profile?.schoolId) return;
@@ -69,12 +71,27 @@ export const SchoolManagerView: React.FC = () => {
       );
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
 
+    const unsubSchool = onSnapshot(doc(db, 'schools', currentSchoolId), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setSchoolData({ id: snap.id, ...data });
+        setSchoolForm({
+          name: data.name || '',
+          address: data.address || '',
+          adminEmail: data.adminEmail || '',
+          contactPhone: data.contactPhone || '',
+          academicStructure: data.academicStructure || 'K-12'
+        });
+      }
+    }, (error) => handleFirestoreError(error, OperationType.GET, `schools/${currentSchoolId}`));
+
     return () => {
       unsubClasses();
       unsubUsers();
       unsubCourses();
       unsubExams();
       unsubEnrollments();
+      unsubSchool();
     };
   }, [profile, courses.length]);
 
@@ -149,6 +166,20 @@ export const SchoolManagerView: React.FC = () => {
       isIndependent: false
     });
     setShowAddModal(true);
+  };
+
+  const handleUpdateSchool = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile?.schoolId) return;
+    try {
+      await setDoc(doc(db, 'schools', profile.schoolId), {
+        ...schoolForm,
+        updatedAt: Timestamp.now()
+      }, { merge: true });
+      alert('School profile updated successfully!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `schools/${profile.schoolId}`);
+    }
   };
 
   const handleBulkUpload = async () => {
@@ -318,6 +349,12 @@ export const SchoolManagerView: React.FC = () => {
           className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'payments' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
         >
           Payments
+        </button>
+        <button 
+          onClick={() => setActiveSubTab('profile')}
+          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'profile' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+        >
+          School Profile
         </button>
         
         {activeSubTab === 'users' && (
@@ -554,6 +591,98 @@ export const SchoolManagerView: React.FC = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {activeSubTab === 'profile' && (
+          <div className="max-w-2xl bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl p-8 shadow-sm">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-16 h-16 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-2xl flex items-center justify-center">
+                <SchoolIcon className="w-8 h-8" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">School Profile</h2>
+                <p className="text-zinc-500 text-sm">Update your school's public information.</p>
+              </div>
+              <div className="ml-auto">
+                <span className={cn(
+                  "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                  schoolData?.status === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                )}>
+                  Status: {schoolData?.status || 'pending'}
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleUpdateSchool} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-bold mb-2">School Name</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={schoolForm.name}
+                    onChange={(e) => setSchoolForm({...schoolForm, name: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Academic Structure</label>
+                  <select 
+                    value={schoolForm.academicStructure}
+                    onChange={(e) => setSchoolForm({...schoolForm, academicStructure: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
+                  >
+                    <option value="K-12">K-12</option>
+                    <option value="Primary">Primary Only</option>
+                    <option value="Secondary">Secondary Only</option>
+                    <option value="Higher Education">Higher Education</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2">Address</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={schoolForm.address}
+                  onChange={(e) => setSchoolForm({...schoolForm, address: e.target.value})}
+                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-bold mb-2">Admin Email</label>
+                  <input 
+                    type="email" 
+                    required 
+                    value={schoolForm.adminEmail}
+                    onChange={(e) => setSchoolForm({...schoolForm, adminEmail: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Contact Phone</label>
+                  <input 
+                    type="text" 
+                    value={schoolForm.contactPhone}
+                    onChange={(e) => setSchoolForm({...schoolForm, contactPhone: e.target.value})}
+                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <button 
+                  type="submit"
+                  className="w-full md:w-auto px-8 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
           </div>
         )}
       </div>

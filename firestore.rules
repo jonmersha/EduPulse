@@ -117,7 +117,11 @@ service cloud.firestore {
 
     function isValidSchool(data) {
       return data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
-             (!('adminEmail' in data) || (data.adminEmail is string && isValidEmail(data.adminEmail)));
+             (!('adminEmail' in data) || (data.adminEmail is string && isValidEmail(data.adminEmail))) &&
+             (!('status' in data) || data.status in ['active', 'pending', 'suspended']) &&
+             (!('academicStructure' in data) || data.academicStructure is string) &&
+             (!('address' in data) || data.address is string) &&
+             (!('contactPhone' in data) || data.contactPhone is string);
     }
 
     function isValidClass(data) {
@@ -130,7 +134,8 @@ service cloud.firestore {
              (!('description' in data) || data.description == null || data.description == "" || (data.description is string && data.description.size() < 2000)) &&
              (!('category' in data) || data.category == null || data.category == "" || (data.category is string && data.category.size() < 50)) &&
              (!('price' in data) || data.price == null || data.price is number) &&
-             (!('teacherId' in data) || data.teacherId == request.auth.uid || isSuperAdmin());
+             (!('teacherId' in data) || data.teacherId == request.auth.uid || isSuperAdmin()) &&
+             (!('adminComments' in data) || data.adminComments is string);
     }
 
     function isValidLesson(data) {
@@ -236,7 +241,7 @@ service cloud.firestore {
     match /schools/{schoolId} {
       allow read: if isAuthenticated();
       allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin() || isSchoolAdmin(schoolId);
+      allow update: if (isSuperAdmin() || isSchoolAdmin(schoolId)) && isValidSchool(request.resource.data);
       allow delete: if isSuperAdmin();
     }
 

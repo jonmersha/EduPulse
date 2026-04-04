@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Settings, Plus, School as SchoolIcon, BookOpen, UserPlus, Trash2, Upload, CheckCircle2, AlertCircle, DollarSign, Search } from 'lucide-react';
+import { Users, Settings, Plus, School as SchoolIcon, BookOpen, UserPlus, Trash2, Upload, CheckCircle2, AlertCircle, DollarSign, Search, MessageSquare } from 'lucide-react';
 import { collection, onSnapshot, doc, setDoc, Timestamp, collectionGroup } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -18,12 +18,15 @@ export const SuperAdminView: React.FC = () => {
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'verified' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Form states
   const [newSchool, setNewSchool] = useState({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
   const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'super_admin' as any, schoolId: '', schoolIds: [] as string[], isIndependent: false });
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [courseComment, setCourseComment] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
 
   const isSuperAdmin = profile?.email === 'jonmersha@gmail.com' || profile?.role === 'super_admin';
 
@@ -55,20 +58,30 @@ export const SuperAdminView: React.FC = () => {
     };
   }, [profile, isSuperAdmin]);
 
-  const handleAddSchool = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUpdateSchoolStatus = async (schoolId: string, status: 'active' | 'pending' | 'suspended') => {
     try {
-      const schoolId = editingItem?.id || doc(collection(db, 'schools')).id;
       await setDoc(doc(db, 'schools', schoolId), {
-        ...newSchool,
-        status: 'active',
-        createdAt: editingItem?.createdAt || Timestamp.now()
+        status: status,
+        updatedAt: Timestamp.now()
       }, { merge: true });
-      setShowAddModal(false);
-      setEditingItem(null);
-      setNewSchool({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `schools/${editingItem?.id || 'new'}`);
+      handleFirestoreError(error, OperationType.WRITE, `schools/${schoolId}`);
+    }
+  };
+
+  const handleAddCourseComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCourse) return;
+    try {
+      await setDoc(doc(db, 'courses', selectedCourse.id), {
+        adminComments: courseComment,
+        commentedAt: Timestamp.now()
+      }, { merge: true });
+      setShowCommentModal(false);
+      setCourseComment('');
+      setSelectedCourse(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `courses/${selectedCourse.id}`);
     }
   };
 
@@ -143,7 +156,7 @@ export const SuperAdminView: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          {activeSubTab === 'users' ? (
+          {activeSubTab === 'users' && (
             <button 
               onClick={() => openAddUserModal('super_admin')}
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all shadow-md"
@@ -151,15 +164,7 @@ export const SuperAdminView: React.FC = () => {
               <UserPlus className="w-4 h-4" />
               Add Global Admin
             </button>
-          ) : activeSubTab === 'schools' ? (
-            <button 
-              onClick={() => { setEditingItem(null); setShowAddModal(true); }}
-              className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-2xl font-bold hover:bg-purple-700 transition-all shadow-lg"
-            >
-              <Plus className="w-5 h-5" />
-              Add School
-            </button>
-          ) : null}
+          )}
         </div>
       </header>
 
@@ -263,23 +268,50 @@ export const SuperAdminView: React.FC = () => {
               <thead>
                 <tr className="bg-zinc-50 dark:bg-zinc-800 border-b border-black/5">
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">School Name</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Address</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Admin Email</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Structure</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Status</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {schools.map(school => (
                   <tr key={school.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-                    <td className="px-6 py-4 font-bold">{school.name}</td>
-                    <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400">{school.address}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="font-bold">{school.name}</span>
+                        <span className="text-[10px] text-zinc-500">{school.address}</span>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400">{school.adminEmail}</td>
-                    <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400">{school.academicStructure}</td>
+                    <td className="px-6 py-4">
+                      <span className={cn(
+                        "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
+                        school.status === 'active' ? "bg-emerald-100 text-emerald-700" : 
+                        school.status === 'suspended' ? "bg-red-100 text-red-700" : 
+                        "bg-amber-100 text-amber-700"
+                      )}>
+                        {school.status || 'pending'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
-                        <button onClick={() => startEdit(school)} className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"><Settings className="w-4 h-4" /></button>
-                        <button onClick={() => setDeleteConfirm({ collection: 'schools', id: school.id })} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        {school.status !== 'active' && (
+                          <button 
+                            onClick={() => handleUpdateSchoolStatus(school.id, 'active')}
+                            className="px-3 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700"
+                          >
+                            Approve
+                          </button>
+                        )}
+                        {school.status === 'active' && (
+                          <button 
+                            onClick={() => handleUpdateSchoolStatus(school.id, 'suspended')}
+                            className="px-3 py-1 bg-red-600 text-white text-[10px] font-bold rounded-lg hover:bg-red-700"
+                          >
+                            Suspend
+                          </button>
+                        )}
+                        <button onClick={() => setDeleteConfirm({ collection: 'schools', id: school.id })} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -348,8 +380,20 @@ export const SuperAdminView: React.FC = () => {
                 <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">
                   School: {schools.find(s => s.id === course.schoolId)?.name || 'Independent / Unknown'}
                 </p>
+                {course.adminComments && (
+                  <div className="mt-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                    <p className="text-[10px] font-bold text-purple-600 uppercase mb-1">Admin Comment</p>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-300 italic">"{course.adminComments}"</p>
+                  </div>
+                )}
                 <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-400">By {course.teacherName || 'Unknown'}</span>
+                  <button 
+                    onClick={() => { setSelectedCourse(course); setCourseComment(course.adminComments || ''); setShowCommentModal(true); }}
+                    className="flex items-center gap-1 text-xs font-bold text-purple-600 hover:text-purple-700"
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    Comment
+                  </button>
                   <button onClick={() => setDeleteConfirm({ collection: 'courses', id: course.id })} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-red-400"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>
@@ -467,97 +511,72 @@ export const SuperAdminView: React.FC = () => {
       <Modal 
         isOpen={showAddModal} 
         onClose={() => { setShowAddModal(false); setEditingItem(null); }}
-        title={editingItem ? `Edit ${activeSubTab === 'schools' ? 'School' : 'User'}` : `Add New ${activeSubTab === 'schools' ? 'School' : 'User'}`}
+        title={editingItem ? `Edit User` : `Add New User`}
       >
-        {activeSubTab === 'schools' ? (
-          <form onSubmit={handleAddSchool} className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold mb-1">School Name</label>
-              <input 
-                type="text" 
-                required 
-                value={newSchool.name}
-                onChange={(e) => setNewSchool({...newSchool, name: e.target.value})}
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">Address</label>
-              <input 
-                type="text" 
-                required 
-                value={newSchool.address}
-                onChange={(e) => setNewSchool({...newSchool, address: e.target.value})}
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">Admin Email</label>
-              <input 
-                type="email" 
-                required 
-                value={newSchool.adminEmail}
-                onChange={(e) => setNewSchool({...newSchool, adminEmail: e.target.value})}
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">Contact Phone</label>
-              <input 
-                type="text" 
-                value={newSchool.contactPhone}
-                onChange={(e) => setNewSchool({...newSchool, contactPhone: e.target.value})}
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              />
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
-              <button type="submit" className="px-6 py-2 bg-purple-600 text-white rounded-xl font-bold shadow-lg">
-                {editingItem ? 'Save Changes' : 'Create School'}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <form onSubmit={handleAddUser} className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold mb-1">Display Name</label>
-              <input 
-                type="text" 
-                required 
-                value={newUser.displayName}
-                onChange={(e) => setNewUser({...newUser, displayName: e.target.value})}
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">Email Address</label>
-              <input 
-                type="email" 
-                required 
-                value={newUser.email}
-                onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1">Role</label>
-              <select 
-                value={newUser.role}
-                onChange={(e) => setNewUser({...newUser, role: e.target.value as any})}
-                className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              >
-                <option value="super_admin">Super Admin</option>
-                <option value="admin">School Manager</option>
-              </select>
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
-              <button type="submit" className="px-6 py-2 bg-purple-600 text-white rounded-xl font-bold shadow-lg">
-                {editingItem ? 'Save Changes' : 'Create User'}
-              </button>
-            </div>
-          </form>
-        )}
+        <form onSubmit={handleAddUser} className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold mb-1">Display Name</label>
+            <input 
+              type="text" 
+              required 
+              value={newUser.displayName}
+              onChange={(e) => setNewUser({...newUser, displayName: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-1">Email Address</label>
+            <input 
+              type="email" 
+              required 
+              value={newUser.email}
+              onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-1">Role</label>
+            <select 
+              value={newUser.role}
+              onChange={(e) => setNewUser({...newUser, role: e.target.value as any})}
+              className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
+            >
+              <option value="super_admin">Super Admin</option>
+              <option value="admin">School Manager</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
+            <button type="submit" className="px-6 py-2 bg-purple-600 text-white rounded-xl font-bold shadow-lg">
+              {editingItem ? 'Save Changes' : 'Create User'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={showCommentModal}
+        onClose={() => setShowCommentModal(false)}
+        title="Course Feedback"
+      >
+        <form onSubmit={handleAddCourseComment} className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold mb-1">Admin Comments</label>
+            <textarea 
+              required 
+              value={courseComment}
+              onChange={(e) => setCourseComment(e.target.value)}
+              placeholder="Provide feedback or comments on this course..."
+              className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent h-32 resize-none"
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => setShowCommentModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
+            <button type="submit" className="px-6 py-2 bg-purple-600 text-white rounded-xl font-bold shadow-lg">
+              Save Comment
+            </button>
+          </div>
+        </form>
       </Modal>
 
       {/* Delete Confirmation Modal */}
