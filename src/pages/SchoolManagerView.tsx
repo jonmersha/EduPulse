@@ -262,11 +262,153 @@ export const SchoolManagerView: React.FC = () => {
     });
   };
 
+  const handleCreateSchool = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || profile.schoolId) return;
+    
+    setLoading(true);
+    try {
+      const schoolId = doc(collection(db, 'schools')).id;
+      const now = Timestamp.now();
+      
+      // 1. Create the school
+      await setDoc(doc(db, 'schools', schoolId), {
+        ...schoolForm,
+        adminEmail: profile.email,
+        status: 'pending',
+        createdAt: now,
+        updatedAt: now
+      });
+      
+      // 2. Update the user's profile with the new schoolId
+      await setDoc(doc(db, 'users', profile.uid), {
+        schoolId: schoolId,
+        updatedAt: now
+      }, { merge: true });
+      
+      alert('School created successfully! It is now pending approval from a Super Admin.');
+      window.location.reload(); // Refresh to load the new school context
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'schools/new');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!profile?.schoolId) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-zinc-400">
-        <AlertCircle className="w-12 h-12 mb-4 opacity-20" />
-        <p className="font-medium">No school associated with your profile.</p>
+      <div className="max-w-2xl mx-auto space-y-8 py-12">
+        <div className="text-center space-y-4">
+          <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto">
+            <SchoolIcon className="w-10 h-10 text-emerald-600" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
+            Create Your School
+          </h1>
+          <p className="text-zinc-500 dark:text-zinc-400">
+            You don't have a school associated with your profile yet. Fill out the form below to register your school.
+          </p>
+        </div>
+
+        <form onSubmit={handleCreateSchool} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-sm space-y-6">
+          <div className="grid grid-cols-1 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">School Name</label>
+              <input
+                type="text"
+                required
+                value={schoolForm.name}
+                onChange={(e) => setSchoolForm({ ...schoolForm, name: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-emerald-600"
+                placeholder="Enter school name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Address</label>
+              <input
+                type="text"
+                required
+                value={schoolForm.address}
+                onChange={(e) => setSchoolForm({ ...schoolForm, address: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-emerald-600"
+                placeholder="Enter school address"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Contact Phone</label>
+                <input
+                  type="tel"
+                  required
+                  value={schoolForm.contactPhone}
+                  onChange={(e) => setSchoolForm({ ...schoolForm, contactPhone: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-emerald-600"
+                  placeholder="Enter phone number"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Academic Structure</label>
+                <select
+                  value={schoolForm.academicStructure}
+                  onChange={(e) => setSchoolForm({ ...schoolForm, academicStructure: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-emerald-600"
+                >
+                  <option value="K-12">K-12</option>
+                  <option value="Primary Only">Primary Only</option>
+                  <option value="Secondary Only">Secondary Only</option>
+                  <option value="Higher Education">Higher Education</option>
+                  <option value="Vocational">Vocational</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 dark:shadow-none disabled:opacity-50"
+          >
+            {loading ? 'Creating School...' : 'Register School'}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  if (schoolData?.status === 'pending') {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-center space-y-6 max-w-md mx-auto">
+        <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center animate-pulse">
+          <AlertCircle className="w-10 h-10 text-amber-600" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Approval Pending</h1>
+          <p className="text-zinc-500 dark:text-zinc-400">
+            Your school <strong>{schoolData.name}</strong> has been registered and is currently awaiting approval from a Super Admin.
+          </p>
+        </div>
+        <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl w-full text-sm text-zinc-600 dark:text-zinc-300">
+          Once approved, you will have full access to the school management dashboard.
+        </div>
+      </div>
+    );
+  }
+
+  if (schoolData?.status === 'suspended') {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-center space-y-6 max-w-md mx-auto">
+        <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+          <AlertCircle className="w-10 h-10 text-red-600" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Account Suspended</h1>
+          <p className="text-zinc-500 dark:text-zinc-400">
+            Your school <strong>{schoolData.name}</strong> has been suspended. Please contact a Super Admin for more information.
+          </p>
+        </div>
       </div>
     );
   }

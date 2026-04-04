@@ -241,7 +241,7 @@ service cloud.firestore {
 
     match /schools/{schoolId} {
       allow read: if isAuthenticated();
-      allow create: if isSuperAdmin();
+      allow create: if isSuperAdmin() || (getUserData().get('role', '') == 'admin' && getUserData().get('schoolId', '') == '');
       allow update: if (isSuperAdmin() || isSchoolAdmin(schoolId)) && isValidSchool(request.resource.data);
       allow delete: if isSuperAdmin();
     }
