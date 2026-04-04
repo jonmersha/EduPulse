@@ -29,12 +29,14 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
+  const isSuperAdmin = profile?.email === 'beshegercom@gmail.com' || profile?.email === 'jonmersha@gmail.com' || profile?.role === 'super_admin';
+  
   const menuItems = [
     { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
     { id: 'courses', label: 'My Learning', icon: BookOpen },
     { id: 'marketplace', label: 'Discover', icon: Search },
     { id: 'messages', label: 'Messaging', icon: MessageSquare },
-    ...(profile?.role === 'admin' || profile?.role === 'super_admin' || profile?.email === 'beshegercom@gmail.com' || profile?.email === 'jonmersha@gmail.com' ? [{ id: 'school', label: 'Admin', icon: Settings }] : []),
+    ...(profile?.role === 'admin' || isSuperAdmin ? [{ id: 'school', label: isSuperAdmin ? 'Super Admin' : 'School Admin', icon: Settings }] : []),
     ...(profile?.role === 'teacher' || profile?.role === 'provider' ? [{ id: 'my-courses', label: 'Teaching', icon: GraduationCap }] : []),
     ...(profile?.role === 'parent' ? [{ id: 'parent', label: 'Parent', icon: Users }] : []),
   ];
