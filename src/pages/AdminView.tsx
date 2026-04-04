@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Users, Settings, Plus, School as SchoolIcon, BookOpen, UserPlus, Trash2, Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
-import { collection, query, onSnapshot, doc, setDoc, Timestamp, where, getDocs } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, setDoc, Timestamp, where, getDocs, collectionGroup, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { Modal } from '../components/Modal';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { CreditCard, DollarSign, Search, Filter } from 'lucide-react';
 import Papa from 'papaparse';
 
 export const AdminView: React.FC = () => {
@@ -14,8 +15,11 @@ export const AdminView: React.FC = () => {
   const [schools, setSchools] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState<'schools' | 'classes' | 'users' | 'courses' | 'exams'>('schools');
+  const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [activeSubTab, setActiveSubTab] = useState<'schools' | 'classes' | 'users' | 'courses' | 'exams' | 'payments'>('schools');
   const [roleFilter, setRoleFilter] = useState<'all' | 'super_admin' | 'admin' | 'teacher' | 'student' | 'provider'>('all');
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'verified' | 'pending'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
@@ -46,6 +50,7 @@ export const AdminView: React.FC = () => {
     let unsubUsers: () => void = () => {};
     let unsubCourses: () => void = () => {};
     let unsubExams: () => void = () => {};
+    let unsubEnrollments: () => void = () => {};
 
     const currentSchoolId = selectedSchoolId || profile.schoolId;
 
@@ -67,6 +72,9 @@ export const AdminView: React.FC = () => {
       unsubExams = onSnapshot(collection(db, 'exams'), (snap) => {
         setExams(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'exams'));
+      unsubEnrollments = onSnapshot(collectionGroup(db, 'enrollments'), (snap) => {
+        setEnrollments(snap.docs.map(doc => ({ id: doc.id, courseId: doc.ref.parent.parent?.id, ...doc.data() })));
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
     } else if (currentSchoolId) {
       // School Admin or Super Admin managing a specific school
       const classesQuery = query(collection(db, 'classes'), where('schoolId', '==', currentSchoolId));
@@ -90,6 +98,17 @@ export const AdminView: React.FC = () => {
         setExams(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'exams'));
 
+      // For school admins, we filter enrollments by courses belonging to the school
+      // This is more complex because enrollments are subcollections of courses
+      // We'll use a collection group query and filter in memory for simplicity if the school has many courses
+      unsubEnrollments = onSnapshot(collectionGroup(db, 'enrollments'), (snap) => {
+        const schoolCourses = courses.filter(c => c.schoolId === currentSchoolId).map(c => c.id);
+        setEnrollments(snap.docs
+          .map(doc => ({ id: doc.id, courseId: doc.ref.parent.parent?.id, ...doc.data() }))
+          .filter(e => schoolCourses.includes(e.courseId))
+        );
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
+
       if (!selectedSchoolId && profile.role === 'admin') {
         setActiveSubTab('classes');
       }
@@ -101,6 +120,7 @@ export const AdminView: React.FC = () => {
       unsubUsers();
       unsubCourses();
       unsubExams();
+      unsubEnrollments();
     };
   }, [profile, isSuperAdmin, selectedSchoolId]);
 
@@ -401,6 +421,12 @@ export const AdminView: React.FC = () => {
             >
               Exams
             </button>
+            <button 
+              onClick={() => setActiveSubTab('payments')}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'payments' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+            >
+              Payments
+            </button>
           </>
         )}
 
@@ -429,6 +455,12 @@ export const AdminView: React.FC = () => {
               className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
             >
               All Exams
+            </button>
+            <button 
+              onClick={() => setActiveSubTab('payments')}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'payments' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+            >
+              All Payments
             </button>
           </>
         )}
@@ -626,7 +658,7 @@ export const AdminView: React.FC = () => {
                 <h3 className="text-xl font-bold">{exam.title}</h3>
                 <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm line-clamp-2">{exam.description}</p>
                 {isSuperAdmin && (
-                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">
+                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">
                     School: {schools.find(s => s.id === exam.schoolId)?.name || 'Independent / Unknown'}
                   </p>
                 )}
@@ -639,6 +671,156 @@ export const AdminView: React.FC = () => {
               </div>
             ))}
             {exams.length === 0 && <p className="text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 italic text-sm col-span-full py-12 text-center">No exams found for this school.</p>}
+          </div>
+        )}
+
+        {activeSubTab === 'payments' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-2xl border border-black/5">
+              <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-black/5 rounded-xl px-3 py-2 w-full sm:w-96">
+                <Search className="w-4 h-4 text-zinc-400" />
+                <input 
+                  type="text" 
+                  placeholder="Search by student name or email..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-transparent border-none focus:ring-0 text-sm w-full"
+                />
+              </div>
+              <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-black/5 rounded-xl p-1">
+                {(['all', 'verified', 'pending'] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setPaymentFilter(filter)}
+                    className={cn(
+                      "px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all",
+                      paymentFilter === filter ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+                    )}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl overflow-hidden shadow-sm">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-zinc-50 dark:bg-zinc-800 border-b border-black/5">
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Student</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Course</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Enrolled Date</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Status</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Payment</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {enrollments
+                    .filter(e => {
+                      const student = users.find(u => u.id === e.studentId);
+                      const matchesSearch = !searchQuery || 
+                        student?.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        student?.email?.toLowerCase().includes(searchQuery.toLowerCase());
+                      const matchesFilter = paymentFilter === 'all' || 
+                        (paymentFilter === 'verified' && e.paymentVerified) || 
+                        (paymentFilter === 'pending' && !e.paymentVerified);
+                      return matchesSearch && matchesFilter;
+                    })
+                    .map(enrollment => {
+                      const student = users.find(u => u.id === enrollment.studentId);
+                      const course = courses.find(c => c.id === enrollment.courseId);
+                      return (
+                        <tr key={enrollment.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="font-bold">{student?.displayName || 'Unknown Student'}</span>
+                              <span className="text-[10px] text-zinc-500">{student?.email}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{course?.title || enrollment.courseTitle || 'Unknown Course'}</span>
+                              {course?.price > 0 && <span className="text-[10px] text-emerald-600 font-bold">${course.price}</span>}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-zinc-500 text-sm">
+                            {enrollment.enrolledAt?.toDate().toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={cn(
+                              "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
+                              enrollment.status === 'approved' ? "bg-emerald-100 text-emerald-700" : 
+                              enrollment.status === 'denied' ? "bg-red-100 text-red-700" : 
+                              "bg-amber-100 text-amber-700"
+                            )}>
+                              {enrollment.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              {enrollment.paymentVerified ? (
+                                <div className="flex items-center gap-1 text-emerald-600">
+                                  <CheckCircle2 className="w-4 h-4" />
+                                  <span className="text-xs font-bold">Verified</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 text-amber-600">
+                                  <AlertCircle className="w-4 h-4" />
+                                  <span className="text-xs font-bold">Pending</span>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex gap-2">
+                              {!enrollment.paymentVerified && (
+                                <button 
+                                  onClick={async () => {
+                                    try {
+                                      await updateDoc(doc(db, 'courses', enrollment.courseId, 'enrollments', enrollment.id), {
+                                        paymentVerified: true,
+                                        status: 'approved'
+                                      });
+                                    } catch (error) {
+                                      handleFirestoreError(error, OperationType.WRITE, `enrollments/${enrollment.id}`);
+                                    }
+                                  }}
+                                  className="px-3 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-all"
+                                >
+                                  Verify Payment
+                                </button>
+                              )}
+                              {enrollment.status === 'pending' && (
+                                <button 
+                                  onClick={async () => {
+                                    try {
+                                      await updateDoc(doc(db, 'courses', enrollment.courseId, 'enrollments', enrollment.id), {
+                                        status: 'approved'
+                                      });
+                                    } catch (error) {
+                                      handleFirestoreError(error, OperationType.WRITE, `enrollments/${enrollment.id}`);
+                                    }
+                                  }}
+                                  className="px-3 py-1 bg-zinc-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all"
+                                >
+                                  Approve
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+              {enrollments.length === 0 && (
+                <div className="py-12 text-center">
+                  <DollarSign className="w-12 h-12 text-zinc-200 mx-auto mb-4" />
+                  <p className="text-zinc-400 italic text-sm">No enrollments or payments found.</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
