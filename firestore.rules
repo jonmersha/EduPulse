@@ -146,7 +146,8 @@ service cloud.firestore {
              (!('videoUrl' in data) || data.videoUrl == null || data.videoUrl == "" || (data.videoUrl is string && data.videoUrl.size() < 1000)) &&
              (!('pdfUrl' in data) || data.pdfUrl == null || data.pdfUrl == "" || (data.pdfUrl is string && data.pdfUrl.size() < 1000)) &&
              data.type in ['text', 'video', 'pdf', 'quiz', 'container'] &&
-             data.courseId is string;
+             data.courseId is string &&
+             (!('isPublic' in data) || data.isPublic is bool);
     }
 
     function isValidExam(data) {
@@ -180,6 +181,8 @@ service cloud.firestore {
              (!('courseTitle' in data) || (data.courseTitle is string && data.courseTitle.size() < 200)) &&
              (!('title' in data) || (data.title is string && data.title.size() < 200)) &&
              (!('type' in data) || data.type in ['course', 'exam']) &&
+             (!('studentName' in data) || (data.studentName is string && data.studentName.size() < 100)) &&
+             (!('teacherId' in data) || (data.teacherId is string && data.teacherId.size() < 100)) &&
              (!('enrolledAt' in data) || data.enrolledAt is timestamp);
     }
 
@@ -203,7 +206,8 @@ service cloud.firestore {
     function isValidSection(data) {
       return data.courseId is string && data.name is string && data.name.size() > 0 &&
              (!('overview' in data) || data.overview == null || data.overview == "" || (data.overview is string && data.overview.size() < 10000)) &&
-             (!('order' in data) || data.order is number);
+             (!('order' in data) || data.order is number) &&
+             (!('isPublic' in data) || data.isPublic is bool);
     }
 
     // ===============================================================
@@ -211,14 +215,7 @@ service cloud.firestore {
     // ===============================================================
 
     match /sections/{sectionId} {
-      allow read: if isAuthenticated();
-      allow create: if isAdmin() || (isTeacher() && isCourseTeacher(request.resource.data.courseId) && isValidSection(request.resource.data));
-      allow update: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId) && isValidSection(request.resource.data));
-      allow delete: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId));
-    }
-
-    match /sections/{sectionId} {
-      allow read: if isAuthenticated();
+      allow read: if resource.data.isPublic == true || isAuthenticated();
       allow create: if isAdmin() || (isTeacher() && isCourseTeacher(request.resource.data.courseId) && isValidSection(request.resource.data));
       allow update: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId) && isValidSection(request.resource.data));
       allow delete: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId));
@@ -246,14 +243,14 @@ service cloud.firestore {
     }
 
     match /courses/{courseId} {
-      allow read: if isAuthenticated();
+      allow read: if resource.data.isPublic == true || isAuthenticated();
       allow create: if isAdmin() || (isTeacher() && isValidCourse(request.resource.data));
       allow update: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid && isValidCourse(request.resource.data));
       allow delete: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
     }
 
     match /lessons/{lessonId} {
-      allow read: if isAuthenticated();
+      allow read: if resource.data.isPublic == true || isAuthenticated();
       allow create: if isAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data));
       allow update: if isAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data));
       allow delete: if isAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid);
@@ -297,7 +294,8 @@ service cloud.firestore {
       );
       allow list: if isAuthenticated() && (
         isAdmin() ||
-        isCourseTeacher(courseId)
+        isCourseTeacher(courseId) ||
+        (request.auth.uid != null)
       );
       allow create: if isAuthenticated() && (isAdmin() || (request.auth.uid == request.resource.data.studentId && isValidEnrollment(request.resource.data) && request.resource.data.courseId == courseId));
       allow update: if isAuthenticated() && (

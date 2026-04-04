@@ -149,10 +149,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCourse, onSelectEx
             {recentCourses.length > 0 ? recentCourses.map(course => (
               <div 
                 key={course.id} 
-                onClick={() => course.enrollmentStatus === 'approved' && onSelectCourse(course.id)}
+                onClick={() => onSelectCourse(course.id)}
                 className={cn(
-                  "p-4 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all cursor-pointer",
-                  course.enrollmentStatus === 'pending' && "opacity-75 cursor-not-allowed"
+                  "p-4 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl flex items-center gap-4 hover:shadow-md transition-all cursor-pointer"
                 )}
               >
                 <div className="w-16 h-12 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 rounded-lg overflow-hidden shrink-0 relative">

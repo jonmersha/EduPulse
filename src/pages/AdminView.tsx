@@ -36,7 +36,7 @@ export const AdminView: React.FC = () => {
   const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolId: '', schoolIds: [] as string[], isIndependent: false });
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  const isSuperAdmin = profile?.email === 'beshegercom@gmail.com' || profile?.role === 'super_admin';
+  const isSuperAdmin = profile?.email === 'beshegercom@gmail.com' || profile?.email === 'jonmersha@gmail.com' || profile?.role === 'super_admin';
 
   useEffect(() => {
     if (!profile) return;

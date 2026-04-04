@@ -34,7 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
     { id: 'courses', label: 'My Learning', icon: BookOpen },
     { id: 'marketplace', label: 'Discover', icon: Search },
     { id: 'messages', label: 'Messaging', icon: MessageSquare },
-    ...(profile?.role === 'admin' || profile?.role === 'super_admin' || profile?.email === 'beshegercom@gmail.com' ? [{ id: 'school', label: 'Admin', icon: Settings }] : []),
+    ...(profile?.role === 'admin' || profile?.role === 'super_admin' || profile?.email === 'beshegercom@gmail.com' || profile?.email === 'jonmersha@gmail.com' ? [{ id: 'school', label: 'Admin', icon: Settings }] : []),
     ...(profile?.role === 'teacher' || profile?.role === 'provider' ? [{ id: 'my-courses', label: 'Teaching', icon: GraduationCap }] : []),
     ...(profile?.role === 'parent' ? [{ id: 'parent', label: 'Parent', icon: Users }] : []),
   ];

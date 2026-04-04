@@ -151,7 +151,7 @@ export const MyCourses: React.FC<MyCoursesProps> = ({ onSelectCourse, onSelectEx
               <div key={course.id} className="relative">
                 <CourseCard 
                   course={course} 
-                  onClick={() => course.enrollmentStatus === 'approved' && onSelectCourse(course.id)}
+                  onClick={() => onSelectCourse(course.id)}
                   progress={course.progress || 0}
                 />
                 {course.enrollmentStatus === 'pending' && (
@@ -179,10 +179,9 @@ export const MyCourses: React.FC<MyCoursesProps> = ({ onSelectCourse, onSelectEx
             {exams.map((exam) => (
               <div 
                 key={exam.id} 
-                onClick={() => exam.enrollmentStatus === 'approved' && onSelectExam(exam.id)}
+                onClick={() => onSelectExam(exam.id)}
                 className={cn(
-                  "group bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer flex flex-col h-full",
-                  exam.enrollmentStatus === 'pending' && "opacity-75 cursor-not-allowed"
+                  "group bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer flex flex-col h-full"
                 )}
               >
                 <div className="aspect-video bg-zinc-900 relative flex items-center justify-center overflow-hidden">

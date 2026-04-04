@@ -409,23 +409,6 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
     return <ExamViewer examId={selectedExam} onBack={() => setSelectedExam(null)} />;
   }
 
-  if (!enrollment && !course?.isPublic) {
-    return (
-      <div className="fixed inset-0 z-50 bg-white dark:bg-zinc-900 flex flex-col items-center justify-center p-8">
-        <h2 className="text-4xl font-black mb-4">{course?.title}</h2>
-        <p className="text-xl text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mb-8">{course?.description}</p>
-        <button 
-          onClick={handleEnroll}
-          disabled={isEnrolling}
-          className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-black text-lg hover:bg-purple-700 transition-all disabled:opacity-50"
-        >
-          {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
-        </button>
-        <button onClick={onBack} className="mt-4 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white">Back</button>
-      </div>
-    );
-  }
-
   const renderSidebarContent = () => (
     <div className={cn("flex flex-col bg-zinc-50 dark:bg-zinc-800", isMobile ? "" : "h-full")}>
       <div className="p-6 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex flex-col gap-4 shrink-0">
@@ -695,7 +678,17 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Course Content Outline (Left Sidebar) */}
+        {isSidebarOpen && (
+          <div className={cn(
+            "w-80 border-r border-zinc-200 dark:border-zinc-800 shrink-0 z-20 hidden md:block",
+            isMobile ? "absolute inset-0 z-50 w-full" : ""
+          )}>
+            {renderSidebarContent()}
+          </div>
+        )}
+
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-zinc-900 relative">
           
@@ -762,12 +755,41 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                         <div className="prose prose-zinc max-w-none text-zinc-700 dark:text-zinc-300 leading-relaxed">
                           <Markdown>{course?.description || 'No course overview provided.'}</Markdown>
                         </div>
+
+                        {!enrollment && (
+                          <div className="mt-8 p-6 bg-purple-50 dark:bg-zinc-800 rounded-2xl border border-purple-100 dark:border-zinc-700">
+                            <h3 className="font-bold text-lg mb-2">Interested in this course?</h3>
+                            <p className="text-zinc-600 dark:text-zinc-300 mb-4">Enroll now to access all lessons, resources, and quizzes.</p>
+                            <button 
+                              onClick={handleEnroll}
+                              disabled={isEnrolling}
+                              className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-black hover:bg-purple-700 transition-all disabled:opacity-50"
+                            >
+                              {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
+                            </button>
+                          </div>
+                        )}
                         {sections.length > 0 && (
                           <div className="pt-12 border-t border-zinc-100 dark:border-zinc-800">
                             <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-6">Course Curriculum</h3>
                             <div className="space-y-4">
                               {sections.map((section, idx) => (
-                                <div key={`${section.id}-${idx}`} className="p-6 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                                <div 
+                                  key={`${section.id}-${idx}`} 
+                                  onClick={() => {
+                                    if (section.mainLessons && section.mainLessons.length > 0) {
+                                      setCurrentLesson(section.mainLessons[0]);
+                                      setSelectedSection(section);
+                                      setIsViewingCourseOverview(false);
+                                      setAudioUrl(null);
+                                      if (isMobile) {
+                                        setActiveTab('overview');
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                      }
+                                    }
+                                  }}
+                                  className="p-6 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-800 cursor-pointer hover:border-purple-200 transition-all"
+                                >
                                   <div className="flex items-center gap-4 mb-2">
                                     <span className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 font-semibold text-xs uppercase tracking-wider">Section {idx + 1}</span>
                                     <h4 className="font-bold text-zinc-900 dark:text-white text-lg">{section.name}</h4>
@@ -795,6 +817,38 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                             </div>
                           </div>
                         )}
+
+                        {/* Related Courses */}
+                        <div className="pt-12 border-t border-zinc-100 dark:border-zinc-800">
+                          <RelatedCourses courseId={courseId} category={course?.category || ''} />
+                        </div>
+
+                        {/* Resources */}
+                        <div className="pt-12 border-t border-zinc-100 dark:border-zinc-800">
+                          <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-6">Resources</h3>
+                          <div className="space-y-4">
+                            {resources.map(res => (
+                              <a 
+                                key={res.id} 
+                                href={res.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:shadow-md transition-all"
+                              >
+                                <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
+                                  <FileText className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-zinc-900 dark:text-white text-sm">{res.title}</h4>
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 capitalize">{res.type}</p>
+                                </div>
+                              </a>
+                            ))}
+                            {resources.length === 0 && (
+                              <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-sm italic">No resources available.</p>
+                            )}
+                          </div>
+                        </div>
 
                         {/* Final Exam */}
                         {exams.filter(e => e.type === 'final').length > 0 && (
@@ -900,6 +954,20 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                   exit={{ opacity: 0, y: -10 }}
                   className="flex flex-col"
                 >
+                  {!(enrollment || currentLesson?.isPublic || selectedSection?.isPublic || course?.isPublic) ? (
+                    <div className="p-12 text-center">
+                      <h3 className="text-2xl font-bold mb-4">Enroll to access this lesson</h3>
+                      <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mb-8">This lesson is restricted. Enroll in the course to access all content.</p>
+                      <button 
+                        onClick={handleEnroll}
+                        disabled={isEnrolling}
+                        className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-black text-lg hover:bg-purple-700 transition-all disabled:opacity-50"
+                      >
+                        {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
+                      </button>
+                    </div>
+                  ) : (
+                    <>
                   {/* Content Section */}
                   <div className="p-6 md:p-12 space-y-8">
                     <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
@@ -1414,6 +1482,8 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
                       )}
                     </div>
                   </div>
+                    </>
+                  )}
                 </motion.div>
               ) : selectedSection ? (
                 <motion.div
@@ -1520,15 +1590,7 @@ export const LessonViewer: React.FC<LessonViewerProps> = ({ courseId, onBack }) 
         </div>
 
         {/* Sidebar - Course Content */}
-        <aside 
-          className={cn(
-            "bg-zinc-50 dark:bg-zinc-800 flex-col shrink-0 z-30",
-            "hidden md:flex md:relative md:inset-auto md:h-full md:w-[420px] md:rounded-none md:shadow-none md:border-t-0 md:border-l md:mt-0",
-            isSidebarOpen ? "md:flex" : "md:hidden"
-          )}
-        >
-          {renderSidebarContent()}
-        </aside>
+        {/* Removed - now handled by left sidebar */}
       </div>
     </div>
   );

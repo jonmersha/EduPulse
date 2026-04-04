@@ -299,6 +299,8 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
+          <h2 className="font-bold text-sm text-zinc-900 dark:text-white truncate max-w-[200px]">{course?.title}</h2>
+          <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-700" />
           <div className="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
             <button 
               onClick={() => setActiveView('content')}
@@ -809,6 +811,20 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                   </div>
 
                   <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Visibility</label>
+                    <button
+                      onClick={() => setEditingSection({...editingSection, isPublic: !editingSection.isPublic})}
+                      className={cn(
+                        "w-full px-4 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-between",
+                        editingSection.isPublic ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-black/5"
+                      )}
+                    >
+                      {editingSection.isPublic ? 'Public (Visible without enrollment)' : 'Private (Requires enrollment)'}
+                      <div className={cn("w-4 h-4 rounded-full border-2", editingSection.isPublic ? "bg-emerald-500 border-emerald-500" : "border-zinc-300")} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
                     <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Section Overview (Markdown)</label>
                     <textarea 
                       value={editingSection.overview || ''}
@@ -865,6 +881,19 @@ export const LessonEditor: React.FC<LessonEditorProps> = ({ courseId, onBack }) 
                     placeholder="Lesson Title"
                   />
 
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Visibility</label>
+                    <button
+                      onClick={() => setEditingLesson({...editingLesson, isPublic: !editingLesson.isPublic})}
+                      className={cn(
+                        "w-full px-4 py-3 rounded-2xl text-sm font-bold transition-all flex items-center justify-between",
+                        editingLesson.isPublic ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-black/5"
+                      )}
+                    >
+                      {editingLesson.isPublic ? 'Public (Visible without enrollment)' : 'Private (Requires enrollment)'}
+                      <div className={cn("w-4 h-4 rounded-full border-2", editingLesson.isPublic ? "bg-emerald-500 border-emerald-500" : "border-zinc-300")} />
+                    </button>
+                  </div>
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Content Type</label>

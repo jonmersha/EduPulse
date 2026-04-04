@@ -22,17 +22,16 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [isEnrolling, setIsEnrolling] = useState(false);
 
   useEffect(() => {
-    const coursesQuery = query(collection(db, 'courses'), where('isPublic', '==', true));
+    const coursesQuery = query(collection(db, 'courses'));
     const unsubCourses = onSnapshot(coursesQuery, (snapshot) => {
       setCourses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'courses'));
 
-    const examsQuery = query(collection(db, 'exams'), where('isPublic', '==', true));
+    const examsQuery = query(collection(db, 'exams'));
     const unsubExams = onSnapshot(examsQuery, (snapshot) => {
       setExams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'exams'));
@@ -60,11 +59,11 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
     setIsEnrolling(true);
     try {
       const parentCollection = type === 'course' ? 'courses' : 'exams';
-      const enrollmentId = `${profile.uid}_${item.id}`;
+      const enrollmentId = profile.uid; // Standardized to profile.uid
       await setDoc(doc(db, parentCollection, item.id, 'enrollments', enrollmentId), {
         studentId: profile.uid,
-        studentName: profile.displayName,
-        teacherId: item.teacherId,
+        studentName: profile.displayName || 'Anonymous',
+        teacherId: item.teacherId || 'unknown',
         [type === 'course' ? 'courseId' : 'examId']: item.id,
         title: item.title,
         enrolledAt: Timestamp.now(),
@@ -75,9 +74,8 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
       });
       // Small delay for feedback
       await new Promise(resolve => setTimeout(resolve, 1000));
-      setSelectedItem(null);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `enrollments/${profile.uid}_${item.id}`);
+      handleFirestoreError(error, OperationType.WRITE, `enrollments/${profile.uid}`);
     } finally {
       setIsEnrolling(false);
     }
@@ -177,26 +175,8 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
               <div key={item.id} className="relative group">
                 <CourseCard 
                   course={item} 
-                  onClick={() => setSelectedItem(item)}
+                  onClick={() => onSelectCourse(item.id)}
                 />
-                {(!isEnrolled || isDenied) && (
-                  <div className="absolute top-6 left-6">
-                    <div className="px-3 py-1 bg-purple-600 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5">
-                      <Sparkles className="w-3 h-3" />
-                      {isDenied ? "Re-enroll" : "New"}
-                    </div>
-                  </div>
-                )}
-                {isEnrolled && !isDenied && (
-                  <div className="absolute top-6 left-6">
-                    <div className={cn(
-                      "px-3 py-1 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5",
-                      isApproved ? "bg-purple-600" : "bg-amber-500"
-                    )}>
-                      {isApproved ? "Enrolled" : "Pending Approval"}
-                    </div>
-                  </div>
-                )}
               </div>
             ) : (
               <motion.div 
@@ -204,7 +184,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="group bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer flex flex-col h-full"
-                onClick={() => setSelectedItem(item)}
+                onClick={() => onSelectExam(item.id)}
               >
                 <div className="aspect-video bg-zinc-900 relative flex items-center justify-center overflow-hidden">
                   <Trophy className="w-20 h-20 text-zinc-700 dark:text-zinc-300 group-hover:scale-110 transition-transform duration-700" />
@@ -212,23 +192,6 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                   <div className="absolute top-6 right-6 px-4 py-2 bg-white dark:bg-zinc-900/90 dark:bg-zinc-800/90 backdrop-blur-md rounded-2xl text-xs font-black shadow-2xl dark:text-white">
                     {item.price > 0 ? `$${item.price}` : 'FREE'}
                   </div>
-                  {isEnrolled && !isDenied && (
-                    <div className="absolute top-6 left-6">
-                      <div className={cn(
-                        "px-3 py-1 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5",
-                        isApproved ? "bg-purple-600" : "bg-amber-500"
-                      )}>
-                        {isApproved ? "Enrolled" : "Pending"}
-                      </div>
-                    </div>
-                  )}
-                  {isDenied && (
-                    <div className="absolute top-6 left-6">
-                      <div className="px-3 py-1 bg-red-500 text-white text-[10px] font-black uppercase rounded-lg shadow-lg flex items-center gap-1.5">
-                        Denied
-                      </div>
-                    </div>
-                  )}
                 </div>
                 <div className="p-8 flex-1 flex flex-col">
                   <div className="flex items-center gap-3 mb-4">
@@ -237,19 +200,6 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
                   </div>
                   <h3 className="font-black text-2xl leading-tight mb-4 group-hover:text-purple-600 transition-colors line-clamp-2 dark:text-white">{item.title}</h3>
                   <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 font-medium line-clamp-2 mb-8 flex-1">{item.description}</p>
-                  
-                  <button className={cn(
-                    "w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl",
-                    isApproved
-                      ? "bg-zinc-900 text-white hover:bg-black"
-                      : isPending
-                        ? "bg-amber-500 text-white cursor-not-allowed"
-                        : isDenied
-                          ? "bg-purple-600 text-white hover:bg-purple-700 shadow-purple-100" // Allow re-enroll
-                          : "bg-purple-600 text-white hover:bg-purple-700 shadow-purple-100"
-                  )}>
-                    {isApproved ? 'Open Exam' : isPending ? 'Pending Approval' : isDenied ? 'Re-enroll' : (item.price > 0 ? 'Purchase Exam' : 'Enroll Free')}
-                  </button>
                 </div>
               </motion.div>
             );
@@ -271,112 +221,6 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectCourse, onSele
 
       {/* Item Detail Modal */}
       <AnimatePresence>
-        {selectedItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedItem(null)}
-              className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl max-h-[90vh] bg-white dark:bg-zinc-900 rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col"
-            >
-              <div className="relative shrink-0 bg-zinc-100 dark:bg-zinc-800 h-48 md:h-64 lg:h-80">
-                {activeTab === 'courses' ? (
-                  <img 
-                    src={selectedItem.thumbnail || `https://picsum.photos/seed/${selectedItem.id}/800/450`} 
-                    alt={selectedItem.title}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Trophy className="w-16 md:w-24 h-16 md:h-24 text-zinc-300 dark:text-zinc-700" />
-                  </div>
-                )}
-                <button 
-                  onClick={() => setSelectedItem(null)}
-                  className="absolute top-4 right-4 md:top-6 md:right-6 w-10 h-10 md:w-12 md:h-12 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md rounded-xl md:rounded-2xl flex items-center justify-center text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white transition-all shadow-xl"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <div className="p-6 md:p-12 overflow-y-auto custom-scrollbar">
-                <div className="flex items-center gap-3 mb-6">
-                  <span className="px-4 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase rounded-lg tracking-widest">
-                    {selectedItem.category || 'General'}
-                  </span>
-                  <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
-                    By {selectedItem.teacherName || 'EduPulse Instructor'}
-                  </span>
-                </div>
-                
-                <h2 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white mb-6 leading-tight">
-                  {selectedItem.title}
-                </h2>
-                
-                <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-lg font-medium leading-relaxed mb-10">
-                  {selectedItem.description}
-                </p>
-                
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  {(() => {
-                    const enrollment = enrollments.find(e => (activeTab === 'courses' ? e.courseId : e.examId) === selectedItem.id);
-                    const isEnrolled = !!enrollment;
-                    const isApproved = enrollment?.status === 'approved';
-                    const isPending = enrollment?.status === 'pending';
-                    const isDenied = enrollment?.status === 'denied';
-
-                    if (isApproved || (selectedItem.isPublic && !isEnrolled)) {
-                      return (
-                        <button 
-                          onClick={() => {
-                            if (activeTab === 'courses') onSelectCourse(selectedItem.id);
-                            else onSelectExam(selectedItem.id);
-                            setSelectedItem(null);
-                          }}
-                          className="w-full sm:flex-1 py-5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl"
-                        >
-                          {isApproved ? 'Open Course' : 'View Public Course'}
-                        </button>
-                      );
-                    }
-
-                    if (isPending) {
-                      return (
-                        <div className="w-full py-5 bg-amber-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest text-center shadow-xl">
-                          Pending Approval
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <button 
-                        onClick={() => handleEnroll(selectedItem, activeTab === 'courses' ? 'course' : 'exam')}
-                        disabled={isEnrolling}
-                        className="w-full sm:flex-1 py-5 bg-emerald-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-emerald-700 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl disabled:opacity-50"
-                      >
-                        {isEnrolling ? 'Enrolling...' : isDenied ? 'Re-enroll' : (selectedItem.price > 0 ? `Purchase for $${selectedItem.price}` : 'Enroll for Free')}
-                      </button>
-                    );
-                  })()}
-                  <button 
-                    onClick={() => setSelectedItem(null)}
-                    className="w-full sm:w-auto px-8 py-5 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-zinc-200 dark:bg-zinc-700 transition-all"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
       </AnimatePresence>
     </div>
   );

@@ -5,14 +5,18 @@ import { motion } from 'motion/react';
 
 interface CourseCardProps {
   course: any;
-  onClick: () => void;
+  onClick?: () => void;
   progress?: number;
+  action?: React.ReactNode;
 }
 
-export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, progress }) => (
+export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, progress, action }) => (
   <div 
     onClick={onClick}
-    className="bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all group cursor-pointer flex flex-col h-full"
+    className={cn(
+      "bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all group flex flex-col h-full",
+      onClick ? "cursor-pointer" : ""
+    )}
   >
     <div className="aspect-video bg-zinc-100 dark:bg-zinc-800 relative overflow-hidden">
       <img 
@@ -70,6 +74,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick, progres
           <ChevronRight className="w-4 h-4" />
         </div>
       </div>
+      {action && (
+        <div className="mt-5" onClick={(e) => e.stopPropagation()}>
+          {action}
+        </div>
+      )}
     </div>
   </div>
 );
