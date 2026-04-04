@@ -36,7 +36,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
     { id: 'courses', label: 'My Learning', icon: BookOpen },
     { id: 'marketplace', label: 'Discover', icon: Search },
     { id: 'messages', label: 'Messaging', icon: MessageSquare },
-    ...(profile?.role === 'admin' || isSuperAdmin ? [{ id: 'school', label: isSuperAdmin ? 'Super Admin' : 'School Manager', icon: Settings }] : []),
+    ...(isSuperAdmin ? [{ id: 'super-admin', label: 'Super Admin', icon: Settings }] : []),
+    ...(profile?.role === 'admin' ? [{ id: 'school', label: 'School Manager', icon: Settings }] : []),
     ...(profile?.role === 'teacher' || profile?.role === 'provider' ? [{ id: 'my-courses', label: 'Teaching', icon: GraduationCap }] : []),
     ...(profile?.role === 'parent' ? [{ id: 'parent', label: 'Parent', icon: Users }] : []),
   ];

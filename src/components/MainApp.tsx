@@ -8,7 +8,8 @@ import { Dashboard } from '../pages/Dashboard';
 import { Marketplace } from '../pages/Marketplace';
 import { MyCourses } from '../pages/MyCourses';
 import { CourseManagement } from '../pages/CourseManagement';
-import { AdminView } from '../pages/AdminView';
+import { SuperAdminView } from '../pages/SuperAdminView';
+import { SchoolManagerView } from '../pages/SchoolManagerView';
 import { ParentView } from '../pages/ParentView';
 import { SettingsView } from '../pages/SettingsView';
 
@@ -56,7 +57,8 @@ export const MainApp: React.FC = () => {
                   {activeTab === 'marketplace' && <Marketplace onSelectCourse={setSelectedCourse} onSelectExam={setSelectedExam} />}
                   {activeTab === 'courses' && <MyCourses onSelectCourse={setSelectedCourse} onSelectExam={setSelectedExam} />}
                   {activeTab === 'my-courses' && <CourseManagement onEditCourse={setSelectedCourseForEdit} onEditExam={setSelectedExamForEdit} />}
-                  {activeTab === 'school' && <AdminView />}
+                  {activeTab === 'super-admin' && <SuperAdminView />}
+                  {activeTab === 'school' && <SchoolManagerView />}
                   {activeTab === 'parent' && <ParentView />}
                   {activeTab === 'messages' && (
                     <div className="flex flex-col items-center justify-center h-64 text-zinc-400">
