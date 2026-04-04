@@ -15,27 +15,32 @@ export const SchoolManagerView: React.FC = () => {
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState<'classes' | 'users' | 'courses' | 'exams' | 'payments' | 'profile'>('classes');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'teacher' | 'student'>('all');
+  const [activeSubTab, setActiveSubTab] = useState<'schools' | 'classes' | 'users' | 'courses' | 'exams' | 'payments' | 'profile'>('schools');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'teacher' | 'student' | 'parent'>('all');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'verified' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkingParent, setLinkingParent] = useState<any>(null);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [addStudentOptionsContext, setAddStudentOptionsContext] = useState<{classId?: string} | null>(null);
   const [bulkUploadContext, setBulkUploadContext] = useState<{classId?: string} | null>(null);
   const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null);
   const [bulkUploadStatus, setBulkUploadStatus] = useState('');
   const [bulkUploadProgress, setBulkUploadProgress] = useState(0);
-  const [bulkUploadRole, setBulkUploadRole] = useState<'student' | 'teacher'>('student');
+  const [bulkUploadRole, setBulkUploadRole] = useState<'student' | 'teacher' | 'school'>('student');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [schoolData, setSchoolData] = useState<any>(null);
   const [managedSchools, setManagedSchools] = useState<any[]>([]);
   const [showCreateSchool, setShowCreateSchool] = useState(false);
+  const [editingSchool, setEditingSchool] = useState<any>(null);
+  const [showEditSchoolModal, setShowEditSchoolModal] = useState(false);
 
   // Form states
   const [newClass, setNewClass] = useState({ name: '', grade: '', year: '', teacherId: '', schoolId: '' });
-  const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolId: '', isIndependent: false });
+  const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolId: '', isIndependent: false, studentIds: [] as string[] });
   const [editingItem, setEditingItem] = useState<any>(null);
   const [schoolForm, setSchoolForm] = useState({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
 
@@ -145,7 +150,7 @@ export const SchoolManagerView: React.FC = () => {
       }, { merge: true });
       setShowAddModal(false);
       setEditingItem(null);
-      setNewUser({ email: '', displayName: '', role: 'student', classId: '', specialization: '', schoolId: '', isIndependent: false });
+      setNewUser({ email: '', displayName: '', role: 'student', classId: '', specialization: '', schoolId: '', isIndependent: false, studentIds: [] });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `users/${editingItem?.id || 'new'}`);
     }
@@ -166,11 +171,11 @@ export const SchoolManagerView: React.FC = () => {
   const startEdit = (item: any) => {
     setEditingItem(item);
     if (activeSubTab === 'classes') setNewClass({ name: item.name, grade: item.grade, year: item.year || '', teacherId: item.teacherId || '', schoolId: item.schoolId || '' });
-    if (activeSubTab === 'users') setNewUser({ email: item.email, displayName: item.displayName, role: item.role, classId: item.classId || '', specialization: item.specialization || '', schoolId: item.schoolId || '', isIndependent: item.isIndependent || false });
+    if (activeSubTab === 'users') setNewUser({ email: item.email, displayName: item.displayName, role: item.role, classId: item.classId || '', specialization: item.specialization || '', schoolId: item.schoolId || '', isIndependent: item.isIndependent || false, studentIds: item.studentIds || [] });
     setShowAddModal(true);
   };
 
-  const openAddUserModal = (role?: 'student' | 'teacher' | 'admin', classId?: string) => {
+  const openAddUserModal = (role?: 'student' | 'teacher' | 'admin' | 'parent', classId?: string) => {
     setEditingItem(null);
     setNewUser({ 
       email: '', 
@@ -179,27 +184,43 @@ export const SchoolManagerView: React.FC = () => {
       classId: classId || '', 
       specialization: '', 
       schoolId: profile?.schoolId || '', 
-      isIndependent: false
+      isIndependent: false,
+      studentIds: []
     });
     setShowAddModal(true);
   };
 
   const handleUpdateSchool = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.schoolId) return;
+    const targetSchoolId = editingSchool?.id || profile?.schoolId;
+    if (!targetSchoolId) return;
     try {
-      await setDoc(doc(db, 'schools', profile.schoolId), {
+      await setDoc(doc(db, 'schools', targetSchoolId), {
         ...schoolForm,
         updatedAt: Timestamp.now()
       }, { merge: true });
+      setShowEditSchoolModal(false);
+      setEditingSchool(null);
       alert('School profile updated successfully!');
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `schools/${profile.schoolId}`);
+      handleFirestoreError(error, OperationType.WRITE, `schools/${targetSchoolId}`);
+    }
+  };
+
+  const handleToggleVisibility = async (school: any) => {
+    try {
+      const newStatus = school.status === 'active' ? 'inactive' : 'active';
+      await setDoc(doc(db, 'schools', school.id), {
+        status: newStatus,
+        updatedAt: Timestamp.now()
+      }, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `schools/${school.id}`);
     }
   };
 
   const handleBulkUpload = async () => {
-    if (!bulkUploadFile || !profile?.schoolId) return;
+    if (!bulkUploadFile || !profile) return;
     
     setBulkUploadStatus('Parsing file...');
     setBulkUploadProgress(0);
@@ -215,49 +236,80 @@ export const SchoolManagerView: React.FC = () => {
         }
         
         const headers = Object.keys(data[0]).map(h => h.toLowerCase());
-        if (!headers.includes('email') || !headers.includes('name')) {
-          setBulkUploadStatus('Error: CSV must contain "email" and "name" columns.');
-          return;
+        
+        if (bulkUploadRole === 'school') {
+          if (!headers.includes('name') || !headers.includes('address')) {
+            setBulkUploadStatus('Error: CSV must contain "name" and "address" columns.');
+            return;
+          }
+        } else {
+          if (!headers.includes('email') || !headers.includes('name')) {
+            setBulkUploadStatus('Error: CSV must contain "email" and "name" columns.');
+            return;
+          }
         }
         
-        setBulkUploadStatus(`Found ${data.length} users. Uploading...`);
+        setBulkUploadStatus(`Found ${data.length} items. Uploading...`);
         let successCount = 0;
         let errorCount = 0;
         
         for (let i = 0; i < data.length; i++) {
           const row = data[i];
-          const emailKey = Object.keys(row).find(k => k.toLowerCase() === 'email');
-          const nameKey = Object.keys(row).find(k => k.toLowerCase() === 'name');
-          const classKey = Object.keys(row).find(k => k.toLowerCase() === 'class');
-          const yearKey = Object.keys(row).find(k => k.toLowerCase() === 'year');
-          
-          if (!emailKey || !nameKey || !row[emailKey] || !row[nameKey]) {
-            errorCount++;
-            continue;
-          }
-          
           try {
-            let classId = '';
-            if (bulkUploadRole === 'student') {
-               if (bulkUploadContext?.classId) {
-                 classId = bulkUploadContext.classId;
-               } else if (classKey && row[classKey] && yearKey && row[yearKey]) {
-                 const matchedClass = classes.find(c => c.name.toLowerCase() === row[classKey].toLowerCase() && c.year === row[yearKey]);
-                 if (matchedClass) classId = matchedClass.id;
-               }
+            if (bulkUploadRole === 'school') {
+              const nameKey = Object.keys(row).find(k => k.toLowerCase() === 'name');
+              const addressKey = Object.keys(row).find(k => k.toLowerCase() === 'address');
+              const academicKey = Object.keys(row).find(k => k.toLowerCase() === 'academicstructure');
+              
+              if (!nameKey || !addressKey || !row[nameKey] || !row[addressKey]) {
+                errorCount++;
+                continue;
+              }
+
+              const schoolId = doc(collection(db, 'schools')).id;
+              await setDoc(doc(db, 'schools', schoolId), {
+                name: row[nameKey].trim(),
+                address: row[addressKey].trim(),
+                academicStructure: academicKey ? row[academicKey].trim() : 'K-12',
+                adminEmail: profile.email,
+                managerId: profile.uid,
+                status: 'pending',
+                createdAt: Timestamp.now(),
+                updatedAt: Timestamp.now()
+              });
+            } else {
+              const emailKey = Object.keys(row).find(k => k.toLowerCase() === 'email');
+              const nameKey = Object.keys(row).find(k => k.toLowerCase() === 'name');
+              const classKey = Object.keys(row).find(k => k.toLowerCase() === 'class');
+              const yearKey = Object.keys(row).find(k => k.toLowerCase() === 'year');
+              
+              if (!emailKey || !nameKey || !row[emailKey] || !row[nameKey]) {
+                errorCount++;
+                continue;
+              }
+              
+              let classId = '';
+              if (bulkUploadRole === 'student') {
+                 if (bulkUploadContext?.classId) {
+                   classId = bulkUploadContext.classId;
+                 } else if (classKey && row[classKey] && yearKey && row[yearKey]) {
+                   const matchedClass = classes.find(c => c.name.toLowerCase() === row[classKey].toLowerCase() && c.year === row[yearKey]);
+                   if (matchedClass) classId = matchedClass.id;
+                 }
+              }
+              
+              const userId = doc(collection(db, 'users')).id;
+              await setDoc(doc(db, 'users', userId), {
+                email: row[emailKey].trim(),
+                displayName: row[nameKey].trim(),
+                role: bulkUploadRole,
+                classId: classId,
+                schoolId: profile.schoolId,
+                status: 'active',
+                uid: userId,
+                createdAt: Timestamp.now()
+              });
             }
-            
-            const userId = doc(collection(db, 'users')).id;
-            await setDoc(doc(db, 'users', userId), {
-              email: row[emailKey].trim(),
-              displayName: row[nameKey].trim(),
-              role: bulkUploadRole,
-              classId: classId,
-              schoolId: profile.schoolId,
-              status: 'active',
-              uid: userId,
-              createdAt: Timestamp.now()
-            });
             successCount++;
           } catch (err) {
             errorCount++;
@@ -323,10 +375,37 @@ export const SchoolManagerView: React.FC = () => {
         schoolId: schoolId,
         updatedAt: Timestamp.now()
       }, { merge: true });
-      // The AuthContext will pick up the change and reload the profile
+      setActiveSubTab('classes');
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `users/${profile.uid}`);
     }
+  };
+
+  const handleLinkStudents = async () => {
+    if (!linkingParent) return;
+    try {
+      await setDoc(doc(db, 'users', linkingParent.id), {
+        studentIds: selectedStudentIds,
+        updatedAt: Timestamp.now()
+      }, { merge: true });
+      setShowLinkModal(false);
+      setLinkingParent(null);
+      setSelectedStudentIds([]);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${linkingParent.id}`);
+    }
+  };
+
+  const startEditSchool = (school: any) => {
+    setEditingSchool(school);
+    setSchoolForm({
+      name: school.name || '',
+      address: school.address || '',
+      adminEmail: school.adminEmail || '',
+      contactPhone: school.contactPhone || '',
+      academicStructure: school.academicStructure || 'K-12'
+    });
+    setShowEditSchoolModal(true);
   };
 
   if (!profile?.schoolId || showCreateSchool) {
@@ -460,57 +539,25 @@ export const SchoolManagerView: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center shrink-0">
-            <SchoolIcon className="w-6 h-6 text-emerald-600" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-zinc-900 dark:text-white leading-tight">
-              {schoolData?.name || 'Loading School...'}
-            </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={cn(
-                "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                schoolData?.status === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-              )}>
-                {schoolData?.status || 'pending'}
-              </span>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">• {schoolData?.academicStructure}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {managedSchools.length > 1 && (
-            <select 
-              value={profile?.schoolId}
-              onChange={(e) => handleSwitchSchool(e.target.value)}
-              className="px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-600 transition-all"
-            >
-              {managedSchools.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          )}
-          <button 
-            onClick={() => setShowCreateSchool(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-xl text-sm font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Register Another</span>
-          </button>
-        </div>
-      </div>
-
       <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            School Management
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1">
-            Manage your school, classes, and users.
-          </p>
+        <div className="flex items-center gap-4">
+          {activeSubTab !== 'schools' && (
+            <button 
+              onClick={() => setActiveSubTab('schools')}
+              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-500 transition-all"
+              title="Back to Schools"
+            >
+              <SchoolIcon className="w-6 h-6" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
+              {activeSubTab === 'schools' ? 'School Management' : (schoolData?.name || 'School Management')}
+            </h1>
+            <p className="text-zinc-500 dark:text-zinc-400 mt-1">
+              {activeSubTab === 'schools' ? 'Manage your school network and infrastructure.' : `Managing ${activeSubTab} for ${schoolData?.name}`}
+            </p>
+          </div>
         </div>
         <div className="flex gap-3">
           {activeSubTab === 'users' ? (
@@ -551,6 +598,12 @@ export const SchoolManagerView: React.FC = () => {
 
       <div className="flex gap-4 border-b border-black/5 pb-4 overflow-x-auto">
         <button 
+          onClick={() => setActiveSubTab('schools')}
+          className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'schools' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+        >
+          My Schools
+        </button>
+        <button 
           onClick={() => setActiveSubTab('classes')}
           className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
         >
@@ -589,7 +642,7 @@ export const SchoolManagerView: React.FC = () => {
         
         {activeSubTab === 'users' && (
           <div className="ml-auto flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
-            {(['all', 'admin', 'teacher', 'student'] as const).map((role) => (
+            {(['all', 'admin', 'teacher', 'student', 'parent'] as const).map((role) => (
               <button
                 key={role}
                 onClick={() => setRoleFilter(role)}
@@ -606,6 +659,74 @@ export const SchoolManagerView: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
+        {activeSubTab === 'schools' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold">My Managed Schools</h3>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => { setBulkUploadRole('school'); setBulkUploadContext(null); setShowBulkUploadModal(true); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl text-sm font-bold hover:bg-zinc-200 transition-all"
+                >
+                  <Upload className="w-4 h-4" />
+                  Bulk Upload Schools
+                </button>
+                <button 
+                  onClick={() => setShowCreateSchool(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-md"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add New School
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {managedSchools.map(school => (
+                <div key={school.id} className={cn(
+                  "p-6 bg-white dark:bg-zinc-900 border rounded-3xl shadow-sm hover:shadow-md transition-all group relative",
+                  profile?.schoolId === school.id ? "border-emerald-500 ring-1 ring-emerald-500" : "border-black/5"
+                )}>
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+                      <SchoolIcon className="w-6 h-6" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleToggleVisibility(school); }}
+                        className={cn(
+                          "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors",
+                          school.status === 'active' ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                        )}
+                        title={school.status === 'active' ? "Make Invisible" : "Make Visible"}
+                      >
+                        {school.status === 'active' ? 'Visible' : 'Invisible'}
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); startEditSchool(school); }}
+                        className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Settings className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div onClick={() => handleSwitchSchool(school.id)} className="cursor-pointer">
+                    <h3 className="text-xl font-bold">{school.name}</h3>
+                    <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">{school.address}</p>
+                    <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
+                      <span className="text-xs font-bold text-zinc-400">{school.academicStructure}</span>
+                      <button 
+                        className="text-xs font-bold text-emerald-600 hover:underline"
+                      >
+                        Manage School →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {activeSubTab === 'classes' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {classes.map(cls => (
@@ -635,6 +756,28 @@ export const SchoolManagerView: React.FC = () => {
 
         {activeSubTab === 'users' && (
           <div className="bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-black/5 flex justify-between items-center">
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => openAddUserModal('teacher')}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all"
+                >
+                  Add Teacher
+                </button>
+                <button 
+                  onClick={() => openAddUserModal('student')}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all"
+                >
+                  Add Student
+                </button>
+                <button 
+                  onClick={() => openAddUserModal('parent')}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-all"
+                >
+                  Add Parent
+                </button>
+              </div>
+            </div>
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-zinc-50 dark:bg-zinc-800 border-b border-black/5">
@@ -657,16 +800,28 @@ export const SchoolManagerView: React.FC = () => {
                           "px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
                           user.role === 'teacher' ? "bg-blue-100 text-blue-700" : 
                           user.role === 'admin' ? "bg-purple-100 text-purple-700" : 
+                          user.role === 'parent' ? "bg-amber-100 text-amber-700" :
                           "bg-purple-100 text-purple-700"
                         )}>
                           {user.role === 'admin' ? 'School Manager' : user.role}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 text-sm">
-                        {user.role === 'teacher' ? user.specialization : classes.find(c => c.id === user.classId)?.name || '-'}
+                        {user.role === 'teacher' ? user.specialization : 
+                         user.role === 'parent' ? `${(user.studentIds || []).length} Linked Students` :
+                         classes.find(c => c.id === user.classId)?.name || '-'}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
+                          {user.role === 'parent' && (
+                            <button 
+                              onClick={() => openLinkModal(user)}
+                              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-emerald-600"
+                              title="Link Students"
+                            >
+                              <UserPlus className="w-4 h-4" />
+                            </button>
+                          )}
                           <button onClick={() => startEdit(user)} className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"><Settings className="w-4 h-4" /></button>
                           <button onClick={() => setDeleteConfirm({ collection: 'users', id: user.id })} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </div>
@@ -1039,6 +1194,108 @@ export const SchoolManagerView: React.FC = () => {
               className="px-6 py-2 bg-zinc-900 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
             >
               Start Upload
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit School Modal */}
+      <Modal
+        isOpen={showEditSchoolModal}
+        onClose={() => { setShowEditSchoolModal(false); setEditingSchool(null); }}
+        title={`Edit ${editingSchool?.name || 'School'}`}
+      >
+        <form onSubmit={handleUpdateSchool} className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold mb-1">School Name</label>
+            <input 
+              type="text" 
+              required 
+              value={schoolForm.name}
+              onChange={(e) => setSchoolForm({...schoolForm, name: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-1">Address</label>
+            <input 
+              type="text" 
+              required 
+              value={schoolForm.address}
+              onChange={(e) => setSchoolForm({...schoolForm, address: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-1">Contact Phone</label>
+            <input 
+              type="tel" 
+              required 
+              value={schoolForm.contactPhone}
+              onChange={(e) => setSchoolForm({...schoolForm, contactPhone: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-1">Academic Structure</label>
+            <select 
+              value={schoolForm.academicStructure}
+              onChange={(e) => setSchoolForm({...schoolForm, academicStructure: e.target.value})}
+              className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
+            >
+              <option value="K-12">K-12</option>
+              <option value="Primary Only">Primary Only</option>
+              <option value="Secondary Only">Secondary Only</option>
+              <option value="Higher Education">Higher Education</option>
+              <option value="Vocational">Vocational</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <button type="button" onClick={() => setShowEditSchoolModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
+            <button type="submit" className="px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold shadow-lg">
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Link Students Modal */}
+      <Modal
+        isOpen={showLinkModal}
+        onClose={() => { setShowLinkModal(false); setLinkingParent(null); }}
+        title={`Link Students to ${linkingParent?.displayName}`}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-500">Select students to link to this parent account.</p>
+          <div className="max-h-64 overflow-y-auto space-y-2">
+            {users.filter(u => u.role === 'student').map(student => (
+              <label key={student.id} className="flex items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl cursor-pointer hover:bg-zinc-100 transition-colors">
+                <input 
+                  type="checkbox"
+                  checked={selectedStudentIds.includes(student.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedStudentIds([...selectedStudentIds, student.id]);
+                    } else {
+                      setSelectedStudentIds(selectedStudentIds.filter(id => id !== student.id));
+                    }
+                  }}
+                  className="w-4 h-4 text-emerald-600 rounded"
+                />
+                <div>
+                  <p className="text-sm font-bold">{student.displayName}</p>
+                  <p className="text-xs text-zinc-500">{student.email}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <button onClick={() => setShowLinkModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
+            <button 
+              onClick={handleLinkStudents}
+              className="px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold shadow-lg"
+            >
+              Save Links
             </button>
           </div>
         </div>
