@@ -3,10 +3,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'r
 import { onAuthStateChanged, signInWithPopup, signOut, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { auth, db, googleProvider, handleFirestoreError, OperationType } from './firebase';
-import { LogIn, LogOut, School, Users, UserPlus, BookOpen, Settings, Plus, Trash2, Upload, Link as LinkIcon, ChevronRight, Search, LayoutDashboard } from 'lucide-react';
+import { LogIn, LogOut, School, Users, UserPlus, BookOpen, Settings, Plus, Trash2, Upload, Link as LinkIcon, ChevronRight, Search, LayoutDashboard, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import SuperAdminView from './pages/SuperAdminView';
 import SchoolManagerView from './pages/SchoolManagerView';
+import ManagerDashboard from './pages/ManagerDashboard';
 
 // --- Types ---
 export type UserRole = 'super_admin' | 'school_manager' | 'teacher' | 'student' | 'parent';
@@ -53,7 +54,15 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           const docSnap = await getDoc(docRef);
           
           if (docSnap.exists()) {
-            setProfile(docSnap.data() as UserProfile);
+            const existingProfile = docSnap.data() as UserProfile;
+            // Force super_admin role for the primary admin email
+            if (firebaseUser.email === 'beshegercom@gmail.com' && existingProfile.role !== 'super_admin') {
+              const updatedProfile = { ...existingProfile, role: 'super_admin' as UserRole };
+              await setDoc(docRef, updatedProfile);
+              setProfile(updatedProfile);
+            } else {
+              setProfile(existingProfile);
+            }
           } else {
             // Default role for first user or new users
             // In a real app, you'd have a more robust way to assign roles
@@ -178,7 +187,8 @@ const App: React.FC = () => {
       <Router>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/school/:schoolId" element={<SchoolManagerView />} />
+          <Route path="/schools" element={<Layout><ManagerDashboard /></Layout>} />
+          <Route path="/school/:schoolId" element={<Layout><SchoolManagerView /></Layout>} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Router>
@@ -187,7 +197,7 @@ const App: React.FC = () => {
 };
 
 const Home = () => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, logout } = useAuth();
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
@@ -198,13 +208,27 @@ const Home = () => {
   if (!user) return <Layout><LoginView /></Layout>;
 
   if (profile?.role === 'super_admin') return <Layout><SuperAdminView /></Layout>;
-  if (profile?.role === 'school_manager') return <Navigate to={`/school/${profile.schoolId}`} />;
+  if (profile?.role === 'school_manager') return <Navigate to="/schools" />;
   
   return (
     <Layout>
-      <div className="text-center py-20">
-        <h2 className="text-2xl font-bold">Access Denied</h2>
-        <p className="text-zinc-500 mt-2">You don't have permission to access the management dashboard.</p>
+      <div className="max-w-md mx-auto text-center py-20 px-6">
+        <div className="w-20 h-20 bg-red-100 dark:bg-red-900/20 text-red-600 rounded-3xl flex items-center justify-center mx-auto mb-8">
+          <X size={40} />
+        </div>
+        <h2 className="text-3xl font-black tracking-tight mb-4">Access Denied</h2>
+        <p className="text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed mb-8">
+          You are signed in as <span className="font-bold text-zinc-900 dark:text-white">{profile?.email}</span> with the role of <span className="font-bold text-purple-600 uppercase text-xs">{profile?.role.replace('_', ' ')}</span>.
+        </p>
+        <div className="p-6 bg-zinc-100 dark:bg-zinc-800 rounded-2xl text-sm text-zinc-500 font-medium mb-8">
+          This dashboard is reserved for Super Admins and School Managers. Please contact your system administrator if you believe this is an error.
+        </div>
+        <button 
+          onClick={logout}
+          className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-bold"
+        >
+          Sign Out
+        </button>
       </div>
     </Layout>
   );

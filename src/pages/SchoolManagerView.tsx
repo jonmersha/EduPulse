@@ -266,6 +266,13 @@ const SchoolManagerView: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
+          <button 
+            onClick={() => navigate('/schools')}
+            className="flex items-center gap-2 text-zinc-500 font-bold uppercase tracking-widest text-[10px] mb-4 hover:text-purple-600 transition-colors"
+          >
+            <ChevronRight size={14} className="rotate-180" />
+            Back to Schools
+          </button>
           <div className="flex items-center gap-2 text-zinc-500 font-bold uppercase tracking-widest text-xs mb-2">
             <School size={14} />
             School Management
