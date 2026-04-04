@@ -77,7 +77,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             setProfile(newProfile);
           }
         } catch (error) {
-          console.error("Error fetching profile:", error);
+          handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
         }
       } else {
         setProfile(null);
