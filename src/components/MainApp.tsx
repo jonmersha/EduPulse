@@ -1,70 +1,76 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { MessageSquare } from 'lucide-react';
 import { Navbar } from './Navbar';
+import { LessonViewer } from './LessonViewer';
+import { ExamViewer } from './ExamViewer';
 import { Dashboard } from '../pages/Dashboard';
 import { Marketplace } from '../pages/Marketplace';
 import { MyCourses } from '../pages/MyCourses';
-import { SettingsView } from '../pages/SettingsView';
-import { useAuth } from '../context/AuthContext';
-import SuperAdminView from '../pages/SuperAdminView';
+import { CourseManagement } from '../pages/CourseManagement';
+import { SuperAdminView } from '../pages/SuperAdminView';
 import { SchoolManagerView } from '../pages/SchoolManagerView';
-import TeacherView from '../pages/TeacherView';
 import { ParentView } from '../pages/ParentView';
-import { LessonViewer } from './LessonViewer';
-import { ExamViewer } from './ExamViewer';
+import { SettingsView } from '../pages/SettingsView';
+
+import { CourseEditorPage } from '../pages/CourseEditorPage';
+import { ExamEditor } from './ExamEditor';
 
 export const MainApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
-  const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
-  const { profile } = useAuth();
-
-  const handleSelectCourse = (id: string) => {
-    setSelectedCourseId(id);
-  };
-
-  const handleSelectExam = (id: string) => {
-    setSelectedExamId(id);
-  };
-
-  const renderContent = () => {
-    if (selectedCourseId) {
-      return <LessonViewer courseId={selectedCourseId} onBack={() => setSelectedCourseId(null)} />;
-    }
-    if (selectedExamId) {
-      return <ExamViewer examId={selectedExamId} onBack={() => setSelectedExamId(null)} />;
-    }
-
-    switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard onSelectCourse={handleSelectCourse} onSelectExam={handleSelectExam} />;
-      case 'courses':
-        return <MyCourses onSelectCourse={handleSelectCourse} onSelectExam={handleSelectExam} />;
-      case 'marketplace':
-        return <Marketplace onSelectCourse={handleSelectCourse} onSelectExam={handleSelectExam} />;
-      case 'settings':
-        return <SettingsView />;
-      case 'super-admin':
-        return <SuperAdminView />;
-      case 'school':
-        return <SchoolManagerView />;
-      case 'my-courses':
-        return <TeacherView />;
-      case 'parent':
-        return <ParentView />;
-      default:
-        return <Dashboard onSelectCourse={handleSelectCourse} onSelectExam={handleSelectExam} />;
-    }
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [selectedCourseForEdit, setSelectedCourseForEdit] = useState<string | null>(null);
+  const [selectedExam, setSelectedExam] = useState<string | null>(null);
+  const [selectedExamForEdit, setSelectedExamForEdit] = useState<string | null>(null);
+  
+  const handleTabChange = (t: string) => {
+    setActiveTab(t);
+    setSelectedCourse(null);
+    setSelectedCourseForEdit(null);
+    setSelectedExam(null);
+    setSelectedExamForEdit(null);
   };
 
   return (
-    <div className="min-h-screen bg-[#F9F9F8] dark:bg-zinc-950 transition-colors duration-300">
-      <Navbar activeTab={activeTab} setActiveTab={(tab) => {
-        setActiveTab(tab);
-        setSelectedCourseId(null);
-        setSelectedExamId(null);
-      }} />
-      <main className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8">
-        {renderContent()}
+    <div className="h-screen flex flex-col bg-[#F9F9F8] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans overflow-hidden">
+      <Navbar activeTab={activeTab} setActiveTab={handleTabChange} />
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-20 md:pb-8 relative">
+        <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab + (selectedCourse || '') + (selectedCourseForEdit || '') + (selectedExam || '') + (selectedExamForEdit || '')}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              {selectedCourse ? (
+                <LessonViewer courseId={selectedCourse} onBack={() => setSelectedCourse(null)} />
+              ) : selectedCourseForEdit ? (
+                <CourseEditorPage courseId={selectedCourseForEdit} onBack={() => setSelectedCourseForEdit(null)} />
+              ) : selectedExam ? (
+                <ExamViewer examId={selectedExam} onBack={() => setSelectedExam(null)} />
+              ) : selectedExamForEdit ? (
+                <ExamEditor examId={selectedExamForEdit} onBack={() => setSelectedExamForEdit(null)} />
+              ) : (
+                <>
+                  {activeTab === 'dashboard' && <Dashboard onSelectCourse={setSelectedCourse} onSelectExam={setSelectedExam} />}
+                  {activeTab === 'marketplace' && <Marketplace onSelectCourse={setSelectedCourse} onSelectExam={setSelectedExam} />}
+                  {activeTab === 'courses' && <MyCourses onSelectCourse={setSelectedCourse} onSelectExam={setSelectedExam} />}
+                  {activeTab === 'my-courses' && <CourseManagement onEditCourse={setSelectedCourseForEdit} onEditExam={setSelectedExamForEdit} />}
+                  {activeTab === 'super-admin' && <SuperAdminView />}
+                  {activeTab === 'school' && <SchoolManagerView />}
+                  {activeTab === 'parent' && <ParentView />}
+                  {activeTab === 'messages' && (
+                    <div className="flex flex-col items-center justify-center h-64 text-zinc-400">
+                      <MessageSquare className="w-12 h-12 mb-4 opacity-20" />
+                      <p className="font-medium">Messages will appear here</p>
+                    </div>
+                  )}
+                  {activeTab === 'settings' && <SettingsView />}
+                </>
+              )}
+            </motion.div>
+          </AnimatePresence>
       </main>
     </div>
   );

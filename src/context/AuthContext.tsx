@@ -6,7 +6,7 @@ import {
   signOut,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, Timestamp, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
 export type UserRole = 'admin' | 'teacher' | 'student' | 'parent' | 'provider' | 'super_admin';
@@ -39,16 +39,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let unsubscribeProfile: (() => void) | null = null;
-
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
         const docRef = doc(db, 'users', user.uid);
-        
-        // Initial check and creation if needed
         const docSnap = await getDoc(docRef);
-        if (!docSnap.exists()) {
+        
+        if (docSnap.exists()) {
+          setProfile(docSnap.data() as UserProfile);
+        } else {
           const newProfile: UserProfile = {
             uid: user.uid,
             email: user.email || '',
@@ -58,29 +57,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             createdAt: Timestamp.now(),
           };
           await setDoc(docRef, newProfile);
+          setProfile(newProfile);
         }
-
-        // Listen for real-time updates
-        unsubscribeProfile = onSnapshot(docRef, (snap) => {
-          if (snap.exists()) {
-            setProfile(snap.data() as UserProfile);
-          }
-          setLoading(false);
-        });
       } else {
         setProfile(null);
-        if (unsubscribeProfile) {
-          unsubscribeProfile();
-          unsubscribeProfile = null;
-        }
-        setLoading(false);
       }
+      setLoading(false);
     });
 
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribeProfile) unsubscribeProfile();
-    };
+    return () => unsubscribe();
   }, []);
 
   const signIn = async () => {
