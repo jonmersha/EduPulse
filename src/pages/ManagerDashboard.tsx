@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, onSnapshot, addDoc, query, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 import { Plus, School, Search, LayoutGrid, List, Settings, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { BookOpen, Users, Calendar, CheckSquare } from 'lucide-react';
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 
 const TeacherView: React.FC = () => {
   const { profile } = useAuth();

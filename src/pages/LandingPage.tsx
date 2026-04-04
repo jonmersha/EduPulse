@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { School, Shield, Users, BookOpen, BarChart3, ChevronRight, Star, CheckCircle2, Globe, Zap } from 'lucide-react';
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 
 const LandingPage: React.FC = () => {
   const { signIn } = useAuth();
@@ -15,7 +15,7 @@ const LandingPage: React.FC = () => {
             <div className="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-purple-500/20">
               <School size={24} />
             </div>
-            <span className="font-black text-xl tracking-tighter">EduManage</span>
+            <span className="font-black text-xl tracking-tighter">EduPulse</span>
           </div>
           
           <div className="hidden md:flex items-center gap-8 text-sm font-bold text-zinc-500 dark:text-zinc-400">
@@ -172,7 +172,7 @@ const LandingPage: React.FC = () => {
           <div className="relative z-10">
             <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-8">Ready to transform your school?</h2>
             <p className="text-xl text-purple-100 font-medium mb-12 max-w-2xl mx-auto">
-              Join hundreds of schools already using EduManage to deliver better education.
+              Join hundreds of schools already using EduPulse to deliver better education.
             </p>
             <button 
               onClick={signIn}
@@ -191,7 +191,7 @@ const LandingPage: React.FC = () => {
             <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center text-white">
               <School size={18} />
             </div>
-            <span className="font-black text-lg tracking-tighter">EduManage</span>
+            <span className="font-black text-lg tracking-tighter">EduPulse</span>
           </div>
           
           <div className="flex gap-8 text-sm font-bold text-zinc-500">
@@ -201,7 +201,7 @@ const LandingPage: React.FC = () => {
           </div>
 
           <p className="text-sm text-zinc-400 font-medium">
-            © 2026 EduManage. All rights reserved.
+            © 2026 EduPulse. All rights reserved.
           </p>
         </div>
       </footer>
