@@ -30,6 +30,8 @@ export const SchoolManagerView: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [schoolData, setSchoolData] = useState<any>(null);
+  const [managedSchools, setManagedSchools] = useState<any[]>([]);
+  const [showCreateSchool, setShowCreateSchool] = useState(false);
 
   // Form states
   const [newClass, setNewClass] = useState({ name: '', grade: '', year: '', teacherId: '', schoolId: '' });
@@ -40,9 +42,15 @@ export const SchoolManagerView: React.FC = () => {
   useEffect(() => {
     if (!profile) return;
     
+    // Fetch all schools managed by this user
+    const managedSchoolsQuery = query(collection(db, 'schools'), where('managerId', '==', profile.uid));
+    const unsubManaged = onSnapshot(managedSchoolsQuery, (snap) => {
+      setManagedSchools(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'schools'));
+
     if (!profile.schoolId) {
       setLoading(false);
-      return;
+      return () => unsubManaged();
     }
 
     const currentSchoolId = profile.schoolId;
@@ -97,6 +105,7 @@ export const SchoolManagerView: React.FC = () => {
       unsubExams();
       unsubEnrollments();
       unsubSchool();
+      unsubManaged();
     };
   }, [profile, courses.length]);
 
@@ -269,7 +278,7 @@ export const SchoolManagerView: React.FC = () => {
 
   const handleCreateSchool = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile || profile.schoolId) return;
+    if (!profile) return;
     
     setLoading(true);
     try {
@@ -280,19 +289,24 @@ export const SchoolManagerView: React.FC = () => {
       await setDoc(doc(db, 'schools', schoolId), {
         ...schoolForm,
         adminEmail: profile.email,
+        managerId: profile.uid,
         status: 'pending',
         createdAt: now,
         updatedAt: now
       });
       
-      // 2. Update the user's profile with the new schoolId
+      // 2. Update the user's profile with the new schoolId and add to schoolIds
+      const updatedSchoolIds = Array.from(new Set([...(profile.schoolIds || []), schoolId]));
       await setDoc(doc(db, 'users', profile.uid), {
-        schoolId: schoolId,
+        schoolId: schoolId, // Set as active school
+        schoolIds: updatedSchoolIds,
         updatedAt: now
       }, { merge: true });
       
       alert('School created successfully! It is now pending approval from a Super Admin.');
-      window.location.reload(); // Refresh to load the new school context
+      setShowCreateSchool(false);
+      setSchoolForm({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
+      // The onSnapshot will update the managedSchools list
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'schools/new');
     } finally {
@@ -300,7 +314,20 @@ export const SchoolManagerView: React.FC = () => {
     }
   };
 
-  if (!profile?.schoolId) {
+  const handleSwitchSchool = async (schoolId: string) => {
+    if (!profile) return;
+    try {
+      await setDoc(doc(db, 'users', profile.uid), {
+        schoolId: schoolId,
+        updatedAt: Timestamp.now()
+      }, { merge: true });
+      // The AuthContext will pick up the change and reload the profile
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${profile.uid}`);
+    }
+  };
+
+  if (!profile?.schoolId || showCreateSchool) {
     return (
       <div className="max-w-2xl mx-auto space-y-8 py-12">
         <div className="text-center space-y-4">
@@ -308,10 +335,10 @@ export const SchoolManagerView: React.FC = () => {
             <SchoolIcon className="w-10 h-10 text-emerald-600" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            Create Your School
+            {profile?.schoolId ? 'Register Another School' : 'Create Your School'}
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400">
-            You don't have a school associated with your profile yet. Fill out the form below to register your school.
+            {profile?.schoolId ? 'Expand your educational network by adding a new school.' : "You don't have a school associated with your profile yet. Fill out the form below to register your school."}
           </p>
         </div>
 
@@ -371,13 +398,24 @@ export const SchoolManagerView: React.FC = () => {
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 dark:shadow-none disabled:opacity-50"
-          >
-            {loading ? 'Creating School...' : 'Register School'}
-          </button>
+          <div className="flex gap-4">
+            {profile?.schoolId && (
+              <button
+                type="button"
+                onClick={() => setShowCreateSchool(false)}
+                className="flex-1 py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-2xl font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-[2] py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 dark:shadow-none disabled:opacity-50"
+            >
+              {loading ? 'Creating School...' : 'Register School'}
+            </button>
+          </div>
         </form>
       </div>
     );
@@ -420,6 +458,49 @@ export const SchoolManagerView: React.FC = () => {
 
   return (
     <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center shrink-0">
+            <SchoolIcon className="w-6 h-6 text-emerald-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-white leading-tight">
+              {schoolData?.name || 'Loading School...'}
+            </h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={cn(
+                "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                schoolData?.status === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+              )}>
+                {schoolData?.status || 'pending'}
+              </span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">• {schoolData?.academicStructure}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {managedSchools.length > 1 && (
+            <select 
+              value={profile?.schoolId}
+              onChange={(e) => handleSwitchSchool(e.target.value)}
+              className="px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-600 transition-all"
+            >
+              {managedSchools.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          )}
+          <button 
+            onClick={() => setShowCreateSchool(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-xl text-sm font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Register Another</span>
+          </button>
+        </div>
+      </div>
+
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">

@@ -17,6 +17,7 @@ export interface UserProfile {
   displayName: string;
   role: UserRole;
   schoolId?: string;
+  schoolIds?: string[];
   isIndependent?: boolean;
   photoURL?: string;
   createdAt: any;
