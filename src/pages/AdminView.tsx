@@ -40,7 +40,7 @@ export const AdminView: React.FC = () => {
   const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolId: '', schoolIds: [] as string[], isIndependent: false });
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  const isSuperAdmin = profile?.email === 'beshegercom@gmail.com' || profile?.email === 'jonmersha@gmail.com' || profile?.role === 'super_admin';
+  const isSuperAdmin = profile?.email === 'jonmersha@gmail.com' || profile?.role === 'super_admin';
 
   useEffect(() => {
     if (!profile) return;
@@ -52,10 +52,8 @@ export const AdminView: React.FC = () => {
     let unsubExams: () => void = () => {};
     let unsubEnrollments: () => void = () => {};
 
-    const currentSchoolId = selectedSchoolId || profile.schoolId;
-
-    if (isSuperAdmin && !selectedSchoolId) {
-      // Super Admin sees all schools, all users, and all classes (for assignment)
+    if (isSuperAdmin) {
+      // Super Admin manages platform: schools, platform users, global courses, global payments
       unsubSchools = onSnapshot(collection(db, 'schools'), (snap) => {
         setSchools(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         setLoading(false);
@@ -63,20 +61,15 @@ export const AdminView: React.FC = () => {
       unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
         setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
-      unsubClasses = onSnapshot(collection(db, 'classes'), (snap) => {
-        setClasses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      }, (error) => handleFirestoreError(error, OperationType.LIST, 'classes'));
       unsubCourses = onSnapshot(collection(db, 'courses'), (snap) => {
         setCourses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'courses'));
-      unsubExams = onSnapshot(collection(db, 'exams'), (snap) => {
-        setExams(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      }, (error) => handleFirestoreError(error, OperationType.LIST, 'exams'));
       unsubEnrollments = onSnapshot(collectionGroup(db, 'enrollments'), (snap) => {
         setEnrollments(snap.docs.map(doc => ({ id: doc.id, courseId: doc.ref.parent.parent?.id, ...doc.data() })));
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
-    } else if (currentSchoolId) {
-      // School Admin or Super Admin managing a specific school
+    } else if (profile.schoolId) {
+      // School Admin manages school operations: classes, users, courses, exams, payments
+      const currentSchoolId = profile.schoolId;
       const classesQuery = query(collection(db, 'classes'), where('schoolId', '==', currentSchoolId));
       unsubClasses = onSnapshot(classesQuery, (snap) => {
         setClasses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -98,9 +91,6 @@ export const AdminView: React.FC = () => {
         setExams(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'exams'));
 
-      // For school admins, we filter enrollments by courses belonging to the school
-      // This is more complex because enrollments are subcollections of courses
-      // We'll use a collection group query and filter in memory for simplicity if the school has many courses
       unsubEnrollments = onSnapshot(collectionGroup(db, 'enrollments'), (snap) => {
         const schoolCourses = courses.filter(c => c.schoolId === currentSchoolId).map(c => c.id);
         setEnrollments(snap.docs
@@ -109,7 +99,7 @@ export const AdminView: React.FC = () => {
         );
       }, (error) => handleFirestoreError(error, OperationType.LIST, 'enrollments'));
 
-      if (!selectedSchoolId && profile.role === 'admin') {
+      if (profile.role === 'admin') {
         setActiveSubTab('classes');
       }
     }
@@ -201,7 +191,7 @@ export const AdminView: React.FC = () => {
     setShowAddModal(true);
   };
 
-  const openAddUserModal = (role?: 'student' | 'teacher' | 'admin' | 'provider', classId?: string, schoolId?: string) => {
+  const openAddUserModal = (role?: 'student' | 'teacher' | 'admin' | 'provider' | 'super_admin', classId?: string, schoolId?: string) => {
     setEditingItem(null);
     setNewUser({ 
       email: '', 
@@ -323,57 +313,63 @@ export const AdminView: React.FC = () => {
     <div className="space-y-8">
       <header className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            {selectedSchoolId && (
-              <button 
-                onClick={() => { setSelectedSchoolId(null); setActiveSubTab('schools'); }}
-                className="text-xs font-bold text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white dark:text-white flex items-center gap-1"
-              >
-                ← Back to Schools
-              </button>
-            )}
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {selectedSchoolId ? schools.find(s => s.id === selectedSchoolId)?.name : (isSuperAdmin ? 'Global Administration' : 'School Administration')}
+          <h1 className={cn(
+            "text-3xl font-bold tracking-tight",
+            isSuperAdmin ? "text-purple-900 dark:text-purple-400" : "text-zinc-900 dark:text-white"
+          )}>
+            {isSuperAdmin ? 'Global Administration' : 'School Management'}
           </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">
-            {selectedSchoolId ? 'Manage this school\'s resources and users.' : (isSuperAdmin ? 'Manage schools and platform-wide settings.' : 'Manage your school, classes, and users.')}
+          <p className="text-zinc-500 dark:text-zinc-400 mt-1">
+            {isSuperAdmin ? 'Platform-wide oversight and infrastructure management.' : 'Manage your school, classes, and users.'}
           </p>
         </div>
         <div className="flex gap-3">
           {activeSubTab === 'users' ? (
             <>
-              <button 
-                onClick={() => openAddUserModal('teacher')}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add Teacher
-              </button>
-              <button 
-                onClick={() => setAddStudentOptionsContext({})}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all shadow-md"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add Student
-              </button>
-              <button 
-                onClick={() => { setBulkUploadRole('student'); setBulkUploadContext(null); setShowBulkUploadModal(true); }}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-md"
-              >
-                <Upload className="w-4 h-4" />
-                Bulk Upload
-              </button>
+              {!isSuperAdmin && (
+                <>
+                  <button 
+                    onClick={() => openAddUserModal('teacher')}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Add Teacher
+                  </button>
+                  <button 
+                    onClick={() => setAddStudentOptionsContext({})}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Add Student
+                  </button>
+                  <button 
+                    onClick={() => { setBulkUploadRole('student'); setBulkUploadContext(null); setShowBulkUploadModal(true); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-md"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Bulk Upload
+                  </button>
+                </>
+              )}
+              {isSuperAdmin && (
+                <button 
+                  onClick={() => openAddUserModal('super_admin')}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all shadow-md"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Add Admin
+                </button>
+              )}
             </>
-          ) : activeSubTab === 'schools' ? (
+          ) : activeSubTab === 'schools' && isSuperAdmin ? (
             <button 
               onClick={() => { setEditingItem(null); setShowAddModal(true); }}
-              className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg"
+              className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-2xl font-bold hover:bg-purple-700 transition-all shadow-lg"
             >
               <Plus className="w-5 h-5" />
               Add School
             </button>
-          ) : activeSubTab === 'classes' ? (
+          ) : activeSubTab === 'classes' && !isSuperAdmin ? (
             <button 
               onClick={() => { setEditingItem(null); setShowAddModal(true); }}
               className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg"
@@ -385,82 +381,116 @@ export const AdminView: React.FC = () => {
         </div>
       </header>
 
-      <div className="flex gap-4 border-b border-black/5 pb-4 overflow-x-auto">
-        {isSuperAdmin && !selectedSchoolId && (
-          <button 
-            onClick={() => setActiveSubTab('schools')}
-            className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'schools' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
-          >
-            Schools
-          </button>
-        )}
-        
-        {(selectedSchoolId || !isSuperAdmin) && (
-          <>
-            <button 
-              onClick={() => setActiveSubTab('classes')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
-            >
-              Classes
-            </button>
-            <button 
-              onClick={() => setActiveSubTab('users')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
-            >
-              Users
-            </button>
-            <button 
-              onClick={() => setActiveSubTab('courses')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
-            >
-              Courses
-            </button>
-            <button 
-              onClick={() => setActiveSubTab('exams')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
-            >
-              Exams
-            </button>
-            <button 
-              onClick={() => setActiveSubTab('payments')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'payments' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
-            >
-              Payments
-            </button>
-          </>
-        )}
+      {isSuperAdmin && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-2xl text-purple-600">
+                <SchoolIcon className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-500">Total Schools</p>
+                <p className="text-2xl font-bold">{schools.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl text-blue-600">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-500">Total Users</p>
+                <p className="text-2xl font-bold">{users.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl text-emerald-600">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-500">Total Courses</p>
+                <p className="text-2xl font-bold">{courses.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl text-amber-600">
+                <DollarSign className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-zinc-500">Verified Revenue</p>
+                <p className="text-2xl font-bold">
+                  ${enrollments.filter(e => e.paymentVerified).reduce((acc, curr) => acc + (curr.price || 0), 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-        {isSuperAdmin && !selectedSchoolId && (
+      <div className="flex gap-4 border-b border-black/5 pb-4 overflow-x-auto">
+        {isSuperAdmin ? (
           <>
             <button 
-              onClick={() => setActiveSubTab('classes')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+              onClick={() => setActiveSubTab('schools')}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'schools' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
             >
-              All Classes
+              Schools
             </button>
             <button 
               onClick={() => setActiveSubTab('users')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
             >
               All Users
             </button>
             <button 
               onClick={() => setActiveSubTab('courses')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
             >
               All Courses
             </button>
             <button 
-              onClick={() => setActiveSubTab('exams')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+              onClick={() => setActiveSubTab('payments')}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'payments' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
             >
-              All Exams
+              All Payments
+            </button>
+          </>
+        ) : (
+          <>
+            <button 
+              onClick={() => setActiveSubTab('classes')}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'classes' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+            >
+              Classes
+            </button>
+            <button 
+              onClick={() => setActiveSubTab('users')}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'users' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+            >
+              Users
+            </button>
+            <button 
+              onClick={() => setActiveSubTab('courses')}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'courses' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+            >
+              Courses
+            </button>
+            <button 
+              onClick={() => setActiveSubTab('exams')}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'exams' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+            >
+              Exams
             </button>
             <button 
               onClick={() => setActiveSubTab('payments')}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'payments' ? "bg-zinc-900 text-white" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800")}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap", activeSubTab === 'payments' ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
             >
-              All Payments
+              Payments
             </button>
           </>
         )}
@@ -476,7 +506,7 @@ export const AdminView: React.FC = () => {
                   roleFilter === role ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white dark:text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:text-zinc-300 dark:text-zinc-300"
                 )}
               >
-                {role === 'super_admin' ? 'Platform Admins' : role === 'admin' ? 'School Admins' : `${role}s`}
+                {role === 'super_admin' ? 'Super Admins' : role === 'admin' ? 'School Managers' : `${role}s`}
               </button>
             ))}
           </div>
@@ -505,14 +535,8 @@ export const AdminView: React.FC = () => {
                     <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">{school.academicStructure}</td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
-                        <button 
-                          onClick={() => { setSelectedSchoolId(school.id); setActiveSubTab('classes'); }}
-                          className="px-3 py-1 bg-zinc-900 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all"
-                        >
-                          Manage
-                        </button>
-                        <button onClick={() => startEdit(school)} className="text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:text-white dark:text-white transition-colors"><Settings className="w-4 h-4" /></button>
-                        <button onClick={() => setDeleteConfirm({ collection: 'schools', id: school.id })} className="text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => startEdit(school)} className="text-zinc-400 hover:text-zinc-900 transition-colors"><Settings className="w-4 h-4" /></button>
+                        <button onClick={() => setDeleteConfirm({ collection: 'schools', id: school.id })} className="text-zinc-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -583,7 +607,7 @@ export const AdminView: React.FC = () => {
                           user.role === 'provider' ? "bg-amber-100 text-amber-700" :
                           "bg-purple-100 text-purple-700"
                         )}>
-                          {user.role === 'super_admin' ? 'Platform Admin' : user.role === 'admin' ? 'School Admin' : user.role}
+                          {user.role === 'super_admin' ? 'Super Admin' : user.role === 'admin' ? 'School Manager' : user.role}
                         </span>
                         {user.isIndependent && (
                           <span className="ml-2 px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-[8px] font-black uppercase rounded">Independent</span>
@@ -1089,8 +1113,8 @@ export const AdminView: React.FC = () => {
                     <select className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl" value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value as any, isIndependent: e.target.value === 'provider'})}>
                       <option value="student">Student</option>
                       <option value="teacher">Teacher</option>
-                      <option value="admin">School Admin</option>
-                      {isSuperAdmin && <option value="super_admin">Platform Admin (Super Admin)</option>}
+                      <option value="admin">School Manager</option>
+                      {isSuperAdmin && <option value="super_admin">Super Admin</option>}
                       <option value="provider">Independent Provider</option>
                     </select>
                   </div>

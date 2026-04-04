@@ -241,7 +241,7 @@ ALTER TABLE direct_messages ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION is_super_admin() RETURNS BOOLEAN AS $$
 BEGIN
-    RETURN (current_setting('app.current_user_email', true) IN ('beshegercom@gmail.com', 'jonmersha@gmail.com')) OR
+    RETURN (current_setting('app.current_user_email', true) IN ('jonmersha@gmail.com')) OR
            (EXISTS (SELECT 1 FROM users WHERE id = current_setting('app.current_user_id', true)::UUID AND role = 'super_admin'));
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

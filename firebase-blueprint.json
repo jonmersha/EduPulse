@@ -8,7 +8,7 @@
         "uid": { "type": "string", "description": "Firebase Auth UID" },
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "teacher", "student", "parent", "provider"] },
+        "role": { "type": "string", "enum": ["admin", "teacher", "student", "parent", "provider", "super_admin"] },
         "schoolId": { "type": "string", "description": "Primary school ID" },
         "schoolIds": { "type": "array", "items": { "type": "string" }, "description": "List of schools the teacher is linked to" },
         "classId": { "type": "string", "description": "ID of the class the student belongs to" },

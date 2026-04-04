@@ -48,15 +48,11 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isAdmin() {
-      return isAuthenticated() && (
-        ((request.auth.token.email == "beshegercom@gmail.com" || request.auth.token.email == "jonmersha@gmail.com") && request.auth.token.email_verified == true) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')
-      );
-    }
-
     function isSuperAdmin() {
-      return isAdmin();
+      return isAuthenticated() && (
+        (request.auth.token.email_verified == true && (request.auth.token.email == "jonmersha@gmail.com")) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'super_admin')
+      );
     }
 
     function getUserData() {
@@ -65,11 +61,11 @@ service cloud.firestore {
 
     function isSchoolAdmin(schoolId) {
       let userData = getUserData();
-      return isAdmin() || (userData.role == 'admin' && userData.schoolId == schoolId);
+      return isSuperAdmin() || (userData.get('role', '') == 'admin' && userData.get('schoolId', '') == schoolId);
     }
 
     function isTeacher() {
-      return isAuthenticated() && (getUserData().role == 'teacher' || getUserData().role == 'provider' || isAdmin());
+      return isAuthenticated() && (getUserData().role == 'teacher' || getUserData().role == 'provider' || isSuperAdmin());
     }
 
     function isCourseTeacher(courseId) {
@@ -134,7 +130,7 @@ service cloud.firestore {
              (!('description' in data) || data.description == null || data.description == "" || (data.description is string && data.description.size() < 2000)) &&
              (!('category' in data) || data.category == null || data.category == "" || (data.category is string && data.category.size() < 50)) &&
              (!('price' in data) || data.price == null || data.price is number) &&
-             (!('teacherId' in data) || data.teacherId == request.auth.uid || isAdmin());
+             (!('teacherId' in data) || data.teacherId == request.auth.uid || isSuperAdmin());
     }
 
     function isValidLesson(data) {
@@ -157,7 +153,7 @@ service cloud.firestore {
              data.type in ['lesson', 'section', 'final'] &&
              (!('lessonId' in data) || data.lessonId is string) &&
              (!('sectionId' in data) || data.sectionId is string) &&
-             (!('teacherId' in data) || data.teacherId == request.auth.uid || isAdmin());
+             (!('teacherId' in data) || data.teacherId == request.auth.uid || isSuperAdmin());
     }
 
     function isValidExamResult(data) {
@@ -213,68 +209,80 @@ service cloud.firestore {
 
     match /sections/{sectionId} {
       allow read: if resource.data.isPublic == true || isAuthenticated();
-      allow create: if isAdmin() || (isTeacher() && isCourseTeacher(request.resource.data.courseId) && isValidSection(request.resource.data));
-      allow update: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId) && isValidSection(request.resource.data));
-      allow delete: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId));
+      allow create: if isSuperAdmin() || (isTeacher() && isCourseTeacher(request.resource.data.courseId) && isValidSection(request.resource.data));
+      allow update: if isSuperAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId) && isValidSection(request.resource.data));
+      allow delete: if isSuperAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId));
     }
 
     match /users/{uid} {
-      allow read: if isAuthenticated() && (isOwner(uid) || isAdmin() || getUserData().schoolId == get(/databases/$(database)/documents/users/$(uid)).data.schoolId);
-      allow create: if isAuthenticated() && (isOwner(uid) || isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == request.resource.data.schoolId && request.resource.data.role != 'super_admin' && request.resource.data.role != 'admin')) && isValidUser(request.resource.data);
-      allow update: if isAuthenticated() && (isOwner(uid) || isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId && request.resource.data.role != 'super_admin' && request.resource.data.role != 'admin')) && isValidUser(request.resource.data);
+      allow read: if isAuthenticated() && (
+        isOwner(uid) || 
+        isSuperAdmin() || 
+        (getUserData().get('schoolId', '') != '' && getUserData().schoolId == resource.data.get('schoolId', ''))
+      );
+      allow create: if isAuthenticated() && (
+        isOwner(uid) || 
+        isSuperAdmin() || 
+        (getUserData().get('role', '') == 'admin' && getUserData().get('schoolId', '') == request.resource.data.get('schoolId', '') && request.resource.data.role != 'super_admin' && request.resource.data.role != 'admin')
+      ) && isValidUser(request.resource.data);
+      allow update: if isAuthenticated() && (
+        isOwner(uid) || 
+        isSuperAdmin() || 
+        (getUserData().get('role', '') == 'admin' && getUserData().get('schoolId', '') == resource.data.get('schoolId', '') && request.resource.data.role != 'super_admin' && request.resource.data.role != 'admin')
+      ) && isValidUser(request.resource.data);
       allow delete: if isSuperAdmin();
     }
 
     match /schools/{schoolId} {
       allow read: if isAuthenticated();
-      allow create: if isAdmin();
-      allow update: if isAdmin() || isSchoolAdmin(schoolId);
-      allow delete: if isAdmin();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin() || isSchoolAdmin(schoolId);
+      allow delete: if isSuperAdmin();
     }
 
     match /classes/{classId} {
-      allow read: if isAuthenticated() && (getUserData().schoolId == resource.data.schoolId || isAdmin());
-      allow create: if isAuthenticated() && (isAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == request.resource.data.schoolId)) && isValidClass(request.resource.data);
-      allow update: if (isAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId)) && isValidClass(request.resource.data);
-      allow delete: if isAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId);
+      allow read: if isAuthenticated() && (getUserData().schoolId == resource.data.schoolId || isSuperAdmin());
+      allow create: if isAuthenticated() && (isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == request.resource.data.schoolId)) && isValidClass(request.resource.data);
+      allow update: if (isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId)) && isValidClass(request.resource.data);
+      allow delete: if isSuperAdmin() || (getUserData().role == 'admin' && getUserData().schoolId == resource.data.schoolId);
     }
 
     match /courses/{courseId} {
       allow read: if resource.data.isPublic == true || isAuthenticated();
-      allow create: if isAdmin() || (isTeacher() && isValidCourse(request.resource.data));
-      allow update: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid && isValidCourse(request.resource.data));
-      allow delete: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
+      allow create: if isSuperAdmin() || (isTeacher() && isValidCourse(request.resource.data));
+      allow update: if isSuperAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid && isValidCourse(request.resource.data));
+      allow delete: if isSuperAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
     }
 
     match /lessons/{lessonId} {
       allow read: if resource.data.isPublic == true || isAuthenticated();
-      allow create: if isAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data));
-      allow update: if isAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data));
-      allow delete: if isAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid);
+      allow create: if isSuperAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data));
+      allow update: if isSuperAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid && isValidLesson(request.resource.data));
+      allow delete: if isSuperAdmin() || (isTeacher() && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid);
     }
 
     match /assignments/{assignmentId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isTeacher() || isAdmin();
+      allow create, update, delete: if isTeacher() || isSuperAdmin();
     }
 
     match /submissions/{submissionId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isAdmin());
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isSuperAdmin());
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.studentId;
-      allow update: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isAdmin());
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isSuperAdmin());
     }
 
     match /{path=**}/enrollments/{enrollmentId} {
       allow get: if isAuthenticated() && (
         (resource != null && request.auth.uid == resource.data.studentId) ||
-        isAdmin() ||
+        isSuperAdmin() ||
         (resource != null && resource.data.courseId != null && exists(/databases/$(database)/documents/courses/$(resource.data.courseId)) && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid) ||
         (resource != null && resource.data.examId != null && exists(/databases/$(database)/documents/exams/$(resource.data.examId)) && get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid)
       );
-      allow list: if isAuthenticated() && (isAdmin() || isTeacher());
-      allow create: if isAuthenticated() && (isAdmin() || (request.auth.uid == request.resource.data.studentId && isValidEnrollment(request.resource.data)));
+      allow list: if isAuthenticated() && (isSuperAdmin() || isTeacher());
+      allow create: if isAuthenticated() && (isSuperAdmin() || (request.auth.uid == request.resource.data.studentId && isValidEnrollment(request.resource.data)));
       allow update: if isAuthenticated() && isValidEnrollment(request.resource.data) && (
-        isAdmin() ||
+        isSuperAdmin() ||
         (request.auth.uid == resource.data.studentId && 
          request.resource.data.studentId == resource.data.studentId &&
          ((request.resource.data.courseId == resource.data.courseId) || (request.resource.data.examId == resource.data.examId))) ||
@@ -286,17 +294,17 @@ service cloud.firestore {
     match /courses/{courseId}/enrollments/{enrollmentId} {
       allow get: if isAuthenticated() && (
         (resource != null && request.auth.uid == resource.data.studentId) ||
-        isAdmin() ||
+        isSuperAdmin() ||
         isCourseTeacher(courseId)
       );
       allow list: if isAuthenticated() && (
-        isAdmin() ||
+        isSuperAdmin() ||
         isCourseTeacher(courseId) ||
         (request.auth.uid != null)
       );
-      allow create: if isAuthenticated() && (isAdmin() || (request.auth.uid == request.resource.data.studentId && isValidEnrollment(request.resource.data) && request.resource.data.courseId == courseId));
+      allow create: if isAuthenticated() && (isSuperAdmin() || (request.auth.uid == request.resource.data.studentId && isValidEnrollment(request.resource.data) && request.resource.data.courseId == courseId));
       allow update: if isAuthenticated() && (
-        isAdmin() ||
+        isSuperAdmin() ||
         (request.auth.uid == resource.data.studentId && isValidEnrollment(request.resource.data)) ||
         isCourseTeacher(courseId)
       );
@@ -304,36 +312,36 @@ service cloud.firestore {
 
     match /exams/{examId} {
       allow read: if isAuthenticated();
-      allow create: if isAdmin() || (isTeacher() && isValidExam(request.resource.data));
-      allow update: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid && isValidExam(request.resource.data));
-      allow delete: if isAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
+      allow create: if isSuperAdmin() || (isTeacher() && isValidExam(request.resource.data));
+      allow update: if isSuperAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid && isValidExam(request.resource.data));
+      allow delete: if isSuperAdmin() || (isTeacher() && resource.data.teacherId == request.auth.uid);
     }
 
     match /examResults/{resultId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isAdmin());
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isSuperAdmin());
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.studentId && isValidExamResult(request.resource.data);
-      allow update: if isAdmin();
+      allow update: if isSuperAdmin();
     }
 
     match /resources/{resourceId} {
       allow read: if isAuthenticated();
-      allow create: if isAdmin() || (isTeacher() && isCourseTeacher(request.resource.data.courseId) && isValidResource(request.resource.data));
-      allow update: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId) && isValidResource(request.resource.data));
-      allow delete: if isAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId));
+      allow create: if isSuperAdmin() || (isTeacher() && isCourseTeacher(request.resource.data.courseId) && isValidResource(request.resource.data));
+      allow update: if isSuperAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId) && isValidResource(request.resource.data));
+      allow delete: if isSuperAdmin() || (isTeacher() && isCourseTeacher(resource.data.courseId));
     }
 
     match /questions/{questionId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidQuestion(request.resource.data);
-      allow update: if isAdmin() || (isQuestionOwner(questionId) && isValidQuestion(request.resource.data));
-      allow delete: if isAdmin() || isQuestionOwner(questionId);
+      allow update: if isSuperAdmin() || (isQuestionOwner(questionId) && isValidQuestion(request.resource.data));
+      allow delete: if isSuperAdmin() || isQuestionOwner(questionId);
     }
 
     match /answers/{answerId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidAnswer(request.resource.data);
-      allow update: if isAdmin() || (isAnswerOwner(answerId) && isValidAnswer(request.resource.data));
-      allow delete: if isAdmin() || isAnswerOwner(answerId);
+      allow update: if isSuperAdmin() || (isAnswerOwner(answerId) && isValidAnswer(request.resource.data));
+      allow delete: if isSuperAdmin() || isAnswerOwner(answerId);
     }
 
     match /chatMessages/{messageId} {

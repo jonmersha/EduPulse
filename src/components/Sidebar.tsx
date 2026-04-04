@@ -19,13 +19,13 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const { profile } = useAuth();
   
-  const isSuperAdmin = profile?.email === 'beshegercom@gmail.com' || profile?.email === 'jonmersha@gmail.com' || profile?.role === 'super_admin';
+  const isSuperAdmin = profile?.email === 'jonmersha@gmail.com' || profile?.role === 'super_admin';
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'courses', label: 'Courses', icon: BookOpen },
     { id: 'marketplace', label: 'Marketplace', icon: Search },
-    ...(profile?.role === 'admin' || isSuperAdmin ? [{ id: 'school', label: isSuperAdmin ? 'Super Admin Panel' : 'School Admin Panel', icon: Settings }] : []),
+    ...(profile?.role === 'admin' || isSuperAdmin ? [{ id: 'school', label: isSuperAdmin ? 'Super Admin Panel' : 'School Manager Panel', icon: Settings }] : []),
     ...(profile?.role === 'teacher' || profile?.role === 'provider' ? [{ id: 'my-courses', label: 'Teaching', icon: GraduationCap }] : []),
     ...(profile?.role === 'parent' ? [{ id: 'parent', label: 'Parent Portal', icon: Users }] : []),
     { id: 'messages', label: 'Messages', icon: MessageSquare },

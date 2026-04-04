@@ -9,8 +9,10 @@ export const SettingsView: React.FC = () => {
   const [role, setRole] = useState(profile?.role || 'student');
   const [saving, setSaving] = useState(false);
 
+  const isSuperAdmin = profile?.role === 'super_admin' || profile?.email === 'jonmersha@gmail.com';
+
   const handleSave = async () => {
-    if (!profile) return;
+    if (!profile || isSuperAdmin) return;
     setSaving(true);
     await setDoc(doc(db, 'users', profile.uid), { ...profile, role }, { merge: true });
     setSaving(false);
@@ -21,53 +23,65 @@ export const SettingsView: React.FC = () => {
     <div className="max-w-2xl mx-auto space-y-8">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 mt-1">Manage your account and preferences.</p>
+        <p className="text-zinc-500 dark:text-zinc-400 mt-1">Manage your account and preferences.</p>
       </header>
 
       <div className="bg-white dark:bg-zinc-900 border border-black/5 rounded-3xl p-8 shadow-sm space-y-6">
         <section className="space-y-4">
           <h2 className="text-lg font-bold">Profile Information</h2>
-          <div className="flex items-center gap-4 p-4 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 rounded-2xl">
-            <div className="w-16 h-16 rounded-full bg-zinc-200 dark:bg-zinc-700 dark:bg-zinc-700 overflow-hidden">
+          <div className="flex items-center gap-4 p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl">
+            <div className="w-16 h-16 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
               <img src={profile?.photoURL || `https://i.pravatar.cc/150?u=${profile?.uid}`} alt="Avatar" referrerPolicy="no-referrer" />
             </div>
             <div>
               <p className="font-bold">{profile?.displayName}</p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">{profile?.email}</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">{profile?.email}</p>
             </div>
           </div>
         </section>
 
         <section className="space-y-4">
           <h2 className="text-lg font-bold">Account Role</h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Choose your role to access different features of the platform.</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {(['student', 'teacher', 'admin', 'parent'] as UserRole[]).map((r) => (
-              <button
-                key={r}
-                onClick={() => setRole(r)}
-                className={cn(
-                  "px-4 py-3 rounded-xl text-xs font-bold capitalize transition-all border",
-                  role === r 
-                    ? "bg-emerald-600 border-purple-600 text-white shadow-lg shadow-purple-200" 
-                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 dark:text-zinc-300 hover:bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800"
-                )}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
+          {isSuperAdmin ? (
+            <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-900/30 rounded-2xl">
+              <p className="text-sm text-purple-700 dark:text-purple-300 font-medium">
+                You are currently a <span className="font-bold">Super Admin</span>. This role cannot be changed from the settings page.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Choose your role to access different features of the platform.</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {(['student', 'teacher', 'admin', 'parent'] as UserRole[]).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRole(r)}
+                    className={cn(
+                      "px-4 py-3 rounded-xl text-xs font-bold capitalize transition-all border",
+                      role === r 
+                        ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-100 dark:shadow-none" 
+                        : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                    )}
+                  >
+                    {r === 'admin' ? 'School Manager' : r}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </section>
 
-        <div className="pt-6 border-t border-black/5">
-          <button 
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full sm:w-auto px-8 py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition-all disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
+        {!isSuperAdmin && (
+          <div className="pt-6 border-t border-black/5">
+            <button 
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full sm:w-auto px-8 py-3 bg-zinc-900 dark:bg-white dark:text-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
