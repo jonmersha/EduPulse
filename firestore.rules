@@ -282,6 +282,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isSuperAdmin());
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.studentId;
       allow update: if isAuthenticated() && (request.auth.uid == resource.data.studentId || isTeacher() || isSuperAdmin());
+      allow delete: if isSuperAdmin();
     }
 
     match /{path=**}/enrollments/{enrollmentId} {
@@ -306,6 +307,7 @@ service cloud.firestore {
         (resource.data.courseId != null && exists(/databases/$(database)/documents/courses/$(resource.data.courseId)) && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId == request.auth.uid) ||
         (resource.data.examId != null && exists(/databases/$(database)/documents/exams/$(resource.data.examId)) && get(/databases/$(database)/documents/exams/$(resource.data.examId)).data.teacherId == request.auth.uid)
       );
+      allow delete: if isSuperAdmin();
     }
 
     match /courses/{courseId}/enrollments/{enrollmentId} {

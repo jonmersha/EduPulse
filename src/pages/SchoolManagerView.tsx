@@ -45,7 +45,13 @@ export const SchoolManagerView: React.FC = () => {
     // Fetch all schools managed by this user
     const managedSchoolsQuery = query(collection(db, 'schools'), where('managerId', '==', profile.uid));
     const unsubManaged = onSnapshot(managedSchoolsQuery, (snap) => {
-      setManagedSchools(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const schools = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setManagedSchools(schools);
+      
+      // If no school is active, set the first managed school as active
+      if (!profile.schoolId && schools.length > 0) {
+        handleSwitchSchool(schools[0].id);
+      }
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'schools'));
 
     if (!profile.schoolId) {
@@ -421,25 +427,6 @@ export const SchoolManagerView: React.FC = () => {
     );
   }
 
-  if (schoolData?.status === 'pending') {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 text-center space-y-6 max-w-md mx-auto">
-        <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center animate-pulse">
-          <AlertCircle className="w-10 h-10 text-amber-600" />
-        </div>
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Approval Pending</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">
-            Your school <strong>{schoolData.name}</strong> has been registered and is currently awaiting approval from a Super Admin.
-          </p>
-        </div>
-        <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl w-full text-sm text-zinc-600 dark:text-zinc-300">
-          Once approved, you will have full access to the school management dashboard.
-        </div>
-      </div>
-    );
-  }
-
   if (schoolData?.status === 'suspended') {
     return (
       <div className="flex flex-col items-center justify-center h-96 text-center space-y-6 max-w-md mx-auto">
@@ -457,95 +444,103 @@ export const SchoolManagerView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center shrink-0">
-            <SchoolIcon className="w-6 h-6 text-emerald-600" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-zinc-900 dark:text-white leading-tight">
-              {schoolData?.name || 'Loading School...'}
-            </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={cn(
-                "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                schoolData?.status === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-              )}>
-                {schoolData?.status || 'pending'}
-              </span>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">• {schoolData?.academicStructure}</span>
+    <div className="flex h-full gap-8">
+      {/* Sidebar */}
+      <div className="w-64 border-r border-black/5 pr-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold">Your Schools</h2>
+          <button 
+            onClick={() => setShowCreateSchool(true)}
+            className="p-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-xl hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="space-y-2">
+          {managedSchools.map(s => (
+            <button 
+              key={s.id} 
+              onClick={() => handleSwitchSchool(s.id)}
+              className={cn(
+                "w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-all",
+                profile?.schoolId === s.id ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100 dark:shadow-none" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              )}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 space-y-8 overflow-y-auto">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center shrink-0">
+              <SchoolIcon className="w-6 h-6 text-emerald-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-zinc-900 dark:text-white leading-tight">
+                {schoolData?.name || 'Loading School...'}
+              </h2>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={cn(
+                  "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                  schoolData?.status === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                )}>
+                  {schoolData?.status || 'pending'}
+                </span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">• {schoolData?.academicStructure}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {managedSchools.length > 1 && (
-            <select 
-              value={profile?.schoolId}
-              onChange={(e) => handleSwitchSchool(e.target.value)}
-              className="px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-600 transition-all"
-            >
-              {managedSchools.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          )}
-          <button 
-            onClick={() => setShowCreateSchool(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-xl text-sm font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Register Another</span>
-          </button>
-        </div>
-      </div>
-
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            School Management
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1">
-            Manage your school, classes, and users.
-          </p>
-        </div>
-        <div className="flex gap-3">
-          {activeSubTab === 'users' ? (
-            <>
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
+              School Management
+            </h1>
+            <p className="text-zinc-500 dark:text-zinc-400 mt-1">
+              Manage your school, classes, and users.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            {activeSubTab === 'users' ? (
+              <>
+                <button 
+                  onClick={() => openAddUserModal('teacher')}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Add Teacher
+                </button>
+                <button 
+                  onClick={() => setAddStudentOptionsContext({})}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Add Student
+                </button>
+                <button 
+                  onClick={() => { setBulkUploadRole('student'); setBulkUploadContext(null); setShowBulkUploadModal(true); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-md"
+                >
+                  <Upload className="w-4 h-4" />
+                  Bulk Upload
+                </button>
+              </>
+            ) : activeSubTab === 'classes' ? (
               <button 
-                onClick={() => openAddUserModal('teacher')}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md"
+                onClick={() => { setEditingItem(null); setShowAddModal(true); }}
+                className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg"
               >
-                <UserPlus className="w-4 h-4" />
-                Add Teacher
+                <Plus className="w-5 h-5" />
+                Add Class
               </button>
-              <button 
-                onClick={() => setAddStudentOptionsContext({})}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-md"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add Student
-              </button>
-              <button 
-                onClick={() => { setBulkUploadRole('student'); setBulkUploadContext(null); setShowBulkUploadModal(true); }}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-md"
-              >
-                <Upload className="w-4 h-4" />
-                Bulk Upload
-              </button>
-            </>
-          ) : activeSubTab === 'classes' ? (
-            <button 
-              onClick={() => { setEditingItem(null); setShowAddModal(true); }}
-              className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg"
-            >
-              <Plus className="w-5 h-5" />
-              Add Class
-            </button>
-          ) : null}
-        </div>
-      </header>
+            ) : null}
+          </div>
+        </header>
 
       <div className="flex gap-4 border-b border-black/5 pb-4 overflow-x-auto">
         <button 
@@ -1061,6 +1056,7 @@ export const SchoolManagerView: React.FC = () => {
           </div>
         </div>
       </Modal>
+      </div>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Users, Settings, Plus, School as SchoolIcon, BookOpen, UserPlus, Trash2, Upload, CheckCircle2, AlertCircle, DollarSign, Search, MessageSquare } from 'lucide-react';
-import { collection, onSnapshot, doc, setDoc, Timestamp, collectionGroup } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, Timestamp, collectionGroup, getDocs, writeBatch, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
@@ -15,6 +15,7 @@ export const SuperAdminView: React.FC = () => {
   const [courses, setCourses] = useState<any[]>([]);
   const [activeSubTab, setActiveSubTab] = useState<'schools' | 'users' | 'courses' | 'payments'>('schools');
   const [roleFilter, setRoleFilter] = useState<'all' | 'super_admin' | 'admin' | 'teacher' | 'student' | 'provider'>('all');
+  const [schoolFilter, setSchoolFilter] = useState<'all' | 'active' | 'pending' | 'suspended'>('all');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'verified' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -107,7 +108,6 @@ export const SuperAdminView: React.FC = () => {
 
   const handleDelete = async (collectionName: string, id: string) => {
     try {
-      const { deleteDoc } = await import('firebase/firestore');
       await deleteDoc(doc(db, collectionName, id));
       setDeleteConfirm(null);
     } catch (error) {
@@ -144,6 +144,37 @@ export const SuperAdminView: React.FC = () => {
     );
   }
 
+  const wipeDatabase = async () => {
+    if (!window.confirm('Are you absolutely sure you want to delete EVERYTHING? This cannot be undone.')) {
+      return;
+    }
+
+    const collectionsToWipe = [
+      'users', 'schools', 'classes', 'courses', 'lessons', 'exams', 
+      'examResults', 'resources', 'questions', 'answers', 'sections',
+      'assignments', 'submissions', 'enrollments', 'chatMessages', 
+      'conversations', 'directMessages'
+    ];
+
+    try {
+      for (const colName of collectionsToWipe) {
+        const colRef = collection(db, colName);
+        const snapshot = await getDocs(colRef);
+        
+        const batch = writeBatch(db);
+        snapshot.docs.forEach((document) => {
+          batch.delete(document.ref);
+        });
+        await batch.commit();
+        console.log(`Deleted ${snapshot.size} documents from ${colName}`);
+      }
+      alert('Database wiped successfully!');
+    } catch (error) {
+      console.error('Error wiping database:', error);
+      alert('Error wiping database. Check console.');
+    }
+  };
+
   return (
     <div className="space-y-8">
       <header className="flex items-center justify-between">
@@ -168,7 +199,7 @@ export const SuperAdminView: React.FC = () => {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-2xl text-purple-600">
@@ -215,6 +246,22 @@ export const SuperAdminView: React.FC = () => {
             </div>
           </div>
         </div>
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-black/5 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-2xl text-red-600">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-500">Danger Zone</p>
+              <button 
+                onClick={wipeDatabase}
+                className="text-red-600 font-bold hover:text-red-700"
+              >
+                Wipe Database
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="flex gap-4 border-b border-black/5 pb-4 overflow-x-auto">
@@ -243,6 +290,22 @@ export const SuperAdminView: React.FC = () => {
           All Payments
         </button>
         
+        {activeSubTab === 'schools' && (
+          <div className="ml-auto flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
+            {(['all', 'active', 'pending', 'suspended'] as const).map((status) => (
+              <button
+                key={status}
+                onClick={() => setSchoolFilter(status)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all",
+                  schoolFilter === status ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
+                )}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+        )}
         {activeSubTab === 'users' && (
           <div className="ml-auto flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
             {(['all', 'super_admin', 'admin', 'teacher', 'student', 'provider'] as const).map((role) => (
@@ -274,7 +337,9 @@ export const SuperAdminView: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {schools.map(school => (
+                {schools
+                  .filter(s => schoolFilter === 'all' || (s.status || 'pending') === schoolFilter)
+                  .map(school => (
                   <tr key={school.id} className="border-b border-black/5 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">

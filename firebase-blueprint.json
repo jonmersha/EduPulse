@@ -257,6 +257,21 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["conversationId", "senderId", "content", "createdAt"]
+    },
+    "JoinRequest": {
+      "title": "JoinRequest",
+      "description": "A request from a user to join a school.",
+      "type": "object",
+      "properties": {
+        "schoolId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "teacher", "parent"] },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["schoolId", "userId", "role", "status"]
     }
   },
   "firestore": {
@@ -275,6 +290,7 @@
     "/answers/{answerId}": { "schema": "Answer", "description": "Question answers" },
     "/chatMessages/{messageId}": { "schema": "ChatMessage", "description": "Course chat messages" },
     "/conversations/{conversationId}": { "schema": "Conversation", "description": "Private conversations" },
-    "/directMessages/{messageId}": { "schema": "DirectMessage", "description": "Direct messages" }
+    "/directMessages/{messageId}": { "schema": "DirectMessage", "description": "Direct messages" },
+    "/joinRequests/{requestId}": { "schema": "JoinRequest", "description": "School join requests" }
   }
 }
