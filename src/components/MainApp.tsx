@@ -8,7 +8,7 @@ import { Dashboard } from '../pages/Dashboard';
 import { Marketplace } from '../pages/Marketplace';
 import { MyCourses } from '../pages/MyCourses';
 import { CourseManagement } from '../pages/CourseManagement';
-import { SuperAdminView } from '../pages/SuperAdminView';
+import SuperAdminView from '../pages/SuperAdminView';
 import { SchoolManagerView } from '../pages/SchoolManagerView';
 import { ParentView } from '../pages/ParentView';
 import { SettingsView } from '../pages/SettingsView';
