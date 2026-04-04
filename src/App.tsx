@@ -210,25 +210,31 @@ const Home = () => {
   if (profile?.role === 'super_admin') return <Layout><SuperAdminView /></Layout>;
   if (profile?.role === 'school_manager') return <Navigate to="/schools" />;
   
+  // For other roles, show a simple dashboard or welcome message
   return (
     <Layout>
-      <div className="max-w-md mx-auto text-center py-20 px-6">
-        <div className="w-20 h-20 bg-red-100 dark:bg-red-900/20 text-red-600 rounded-3xl flex items-center justify-center mx-auto mb-8">
-          <X size={40} />
+      <div className="max-w-4xl mx-auto py-12 px-6">
+        <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-12 border border-zinc-100 dark:border-zinc-800 shadow-sm">
+          <div className="w-20 h-20 bg-purple-100 dark:bg-purple-900/20 text-purple-600 rounded-3xl flex items-center justify-center mb-8">
+            <LayoutDashboard size={40} />
+          </div>
+          <h2 className="text-4xl font-black tracking-tight mb-4">Welcome, {profile?.name}!</h2>
+          <p className="text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed mb-8">
+            You are logged in as a <span className="font-bold text-purple-600 uppercase text-xs">{profile?.role.replace('_', ' ')}</span>. 
+            Your personalized dashboard is being prepared.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+              <h3 className="font-bold mb-2">My Profile</h3>
+              <p className="text-sm text-zinc-500">{profile?.email}</p>
+            </div>
+            <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+              <h3 className="font-bold mb-2">School</h3>
+              <p className="text-sm text-zinc-500">{profile?.schoolId || 'Not assigned'}</p>
+            </div>
+          </div>
         </div>
-        <h2 className="text-3xl font-black tracking-tight mb-4">Access Denied</h2>
-        <p className="text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed mb-8">
-          You are signed in as <span className="font-bold text-zinc-900 dark:text-white">{profile?.email}</span> with the role of <span className="font-bold text-purple-600 uppercase text-xs">{profile?.role.replace('_', ' ')}</span>.
-        </p>
-        <div className="p-6 bg-zinc-100 dark:bg-zinc-800 rounded-2xl text-sm text-zinc-500 font-medium mb-8">
-          This dashboard is reserved for Super Admins and School Managers. Please contact your system administrator if you believe this is an error.
-        </div>
-        <button 
-          onClick={logout}
-          className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-bold"
-        >
-          Sign Out
-        </button>
       </div>
     </Layout>
   );

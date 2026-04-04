@@ -1,20 +1,63 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if request.auth != null;
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
     }
-    match /schools/{schoolId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.token.email == "beshegercom@gmail.com";
+
+    // Check if the user is the primary super admin via email
+    function isPrimaryAdmin() {
+      return isAuthenticated() && request.auth.token.email == "beshegercom@gmail.com";
+    }
+
+    // Check if the user has a specific role in their profile
+    // This is safe to call for collections OTHER than /users/{uid}
+    function hasRole(role) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+
+    function isSuperAdmin() {
+      return isPrimaryAdmin() || hasRole('super_admin');
+    }
+
+    function isSchoolManager(schoolId) {
+      return hasRole('school_manager') && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolId == schoolId;
+    }
+
+    // Rules for User Profiles
+    match /users/{userId} {
+      // Users can always read and write their own profile
+      // Super admins can manage all profiles
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isPrimaryAdmin());
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isPrimaryAdmin());
       
+      // Allow school managers to read profiles in their school
+      // We use a direct check here to avoid calling hasRole which might be recursive if not careful
+      allow read: if isAuthenticated() && 
+                  exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+                  get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'school_manager' && 
+                  get(/databases/$(database)/documents/users/$(request.auth.uid)).data.schoolId == resource.data.schoolId;
+    }
+
+    // Rules for Schools
+    match /schools/{schoolId} {
+      allow read: if isAuthenticated();
+      allow create: if isSuperAdmin() || hasRole('school_manager');
+      allow update: if isSuperAdmin() || (hasRole('school_manager') && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.managerId == request.auth.uid);
+      allow delete: if isSuperAdmin();
+
       match /classes/{classId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null && request.auth.token.email == "beshegercom@gmail.com";
+        allow read: if isAuthenticated();
+        allow write: if isSuperAdmin() || isSchoolManager(schoolId);
       }
     }
+
     match /{path=**}/classes/{classId} {
-      allow read: if request.auth != null;
+      allow read: if isAuthenticated();
     }
   }
 }
