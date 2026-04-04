@@ -39,7 +39,7 @@ export const SchoolManagerView: React.FC = () => {
   const [showEditSchoolModal, setShowEditSchoolModal] = useState(false);
 
   // Form states
-  const [newClass, setNewClass] = useState({ name: '', grade: '', year: '', teacherId: '', schoolId: '' });
+  const [newClass, setNewClass] = useState({ name: '', grade: '', year: new Date().getFullYear().toString(), teacherId: '', schoolId: '' });
   const [newUser, setNewUser] = useState({ email: '', displayName: '', role: 'student' as any, classId: '', specialization: '', schoolId: '', isIndependent: false, studentIds: [] as string[] });
   const [editingItem, setEditingItem] = useState<any>(null);
   const [schoolForm, setSchoolForm] = useState({ name: '', address: '', adminEmail: '', contactPhone: '', academicStructure: 'K-12' });
@@ -394,6 +394,12 @@ export const SchoolManagerView: React.FC = () => {
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `users/${linkingParent.id}`);
     }
+  };
+
+  const openLinkModal = (parent: any) => {
+    setLinkingParent(parent);
+    setSelectedStudentIds(parent.studentIds || []);
+    setShowLinkModal(true);
   };
 
   const startEditSchool = (school: any) => {
@@ -1102,13 +1108,18 @@ export const SchoolManagerView: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-bold mb-1">Year</label>
-              <input 
-                type="text" 
+              <select 
                 required 
                 value={newClass.year}
                 onChange={(e) => setNewClass({...newClass, year: e.target.value})}
                 className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent"
-              />
+              >
+                <option value="">Select Year</option>
+                {[...Array(10)].map((_, i) => {
+                  const year = new Date().getFullYear() + i - 2;
+                  return <option key={year} value={year.toString()}>{year}</option>;
+                })}
+              </select>
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-bold text-zinc-500">Cancel</button>
